@@ -15,6 +15,8 @@ from ..graph.env import get_default_net
 from ..graph.node import as_varnode
 from ...core.utils.meta import assert_notnone
 
+__all__ = ['placeholder', 'variable', 'constant']
+
 
 @wrap_varnode_func
 def placeholder(name, shape=None, dtype=__default_dtype__, device=None):
@@ -37,3 +39,9 @@ def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, de
         get_default_net().add_to_collection(var, 'variables')
         get_default_net().add_to_collection(var.impl.initializer, 'variables/initializer')
         return var
+
+@wrap_varnode_func
+def constant(value, shape=None, dtype=None, name='const', device=None, verify_shape=False):
+    with device_context(device):
+        return tf.constant(value, dtype=dtype, shape=shape, name=name, verify_shape=verify_shape)
+

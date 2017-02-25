@@ -9,4 +9,8 @@
 from .cnn import *
 from .helper import *
 from .netsrc import *
+from .shape import *
+from .tensor import *
+
+from ._migrate import *
 

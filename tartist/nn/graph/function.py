@@ -6,14 +6,16 @@
 # 
 # This file is part of TensorArtist
 
+from .node import __valid_tensor_types__, as_tftensor, as_varnode
+from ...core.logger import get_logger
+from ...core.utils.meta import merge_iterable, notnone_property
+logger = get_logger(__file__)
+
 import enum
 import collections
 
+import numpy as np
 import tensorflow as tf
-
-from .node import as_tftensor
-from ...core.logger import get_logger
-logger = get_logger(__file__)
 
 __all__ = ['Function']
 
@@ -32,9 +34,8 @@ class Function(object):
 
         @classmethod
         def make(cls, outputs):
-            from .node import VarNode
 
-            if isinstance(outputs, (VarNode, tf.Tensor)):
+            if isinstance(outputs, __valid_tensor_types__):
                 return cls(Function.OutputResultType.SINGLE, 1), [outputs]
             elif type(outputs) in (tuple, list):
                 return cls(Function.OutputResultType.LIST, len(outputs)), list(outputs)
@@ -54,12 +55,37 @@ class Function(object):
             else:
                 return collections.OrderedDict(zip(self._output_names, outputs))
 
+        def reduce_format(self, all_vars, all_outputs, reduce_ratios=None):
+            assert len(all_vars) == self._nr_outputs 
+            all_outputs = [o[:self._nr_outputs] for o in all_outputs]
+            ret = []
+            for o, *vals in zip(all_vars, *all_outputs):
+                ret.append(self.reduce_single(o, *vals, reduce_ratios=reduce_ratios))
+            return ret
+
+        def reduce_single(self, o, *vals, reduce_ratios=None):
+            meth = as_varnode(o).flags.data_parallel_reduce_method
+            if meth == 'CONCAT':
+                return np.concatnate(vals, axis=0)
+            elif meth == 'SUM':
+                if reduce_ratios is None:
+                    return np.mean(vals)
+
+                sum_v, sum_r = 0, 0
+                for v, r in zip(vals, reduce_ratios):
+                    sum_v += v * r
+                    sum_r += r
+                return sum_v / sum_r
+
     def __init__(self, env):
         self._env = env
         self._inputs = None
         self._outputs = None
         self._output_manager = None
+
         self._extra_outputs = []
+        self._extra_kwoutputs = {}
+        self._extra_ops = []
         self._extra_kw_modifiers = []
 
         self.__compiled = False
@@ -72,24 +98,48 @@ class Function(object):
     def flags(self):
         return self._env.flags
 
-    def add_extra_outputs(self, out):
+    @notnone_property
+    def output_manager(self):
+        return self._output_manager
+
+    def add_extra_output(self, out):
         assert not self.__compiled
         self._extra_outputs.append(out)
+
+    def add_extra_output(self, k, v):
+        assert not self.__compiled
+        self._extra_kwoutputs[k] = v
+
+    def add_extra_op(self, out):
+        assert not self.__compiled
+        self._extra_ops.append(as_tftensor(out))
 
     def extend_extra_kw_modifiers(self, modifiers):
         self._extra_kw_modifiers.extend(modifiers)
 
+    @property
+    def compiled(self):
+        return self.__compiled
+
     def compile(self, outputs, inputs=None):
         if self.__compiled:
             logger.warn('function {} already compiled'.format(self))
+       
+        if len(self._extra_kwoutputs):
+            assert isinstance(outputs, (dict, collections.OrderedDict))
+            outputs.update(self._extra_kwoutputs)
+        if len(self._extra_outputs):
+            if isinstance(outputs, __valid_tensor_types__):
+                outputs = [outputs]
+            outputs.extend(self._extra_outputs)
 
         self._inputs = inputs
         self._output_manager, self._outputs = Function.OutputManager.make(outputs)
         self._outputs = list(map(as_tftensor, self._outputs))
-        self._outputs.extend(self._extra_outputs)
+        self._outputs.extend(self._extra_ops)
         self.__compiled = True
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, output_raw=False, **kwargs):
         if len(args) > 0:
             assert self._inputs is not None
             assert len(self._inputs) == len(args)
@@ -102,7 +152,26 @@ class Function(object):
         feed_dict = self.__canonize_feed_dict(feed_dict)
 
         outputs = self.session.run(self._outputs, feed_dict=feed_dict)
+        if output_raw:
+            return outputs
         return self._output_manager.format(outputs)
+
+    def call(self, *args, **kwargs):
+        return self(*args, **kwargs)
+
+    def call_args(self, inputs, output_raw=False):
+        if isinstance(inputs, dict):
+            outputs = self(**inputs, output_raw=output_raw)
+        else:
+            outputs = self(*inputs, output_raw=output_raw)
+        return outputs
+       
+    def map(self, iterable, event_spec=None):
+        all_outputs = []
+        for inputs in iterable:
+            outputs = self.call_args(inputs, output_raw=True)
+            all_outputs.append(outputs)
+        return self._output_manager.reduce_format(self._outputs, all_outputs)
 
     @staticmethod
     def __canonize_feed_dict(feed_dict):

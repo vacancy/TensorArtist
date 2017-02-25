@@ -13,6 +13,10 @@ import tensorflow as tf
 import functools
 import collections
 
+__all__ = ['device_context', 
+        'get_2dshape', 'get_4dshape', 
+        'wrap_varnode_func', 'wrap_named_op']
+
 
 def device_context(device=None):
     if device is None:
@@ -79,5 +83,4 @@ def wrap_named_op(func):
             outputs.set_taop(opr)
         return outputs
     return new_func
-
 

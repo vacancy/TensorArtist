@@ -6,7 +6,7 @@
 # 
 # This file is part of TensorArtist
 
-from ...core.utils.meta import assert_notnone
+from ...core.utils.meta import notnone_property
 
 
 class OptimizerWrapper(object):
@@ -14,9 +14,8 @@ class OptimizerWrapper(object):
         self._base_optimizer = base_optimizer
         self._grad_modifiers = []
 
-    @property
+    @notnone_property
     def base_optimizer(self):
-        assert_notnone(self._base_optimizer, name='optimizer_wrapper.base_optimizer')
         return self._base_optimizer
 
     def set_base_optimizer(self, optimizer):

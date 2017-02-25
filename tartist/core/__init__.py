@@ -8,4 +8,5 @@
 
 from .environ import *
 from .logger import *
+from .event import *
 from . import io, utils

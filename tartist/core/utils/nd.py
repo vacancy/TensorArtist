@@ -9,7 +9,11 @@
 import collections
 import numpy
 
-__all__ = ['isndarray', 'nd_concat', 'nd_len', 'nd_batch_size', 'nd_split_n', 'size_split_n']
+__all__ = [
+    'isndarray', 
+    'nd_concat', 'nd_len', 'nd_batch_size', 
+    'nd_split_n', 'size_split_n'
+]
 
 
 def isndarray(arr):
@@ -20,7 +24,7 @@ def nd_concat(lst):
     if len(lst) == 0:
         return None
     elif len(lst) == 1:
-        return lst[1]
+        return lst[0]
     else:
         return numpy.concatenate(lst)
 

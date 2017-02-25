@@ -12,6 +12,8 @@ from .shape import flatten2
 from .netsrc import variable
 import tensorflow as tf
 
+__all__ = ['conv2d', 'pooling2d', 'fc']
+
 
 @wrap_named_op
 @wrap_varnode_func
@@ -87,3 +89,4 @@ def fc(name, inpvar, nr_output_channels,
     out = tf.nn.xw_plus_b(inpvar, W, b) if use_bias else tf.matmul(inpvar, W)
     out = nonlin(out)
     return out
+

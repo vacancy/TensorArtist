@@ -11,10 +11,12 @@ import collections
 
 import numpy
 
-__all__ = ['iter_kv',
+__all__ = ['iter_kv', 'merge_iterable',
            'dict_deep_update', 'dict_deep_keys',
            'astuple', 'asshape',
+           'canonize_args_list',
            'assert_instance', 'assert_none', 'assert_notnone',
+           'notnone_property',
            'UniqueValueGetter']
 
 
@@ -23,6 +25,15 @@ def iter_kv(v):
         return v.items()
     assert_instance(v, collections.Iterable)
     return enumerate(v)
+
+
+def merge_iterable(v1, v2):
+    assert issubclass(type(v1), type(v2)) or issubclass(type(v2), type(v1))
+    if isinstance(v1, (dict, set)):
+        v = v1.copy().update(v2)
+        return v
+
+    return v1 + v2
 
 
 def dict_deep_update(a, b):
@@ -62,10 +73,10 @@ def dict_deep_keys(d, sort=True, split='.'):
 def astuple(arr_like):
     if type(arr_like) is tuple:
         return arr_like
-    elif type(arr_like) in (bool, int, float):
-        return tuple((arr_like,))
-    else:
+    elif isinstance(arr_like, collections.Iterable):
         return tuple(arr_like)
+    else:
+        return tuple((arr_like,))
 
 
 def asshape(arr_like):
@@ -82,8 +93,19 @@ def asshape(arr_like):
         return tuple(arr_like)
 
 
+def canonize_args_list(args, *, allow_empty=False, cvt=None):
+    if not allow_empty and not args:
+        raise TypeError('at least one argument must be provided')
+
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        args = args[0]
+    if cvt is not None:
+        args = tuple(map(cvt, args))
+    return args
+
+
 def assert_instance(ins, clz, msg=None):
-    msg = msg or '{} is not of class {}'.format(ins, clz)
+    msg = msg or '{} (of type{}) is not of type {}'.format(ins, type(ins), clz)
     assert isinstance(ins, clz), msg
 
 
@@ -109,4 +131,22 @@ class UniqueValueGetter(object):
 
     def get(self):
         return self._val or self._default
+
+
+class notnone_property:
+    def __init__(self, fget):
+        self.fget = fget
+        self.__module__ = fget.__module__
+        self.__name__ = fget.__name__
+        self.__doc__ = fget.__doc__
+        self.__prop_key  = '{}_{}'.format(
+            fget.__name__, id(fget))
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self.fget
+        v = self.fget(instance)
+        assert v is not None, '{}.{} can not be None, maybe not set yet'.format(
+                type(instance).__name__, self.__name__)
+        return v
 

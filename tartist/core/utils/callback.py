@@ -61,7 +61,8 @@ class CallbackManager(object):
         """
         return name in self._callbacks
 
-    def get_super_callback(self):
+    @property
+    def super_callback(self):
         """
         :return: the super callback
         """
@@ -75,7 +76,8 @@ class CallbackManager(object):
         self._super_callback = callback
         return self
 
-    def get_fallback_callback(self):
+    @property
+    def fallback_callback(self):
         """
         :return: the super callback
         """
@@ -96,7 +98,7 @@ class CallbackManager(object):
         :return: the result
         """
         if self._super_callback is not None:
-            return self._super_callback(name, *args, **kwargs)
+            return self._super_callback(self, name, *args, **kwargs)
         return self.dispatch_direct(name, *args)
 
     def dispatch_direct(self, name, *args, **kwargs):
@@ -109,6 +111,6 @@ class CallbackManager(object):
         if name in self._callbacks:
             return self._callbacks[name](*args, **kwargs)
         elif self._fallback_callback is not None:
-            return self._fallback_callback(name, *args, **kwargs)
+            return self._fallback_callback(self, name, *args, **kwargs)
         return None
 

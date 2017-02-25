@@ -15,7 +15,7 @@ from .function import Function
 from ..tfutils import clean_name
 from ...core.utils.defaults import defaults_manager
 from ...core.utils.context import EmptyContext
-from ...core.utils.meta import assert_notnone
+from ...core.utils.meta import assert_notnone, notnone_property
 from ...core.utils.nd import nd_split_n
 
 __all__ = ['Env', 'Network']
@@ -57,9 +57,8 @@ class Env(object):
         self._dpflags = dpflags
         self._dpsplitters = []
 
-    @property
+    @notnone_property
     def network(self):
-        assert self.__network is not None
         return self.__network
 
     @contextlib.contextmanager
@@ -225,11 +224,13 @@ class DataParallelController(object):
             self._outputs = {k: v[0] for k, v in outputs.items()}
 
     def _reduce(self, name, values):
+        from .. import opr as O
+
         meth = self._output_reduce_methods[name]
         if meth == 'concat':
-            return tf.concat(0, values, name=name)
+            return O.concat(values, 0, name=name)
         elif meth == 'sum':
-            return tf.truediv(tf.add_n(values), self._nr_towers, name=name)
+            return O.truediv(O.add_n(values), self._nr_towers, name=name)
 
     def _split(self, kwargs):
         assert self.__activated
@@ -271,9 +272,8 @@ class Network(object):
     def owner_env(self):
         return self.__owner_env
     
-    @property
+    @notnone_property
     def loss(self):
-        assert_notnone(self.__loss, 'network.loss')
         return self.__loss
 
     def set_loss(self, loss):

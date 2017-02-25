@@ -7,11 +7,14 @@
 # This file is part of TensorArtist
 
 from ...core.utils.meta import assert_instance, assert_notnone
+
+import numpy as np
 import tensorflow as tf
 
-__all__ = ['VarNode', 'as_varnode', 'as_tftensor']
-
-__valid_tf_tensor_types__ = (tf.Tensor, tf.Variable)
+__all__ = [
+    '__valid_tensor_types__', '__valid_tf_tensor_types__',
+    'VarNode', 'as_varnode', 'as_tftensor'
+]
 
 
 class VarNodeStore(object):
@@ -31,15 +34,176 @@ class VarNodeStore(object):
 varnode_store = VarNodeStore()
 
 
-class VarNode(object):
-    def __init__(self, impl):
+class VarNodeOpDecl(object):
+    def __binary(self, rhs, op_name):
+        rhs = as_varnode(rhs)
+        return as_varnode(getattr(tf, op_name)(self, rhs))
+
+    def __rbinary(self, lhs, op_name):
+        lhs = as_varnode(lhs)
+        return as_varnode(getattr(tf, op_name)(self, lhs))
+
+    def __add__(self, rhs):
+        return self.__binary(rhs, 'add')
+    def __radd__(self, lhs):
+        return self.__rbinary(lhs, 'add')
+
+    def __sub__(self, rhs):
+        return self.__binary(rhs, 'subtract')
+    def __rsub__(self, lhs):
+        return self.__rbinary(lhs, 'subtract')
+
+    def __mul__(self, rhs):
+        return self.__binary(rhs, 'multiply')
+    def __rmul__(self, lhs):
+        return self.__rbinary(lhs, 'multiply')
+
+    def __matmul__(self, rhs):
+        return self.__binary(rhs, 'matmul')
+    def __rmatmul__(self, lhs):
+        return self.__rbinary(lhs, 'matmul')
+
+    def __truediv__(self, rhs):
+        return self.__binary(rhs, 'truediv')
+    def __rtruediv__(self, lhs):
+        return self.__rbinary(lhs, 'truediv')
+
+    def __floordiv__(self, rhs):
+        return self.__binary(rhs, 'floordiv')
+    def __rfloordiv__(self, lhs):
+        return self.__rbinary(lhs, 'floordiv')
+
+    def __mod__(self, rhs):
+        return self.__binary(rhs, 'mod')
+    def __rmod__(self, lhs):
+        return self.__rbinary(lhs, 'mod')
+
+    def __pow__(self, rhs):
+        return self.__binary(rhs, 'pow')
+    def __rpow__(self, lhs):
+        return self.__rbinary(lhs, 'pow')
+
+    def __lt__(self, rhs):
+        return self.__binary(rhs, 'less')
+
+    def __le__(self, rhs):
+        return self.__binary(rhs, 'less_equal')
+
+    def __gt__(self, rhs):
+        return self.__binary(rhs, 'greater')
+
+    def __ge__(self, rhs):
+        return self.__binary(rhs, 'greater_equal')
+
+    # do not define __eq__ because it would make the node unhashable
+    def eq(self, rhs):
+        return self.__binary(rhs, 'equal')
+
+    def neq(self, rhs):
+        return self.__binary(rhs, 'not_equal')
+
+    def __neg__(self):
+        return as_varnode(tf.neg(self))
+
+    def __getitem__(self, slices):
+        return as_varnode(as_tftensor(self)[slices])
+   
+    @property
+    def set_sub(self):
+        raise NotImplementedError()
+
+    @property
+    def ai(self):
+        raise NotImplementedError()
+
+    @property
+    def set_ai(self):
+        raise NotImplementedError()
+
+    def __iter__(self):
+        raise ValueError('iterating over {} is not allowed'.format(type(self).__name__))
+
+    def astype(self, dtype):
+        return as_varnode(tf.cast(self, dtype))
+
+    def reshape(self, *tshape, name=None):
+        if len(tshape) == 1:
+            tshape, = tshape
+        from ..opr.shape import reshape
+        return as_varnode(reshape(self, tshape=tshape, name=name))
+
+    def broadcast(self, *tshape, name=None):
+        if len(tshape) == 1:
+            tshape, = tshape
+        from ..opr.shape import broadcast
+        return as_varnode(broadcast(self, tshape=tshape, name=name))
+
+    def dimshuffle(self, *pattern, name=None):
+        from ..opr.shape import dimshuffle 
+        return as_varnode(Dimshuffle(src=self, pattern=pattern, name=name))
+
+    def add_axis(self, axis):
+        from ..opr.shape import add_axis 
+        return as_varnode(add_axis(axis=axis))
+
+    def remove_axis(self, axis):
+        from ..opr.shape import remove_axis 
+        return as_varnode(remove_axis(axis=axis))
+
+    def sum(self, axis=None, keepdims=False, name=None):
+        return as_varnode(tf.reduce_sum(self, axis=axis, keep_dims=keepdims, name=name))
+
+    def mean(self, axis=None, keepdims=False, name=None):
+        return as_varnode(tf.reduce_mean(self, axis=axis, keep_dims=keepdims, name=name))
+
+    def max(self, axis=None, keepdims=False, name=None):
+        return as_varnode(tf.reduce_max(self, axis=axis, keep_dims=keepdims, name=name))
+
+    def min(self, axis=None, keepdims=False, name=None):
+        return as_varnode(tf.reduce_min(self, axis=axis, keep_dims=keepdims, name=name))
+
+    def argmax(self, axis=None, name=None):
+        return as_varnode(tf.argmax(self, axis=axis, name=name))
+
+    def argmin(self, axis=None, name=None):
+        return as_varnode(tf.argmin(self, axis=axis, name=name))
+
+    def prod(self, axis=None, keepdims=False, name=None):
+        return as_varnode(tf.reduce_prod(self, axis=axis, keep_dims=keepdims, name=name))
+
+    def flatten(self):
+        from ..opr.shape import flatten
+        return as_varnode(flatten(self))
+
+    def flatten2(self):
+        from ..opr.shape import flatten2
+        return as_varnode(flatten2(self))
+
+    def eval(self, session=None, **feed_dict):
+        return as_tftensor.eval(feed_dict=feed_dict, session=session)
+
+
+class VarNode(VarNodeOpDecl):
+    class Flags:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+        data_parallel_reduce_method = 'CONCAT'
+
+    def __init__(self, impl, **flags):
         self.__impl = impl
         self.__taop = None
+        self.__flags = type(self).Flags(**flags)
         assert_instance(impl, __valid_tf_tensor_types__)
 
     @property
     def impl(self):
         return self.__impl
+
+    @property
+    def flags(self):
+        return self.__flags
 
     @property
     def static_shape(self):
@@ -86,9 +250,18 @@ class OprNode(object):
         return self.__name
 
 
+__valid_tensor_types__ = (VarNode, tf.Tensor, tf.Variable, tf.Operation)
+__valid_tf_tensor_types__ = (tf.Tensor, tf.Variable, tf.Operation)
+
+
 def as_varnode(tensor):
     if isinstance(tensor, VarNode):
         return tensor
+
+    if isinstance(tensor, (np.ndarray, int, float, tuple, list)):
+        from ..opr.netsrc import constant
+        return constant(tensor)
+
     return varnode_store.get(tensor)
 
 

@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : dynamic
+# File   : imp.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/29/16
@@ -11,7 +11,11 @@ import os
 import sys
 
 
-__all__ = ['load_module', 'load_module_filename', 'tuple_to_classname', 'classname_to_tuple', 'load_class']
+__all__ = [
+    'load_module', 'load_module_filename', 
+    'tuple_to_classname', 'classname_to_tuple', 
+    'load_class'
+]
 
 
 def load_module(module_name):
@@ -23,7 +27,7 @@ def load_module_filename(module_filename):
     assert module_filename.endswith('.py')
     realpath = os.path.realpath(module_filename)
     pos = realpath.rfind('/')
-    dirname, module_name = realpath[0:pos], realpath[pos:-3]
+    dirname, module_name = realpath[0:pos], realpath[pos+1:-3]
     sys.path.insert(0, dirname)
     module = load_module(module_name)
     del sys.path[0]

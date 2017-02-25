@@ -25,8 +25,8 @@ class _Environ(object):
             raise NotImplementedError('Not implemented loading method')
         elif isinstance(env_spec, dict):
             return env_spec
-        elif isinstance(env_spec, object) and hasattr(env_spec, 'envs'):
-            return env_spec.envs
+        elif isinstance(env_spec, object) and (hasattr(env_spec, 'envs') or hasattr(env_spec, '__envs__')):
+            return getattr(env_spec, 'envs', None) or getattr(env_spec, '__envs__')
         else:
             raise TypeError('unsupported env spec: {}'.format(env_spec))
 
