@@ -100,11 +100,6 @@ def dump(path, content, method=None, py_prefix='', py_suffix='', text_mode='w'):
     elif method == IOMethod.NUMPY_RAW:
         with open(path, 'wb') as f:
             content.dump(f)
-    elif method == IOMethod.PYTHON:
-        with open(path, 'w') as f:
-            f.write(py_prefix)
-            info(content, file=f)
-            f.write(py_suffix)
     elif method == IOMethod.TEXT:
         with open(path, text_mode) as f:
             if type(content) in (list, tuple):

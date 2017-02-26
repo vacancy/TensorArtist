@@ -171,16 +171,24 @@ class VarNodeOpDecl(object):
     def prod(self, axis=None, keepdims=False, name=None):
         return as_varnode(tf.reduce_prod(self, axis=axis, keep_dims=keepdims, name=name))
 
+    def std(self):
+        from ..opr.arith import std
+        return std(self)
+
+    def rms(self):
+        from ..opr.arith import rms
+        return rms(self)
+
     def flatten(self):
         from ..opr.shape import flatten
-        return as_varnode(flatten(self))
+        return flatten(self)
 
     def flatten2(self):
         from ..opr.shape import flatten2
-        return as_varnode(flatten2(self))
+        return flatten2(self)
 
     def eval(self, session=None, **feed_dict):
-        return as_tftensor.eval(feed_dict=feed_dict, session=session)
+        return as_tftensor(self).eval(feed_dict=feed_dict, session=session)
 
 
 class VarNode(VarNodeOpDecl):
@@ -238,25 +246,51 @@ class VarNode(VarNodeOpDecl):
 
 
 class OprNode(object):
-    def __init__(self, name):
+    def __init__(self, name, inputs=[], outputs=[]):
         self.__name = tf.get_default_graph().unique_name(name, mark_as_used=False)
+        self.__inputs = inputs
+        self.__outputs = outputs
+
+        self.__mark_outputs()
 
     @property
     def name(self):
         return self.__name
+
+    @property
+    def inputs(self):
+        return self.__inputs
+
+    def set_inputs(self, inputs):
+        self.__inputs = inputs
+        return self
+
+    @property
+    def outputs(self):
+        return self.__outputs
+
+    def add_output(self, output):
+        self.__outputs.append(output)
+        self.__mark_outputs()
+        return self
+
+    def __mark_outputs(self):
+        for i, o in enumerate(self.__outputs):
+            self.__outputs[i] = as_varnode(o)
+            self.__outputs[i].set_taop(self)
 
 
 __valid_tensor_types__ = (VarNode, tf.Tensor, tf.Variable, tf.Operation)
 __valid_tf_tensor_types__ = (tf.Tensor, tf.Variable, tf.Operation)
 
 
-def as_varnode(tensor):
+def as_varnode(tensor, dtype='float32'):
     if isinstance(tensor, VarNode):
         return tensor
 
     if isinstance(tensor, (np.ndarray, int, float, tuple, list)):
         from ..opr.netsrc import constant
-        return constant(tensor)
+        return constant(tensor, dtype=dtype)
 
     return varnode_store.get(tensor)
 

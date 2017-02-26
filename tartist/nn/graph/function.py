@@ -106,7 +106,7 @@ class Function(object):
         assert not self.__compiled
         self._extra_outputs.append(out)
 
-    def add_extra_output(self, k, v):
+    def add_extra_kwoutput(self, k, v):
         assert not self.__compiled
         self._extra_kwoutputs[k] = v
 

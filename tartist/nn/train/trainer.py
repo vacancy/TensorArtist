@@ -11,6 +11,8 @@ from ...core import get_env, trigger_event
 from ...core.utils.meta import assert_instance, notnone_property
 from ...core.utils.cache import cached_property
 
+import tensorflow as tf
+
 __all__ = ['TrainerBase', 'SimpleTrainer']
 
 
@@ -121,12 +123,18 @@ class SimpleTrainer(TrainerBase):
 
     def _compile_fn_train(self):
         if not self._fn_train.compiled:
+            summaries = self.network.merged_summaries
+            if summaries is not None:
+                self._fn_train.add_extra_kwoutput('summaries', summaries)
             self._fn_train.compile({'loss': self.network.loss})
 
     def _run_step(self, data):
         self._compile_fn_train()
         out = self._fn_train.call_args(data)
         self.runtime['loss'] = out['loss']
+        if 'summaries' in out:
+            summaries = tf.Summary.FromString(out['summaries'])
+            self.runtime['summaries'] = summaries
         return out
 
     # def make_snapshot(self):

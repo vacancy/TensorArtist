@@ -7,9 +7,12 @@
 # This file is part of TensorArtist
 
 from tartist.core import get_env, load_env, get_logger, register_event
+from tartist.core import io
 from tartist.core.utils.cli import load_desc, parse_devices
 from tartist.nn import Env, train
+
 import argparse
+import os.path as osp
 
 logger = get_logger(__file__)
 
@@ -49,10 +52,29 @@ def main():
         logger.info('\n'.join(names))
 
     trainer = train.SimpleTrainer(env, data_provider=desc.make_dataflow)
-    def print_loss(trainer, inp, out):
+    def print_log(trainer, inp, out):
         loss = out.get('loss', 'N/A')
         logger.info('iter={}: loss={}'.format(trainer.iter, loss))
-    register_event('trainer', 'iter:after', print_loss)
+
+        if 'summaries' in trainer.runtime:
+            log_strs = ['summaries:']
+            for val in trainer.runtime['summaries'].value:
+                if val.WhichOneof('value') == 'simple_value':
+                    log_strs.append('  {} = {}'.format(val.tag, val.simple_value))
+            logger.info('\n'.join(log_strs)) 
+
+    def save_model(trainer):
+        fpath = osp.join(get_env('dir.root'), 'models', 'last_epoch.pkl')
+        io.mkdir(osp.dirname(fpath))
+        all_variables = trainer.network.get_collection('variables')
+        all_variable_values = {}
+        for var in all_variables:
+            k, v = var.name[:-2], var.taop.get_value()
+            all_variable_values[k] = v 
+        io.dump(fpath, all_variable_values)
+
+    register_event('trainer', 'iter:after', print_log)
+    register_event('trainer', 'optimization:after', save_model)
     trainer.train()
 
 

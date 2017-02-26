@@ -6,6 +6,7 @@
 # 
 # This file is part of TensorArtist
 
+from .arith import *
 from .cnn import *
 from .helper import *
 from .netsrc import *

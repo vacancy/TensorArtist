@@ -10,9 +10,11 @@ from ._defaults import __default_dtype__, __default_nonlin__
 from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op
 from .shape import flatten2
 from .netsrc import variable
+from ..graph.env import Env, get_default_env
+
 import tensorflow as tf
 
-__all__ = ['conv2d', 'pooling2d', 'fc']
+__all__ = ['conv2d', 'pooling2d', 'fc', 'dropout']
 
 
 @wrap_named_op
@@ -88,5 +90,15 @@ def fc(name, inpvar, nr_output_channels,
 
     out = tf.nn.xw_plus_b(inpvar, W, b) if use_bias else tf.matmul(inpvar, W)
     out = nonlin(out)
+    return out
+
+
+@wrap_named_op
+@wrap_varnode_func
+def dropout(name, inpvar, keep_prob, keep_prob_sym=None, noise_shape=None, seed=None):
+    if keep_prob_sym is None:
+        env = get_default_env()
+        keep_prob_sym = keep_prob if env.phase == Env.Phase.TRAIN else 1
+    out = tf.nn.dropout(inpvar, keep_prob_sym, noise_shape=noise_shape, seed=seed, name=name)
     return out
 

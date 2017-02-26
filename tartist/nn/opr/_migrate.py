@@ -66,6 +66,13 @@ __all_migrated_oprs__.extend([
     ('argmin', tf.minimum),
     ('pow', tf.pow),
 
+    ('eq', tf.equal),
+    ('neq', tf.not_equal),
+    ('gt', tf.greater),
+    ('ge', tf.greater_equal),
+    ('lt', tf.less),
+    ('le', tf.less_equal),
+
     ('add_n', tf.add_n)
 ])
 

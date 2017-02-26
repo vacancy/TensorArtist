@@ -11,8 +11,8 @@ import tensorflow as tf
 
 from ._defaults import __default_dtype__
 from .helper import device_context, wrap_varnode_func
-from ..graph.env import get_default_net
-from ..graph.node import as_varnode
+from ..graph.env import get_default_env, get_default_net
+from ..graph.node import as_tftensor, as_varnode, OprNode
 from ...core.utils.meta import assert_notnone
 
 __all__ = ['placeholder', 'variable', 'constant']
@@ -24,6 +24,25 @@ def placeholder(name, shape=None, dtype=__default_dtype__, device=None):
         var = as_varnode(tf.placeholder(name=name, shape=shape, dtype=dtype))
         get_default_net().add_to_collection(var, 'placeholders')
         return var
+
+
+class VariableOp(OprNode):
+    def __init__(self, name, output, owner_net):
+        super().__init__(name, [], [output])
+        self._owner_net = owner_net
+
+    @property
+    def owner_env(self):
+        return self._owner_net.owner_env
+
+    def get_value(self):
+        var = self.outputs[0].impl
+        return self.owner_env.session.run([var])[0]
+
+    def set_value(self, value, use_locking=False):
+        var = self.outputs[0].impl
+        self.owner_env.session.run([var.assign(value, use_locking=use_locking)])
+        return self
 
 
 @wrap_varnode_func
@@ -38,7 +57,8 @@ def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, de
         var = as_varnode(var)
         get_default_net().add_to_collection(var, 'variables')
         get_default_net().add_to_collection(var.impl.initializer, 'variables/initializer')
-        return var
+        return VariableOp(name, var, get_default_net()).outputs[0]
+
 
 @wrap_varnode_func
 def constant(value, shape=None, dtype=None, name='const', device=None, verify_shape=False):

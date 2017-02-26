@@ -18,7 +18,12 @@ from ...core.utils.context import EmptyContext
 from ...core.utils.meta import assert_notnone, notnone_property, AttrObject
 from ...core.utils.nd import nd_split_n
 
-__all__ = ['Env', 'Network']
+__all__ = [
+    'select_device', 'reuse_context', 
+    'Env', 'get_default_env', 
+    'Network', 'get_default_net', 
+    'DataParallelController'
+]
 
 
 def select_device(devid, env):
@@ -146,6 +151,9 @@ class Env(object):
     def initialize_all_variables(self):
         sess = self.session
         sess.run(list(self.network.get_collection('variables/initializer')))
+
+    def run(self, fetches, feed_dict=None, options=None, run_metadata=None):
+        return self.session.run(fetches, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
 
 get_default_env = defaults_manager.gen_get_default(Env)
 
@@ -298,6 +306,10 @@ class Network(object):
     @property
     def outputs(self):
         return self.__outputs
+
+    @property
+    def merged_summaries(self):
+        return tf.summary.merge_all()
 
     def add_output(self, symbol, name=None):
         symbol = as_varnode(symbol)

@@ -13,7 +13,7 @@ import numpy.random as npr
 
 from tartist.core import get_env
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
-from tartist.nn import Env, opr as O, optimizer
+from tartist.nn import Env, opr as O, optimizer, summary
 from tartist.data import flow
 
 __envs__ = {
@@ -23,7 +23,7 @@ __envs__ = {
     },
 
     'trainer': {
-        'nr_iters': 100,
+        'nr_iters': 1000,
         'learning_rate': 0.1,
         'batch_size': 64,
 
@@ -50,6 +50,7 @@ def make_network(env):
                 _ = O.conv2d('conv2', _, 32, (3, 3), padding='SAME', nonlin=tf.nn.relu)
                 _ = O.pooling2d('pool2', _, kernel=2)
                 dpc.add_output(_, name='feature')
+                summary.scalar('feature/rms', _.rms())
 
             dpc.set_input_maker(inputs).set_forward_func(forward)
 
@@ -59,7 +60,7 @@ def make_network(env):
 
         # it's safe to use tf.xxx and O.xx together
         prob = O.softmax(_, name='prob')
-        pred = _.argmax(axis=1, name='pred')
+        pred = _.argmax(axis=1, name='pred').astype(tf.int32)
         net.add_output(prob)
         net.add_output(pred)
 
@@ -69,6 +70,9 @@ def make_network(env):
             loss = O.identity(loss, name='loss')
             net.set_loss(loss)
 
+            accuracy = O.eq(label, pred).astype('float32').mean()
+            summary.scalar('accuracy', accuracy)
+            
 
 def make_optimizer(env):
     wrapper = optimizer.OptimizerWrapper()

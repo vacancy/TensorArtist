@@ -45,3 +45,4 @@ class OptimizerWrapper(object):
         for f in self._grad_modifiers:
             all_gradients = f(all_gradients)
         return all_gradients
+
