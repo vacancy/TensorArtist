@@ -6,7 +6,7 @@
 # 
 # This file is part of TensorArtist
 
-from ...core.utils.meta import assert_instance, assert_notnone
+from ...core.utils.meta import assert_instance, assert_notnone, AttrObject
 
 import numpy as np
 import tensorflow as tf
@@ -184,11 +184,7 @@ class VarNodeOpDecl(object):
 
 
 class VarNode(VarNodeOpDecl):
-    class Flags:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-
+    class Flags(AttrObject):
         data_parallel_reduce_method = 'CONCAT'
 
     def __init__(self, impl, **flags):
