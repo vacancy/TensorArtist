@@ -60,8 +60,8 @@ class Env(object):
         self._master_device = master_dev
         self._slave_devices = []
 
-        self._flags = flags or SessionFlag()
-        self._dpflags = dpflags or DataParallelFlag()
+        self._flags = flags or type(self).SessionFlag()
+        self._dpflags = dpflags or type(self).DataParallelFlag()
         self._dpsplitters = []
 
     @notnone_property
@@ -93,7 +93,7 @@ class Env(object):
             config.allow_soft_placement = self.flags.allow_soft_placement
             config.gpu_options.per_process_gpu_memory_fraction = self.flags.gpu_mem_fraction
             config.gpu_options.allocator_type = self.flags.gpu_allocator_type
-            config.gpu_optinos.allow_growth = self.flags.gpu_allow_growth
+            config.gpu_options.allow_growth = self.flags.gpu_allow_growth
 
             self.__session = tf.Session(config=config)
         return self.__session
