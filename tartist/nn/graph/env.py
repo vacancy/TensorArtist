@@ -15,7 +15,7 @@ from .function import Function
 from ..tfutils import clean_name
 from ...core.utils.defaults import defaults_manager
 from ...core.utils.context import EmptyContext
-from ...core.utils.meta import assert_notnone, notnone_property
+from ...core.utils.meta import assert_notnone, notnone_property, AttrObject
 from ...core.utils.nd import nd_split_n
 
 __all__ = ['Env', 'Network']
@@ -35,10 +35,17 @@ def reuse_context(activate=True):
 
 
 class Env(object):
-    class DataParallelFlag(object):
+    class SessionFlag(AttrObject):
+        log_device_placement = False
+        allow_soft_placement = True
+        
+        gpu_allocator_type = 'BFC'
+        gpu_allow_growth = True
+        gpu_mem_fraction = 0.99
+
         pass
 
-    class FpropFlag(object):
+    class DataParallelFlag(AttrObject):
         pass
 
     class Phase(enum.Enum):
@@ -53,8 +60,8 @@ class Env(object):
         self._master_device = master_dev
         self._slave_devices = []
 
-        self._flags = flags
-        self._dpflags = dpflags
+        self._flags = flags or SessionFlag()
+        self._dpflags = dpflags or DataParallelFlag()
         self._dpsplitters = []
 
     @notnone_property
@@ -81,7 +88,14 @@ class Env(object):
     @property
     def session(self):
         if self.__session is None:
-            self.__session = tf.Session()
+            config = tf.ConfigProto()
+            config.log_device_placement = self.flags.log_device_placement
+            config.allow_soft_placement = self.flags.allow_soft_placement
+            config.gpu_options.per_process_gpu_memory_fraction = self.flags.gpu_mem_fraction
+            config.gpu_options.allocator_type = self.flags.gpu_allocator_type
+            config.gpu_optinos.allow_growth = self.flags.gpu_allow_growth
+
+            self.__session = tf.Session(config=config)
         return self.__session
 
     @property

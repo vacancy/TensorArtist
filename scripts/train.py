@@ -34,6 +34,7 @@ def main():
     devices = parse_devices(args.devices)
 
     env = train.TrainerEnv(Env.Phase.TRAIN, devices[0])
+    env.flags.update(**get_env('trainer.env_flags', {})
     if len(devices) > 1:
         env.set_slave_devices(devices[1:])
 

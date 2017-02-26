@@ -17,7 +17,7 @@ __all__ = ['iter_kv', 'merge_iterable',
            'canonize_args_list',
            'assert_instance', 'assert_none', 'assert_notnone',
            'notnone_property',
-           'UniqueValueGetter']
+           'UniqueValueGetter', 'AttrObject']
 
 
 def iter_kv(v):
@@ -131,6 +131,28 @@ class UniqueValueGetter(object):
 
     def get(self):
         return self._val or self._default
+
+
+class AttrObject(object):
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    def update(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    def __setattr__(self, k, v):
+        assert not k.startswith('_')
+        if k not in type(self).__dict__:
+            # do not use hasattr; since it may result in infinite recursion
+            raise AttributeError(
+                '{}: could not set non-existing attribute {}'.format(
+                    self, k))
+        cvt = getattr(type(self), '_convert_{}'.format(k), None)
+        if cvt is not None:
+            v = cvt(v)
+        super().__setattr__(k, v)
 
 
 class notnone_property:

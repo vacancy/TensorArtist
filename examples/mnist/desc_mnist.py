@@ -17,7 +17,11 @@ from tartist.data import flow
 __envs__ = {
     'trainer': {
         'nr_iters': 100,
-        'learning_rate': 0.1
+        'learning_rate': 0.1,
+
+        'env_flags': {
+            'log_device_placement': True
+        }
     }
 }
 
