@@ -30,6 +30,8 @@ except ImportError:
 
 from ..utils.meta import assert_instance
 
+__all__ = ['IOMethod', 'load', 'dump', 'link', 'makedir', 'mkdir', 'make_dir', 'assert_extension']
+
 
 class IOMethod(enum.Enum):
     PICKLE = 0
@@ -139,10 +141,11 @@ def makedir(path):
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else:
-            raise
+            raise exc
     return True
 
 
+mkdir = makedir
 make_dir = makedir
 
 

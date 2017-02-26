@@ -6,8 +6,9 @@
 # 
 # This file is part of TensorArtist
 
+from ...core.logger import get_logger
 import collections
-
+logger = get_logger(__file__)
 
 __all__ = ['DataFlowBase', 'SimpleDataFlowBase', 'AdvancedDataFlowBase']
 
@@ -41,6 +42,7 @@ class SimpleDataFlowBase(DataFlowBase):
             for v in self._gen():
                 yield v
         except Exception as e:
+            logger.warn('{} got exception {} during iter: {}'.format(type(self), type(e), e))
             pass
         finally:
             self._finalize()

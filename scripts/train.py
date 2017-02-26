@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(dest='desc', help='The description file module')
 parser.add_argument('-w', '--initial-weight', dest='initial_weights_path', default=None,
                     help='The pickle containing initial weights, default value can be set in env')
-parser.add_argument('-d', '--dev', dest='devices', default=[], nargs='*',
+parser.add_argument('-d', '--dev', dest='devices', default=[], nargs='+',
                     help='The devices trainer will use, default value can be set in env')
 parser.add_argument('-r', '--root', dest='root', default=None, help='Data dump root')
 
@@ -32,6 +32,7 @@ args = parser.parse_args()
 def main():
     desc = load_desc(args.desc)
     devices = parse_devices(args.devices)
+    assert len(devices) > 0
 
     env = train.TrainerEnv(Env.Phase.TRAIN, devices[0])
     env.flags.update(**get_env('trainer.env_flags', {}))

@@ -36,8 +36,10 @@ def gen_seed():
     return rng.randint(4294967296)
 
 
-def gen_rng():
-    return npr.RandomState(gen_seed())
+def gen_rng(seed=None):
+    if seed is None:
+        seed = gen_seed()
+    return npr.RandomState(seed)
 
 
 def shuffle_multiarray(*arrs):

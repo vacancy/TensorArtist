@@ -24,7 +24,7 @@ class RandomizedDataFlow(SimpleDataFlowBase):
     def __init__(self, seed=None):
         self._seed = seed
 
-    def _initialize():
+    def _initialize(self):
         self._rng = gen_rng(seed=self._seed)
 
 

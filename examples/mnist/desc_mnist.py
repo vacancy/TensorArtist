@@ -6,21 +6,29 @@
 # 
 # This file is part of TensorArtist
 
+import os.path as osp
 import tensorflow as tf
 import numpy as np
 import numpy.random as npr
 
 from tartist.core import get_env
+from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import Env, opr as O, optimizer
 from tartist.data import flow
 
 __envs__ = {
+    'dir': {
+        'root': get_dump_directory(__file__),
+        'data': get_data_directory('WellKnown/mnist')
+    },
+
     'trainer': {
         'nr_iters': 100,
         'learning_rate': 0.1,
+        'batch_size': 64,
 
         'env_flags': {
-            'log_device_placement': True
+            'log_device_placement': False
         }
     }
 }
@@ -70,20 +78,7 @@ def make_optimizer(env):
     ]))
     env.set_optimizer(wrapper)
 
-
-def make_dataflow(env):
-    global data_fake
-
-    data_fake = dict(img=npr.uniform(size=(16, 28, 28, 1)), label=npr.randint(0, 10, size=16))
-    batch_size = 32
-
-    df = flow.DictOfArrayDataFlow(data_fake)
-    df = flow.tools.cycle(df)
-    df = flow.BatchDataFlow(df, batch_size, sample_dict={
-        'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
-        'label': np.empty(shape=(batch_size, ), dtype='int32')
-    })
-    return df
+from data_provider import make_dataflow_train as make_dataflow 
 
 # if True:
 #     f = env.make_func()

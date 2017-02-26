@@ -7,11 +7,13 @@
 # This file is part of TensorArtist
 
 from .base import SimpleDataFlowBase
+from ...core.logger import get_logger
 from ...core.utils.concurrent import MTBooleanEvent
 from ...core.utils.meta import iter_kv, assert_none
 
 from copy import copy, deepcopy
 from threading import Thread, Event
+logger = get_logger(__file__)
 
 __all__ = ['BatchDataFlow']
 
@@ -59,7 +61,7 @@ class BatchDataFlow(SimpleDataFlowBase):
                 self._cond[current].set_true()
                 current = 1 - current
         except Exception as e:
-            print(type(e), e)
+            logger.warn('{} got exception {} in filler thread: {}'.format(type(self), type(e), e))
             self._cond[current].set_true()
             self._stop_event.set()
 
