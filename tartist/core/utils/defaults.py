@@ -43,4 +43,8 @@ class DefaultsManager(object):
             return self._defaults.get(identifier, default)
         return get_default
 
+    def set_default(self, cls, default):
+        identifier = self.__make_unique_identifier(cls.as_default)
+        self._defaults[identifier] = default
+
 defaults_manager = DefaultsManager()

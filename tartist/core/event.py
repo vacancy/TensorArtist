@@ -6,14 +6,15 @@
 # 
 # This file is part of TensorArtist
 
+from .utils.imp import load_module
+import uuid
+
 __all__ = [
     'EventManager', 
     'event_manager', 
     'register_event', 'unregister_event', 
     'trigger_event', 'trigger_event_args'
 ]
-
-import uuid
 
 
 class EventManager(object):
@@ -69,3 +70,8 @@ unregister_event = event_manager.unregister
 trigger_event = event_manager.trigger
 trigger_event_args = event_manager.trigger_args
 
+
+def load_plugin(module):
+    module = load_module(module)
+    if hasattr(module, 'main_plugin'):
+        module.main_plugin()

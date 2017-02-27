@@ -18,7 +18,7 @@ rng = None
 
 
 def __initialize_rng():
-    seed = os.getenv('TA_RANDOM_SEED')
+    seed = os.getenv('TART_RANDOM_SEED')
     reset_rng(seed)
 
 

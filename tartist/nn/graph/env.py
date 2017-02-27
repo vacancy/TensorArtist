@@ -156,7 +156,7 @@ class Env(object):
 
     def initialize_all_variables(self):
         sess = self.session
-        sess.run(list(self.network.get_collection('variables/initializer')))
+        sess.run(tf.global_variables_initializer())
 
     def run(self, fetches, feed_dict=None, options=None, run_metadata=None):
         return self.session.run(fetches, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
@@ -335,9 +335,36 @@ class Network(object):
             return set()
         return self.__collections[collection]
 
+    def fetch_all_variables_dict(self):
+        from ..tfutils import fetch_variable
+
+        all_variables = {}
+        for v in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
+            all_variables[clean_name(v)] = fetch_variable(v, self.owner_env.session)
+        return all_variables
+
+    def assign_all_variables_dict(self, all_variables):
+        from ..tfutils import assign_variable
+
+        for v in tf.get_collection(tf.GraphKeys.VARIABLES):
+            value = all_variables.get(clean_name(v), None)
+            if value is not None:
+                assign_variable(v, value, self.owner_env.session)
+        return self
+
     @defaults_manager.wrap_custom_as_default
     def as_default(self):
         yield
 
 get_default_net = defaults_manager.gen_get_default(Network)
+
+
+# TODO(mjy):: add environ to control this
+if True:
+    _default_env = Env(master_dev='/cpu:0')
+    defaults_manager.set_default(Env, _default_env)
+    with _default_env.create_network() as _default_net:
+        pass
+    _default_net = _default_env.network
+    defaults_manager.set_default(Network, _default_net)
 

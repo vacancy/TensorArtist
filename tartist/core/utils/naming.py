@@ -19,7 +19,7 @@ def get_uri_prefix(group_name='neuart'):
 
 def get_dump_directory(filename, prefix=None, suffix=''):
     if prefix is None:
-        prefix = os.getenv('TA_DIR_DUMP', os.path.expanduser('~/dump'))
+        prefix = os.getenv('TART_DIR_DUMP', os.path.expanduser('~/dump'))
     dirname = os.path.basename(os.path.dirname(filename))
     dirname = dirname.replace('_', '-')
 
@@ -37,6 +37,6 @@ def get_dump_directory(filename, prefix=None, suffix=''):
 
 def get_data_directory(dirname, prefix=None):
     if prefix is None:
-        prefix = os.getenv('TA_DIR_DATA', os.path.expanduser('~/data'))
+        prefix = os.getenv('TART_DIR_DATA', os.path.expanduser('~/data'))
     return os.path.join(prefix, dirname)
 

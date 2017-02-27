@@ -48,34 +48,13 @@ def main():
 
     # debug outputs
     for k, s in env.network.get_all_collections().items():
-        names = [k] + sorted(['\t{}'.format(v.name) for v in s])
+        names = ['Collection ' + k] + sorted(['\t{}'.format(v.name) for v in s])
         logger.info('\n'.join(names))
 
     trainer = train.SimpleTrainer(env, data_provider=desc.make_dataflow)
-    def print_log(trainer, inp, out):
-        loss = out.get('loss', 'N/A')
-        logger.info('iter={}: loss={}'.format(trainer.iter, loss))
+    trainer.set_epoch_size(get_env('trainer.epoch_size', 1))
 
-        if 'summaries' in trainer.runtime:
-            log_strs = ['summaries:']
-            for val in trainer.runtime['summaries'].value:
-                if val.WhichOneof('value') == 'simple_value':
-                    log_strs.append('  {} = {}'.format(val.tag, val.simple_value))
-            logger.info('\n'.join(log_strs)) 
-
-    def save_model(trainer):
-        fpath = osp.join(get_env('dir.root'), 'models', 'last_epoch.pkl')
-        io.mkdir(osp.dirname(fpath))
-        all_variables = trainer.network.get_collection('variables')
-        all_variable_values = {}
-        for var in all_variables:
-            k, v = var.name[:-2], var.taop.get_value()
-            all_variable_values[k] = v 
-        io.dump(fpath, all_variable_values)
-
-    register_event('trainer', 'iter:after', print_log)
-    register_event('trainer', 'optimization:after', save_model)
-    trainer.train()
+    desc.main_train(trainer)
 
 
 if __name__ == '__main__':

@@ -1,9 +1,12 @@
 #/bin/bash -E
 
 TAROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )"/../ && pwd )"
-SCRIPT=$( basename ${BASH_SOURCE[0]} )
-SCRIPT=${SCRIPT:3}
 
 export PYTHONPATH=$TAROOT:$PYTHONPATH
-exec python3 "$TAROOT/scripts/$SCRIPT.py" $@
+
+if [[ $1 == *.py ]]; then
+    exec python3 $@ && exit
+fi
+
+exec $@
 

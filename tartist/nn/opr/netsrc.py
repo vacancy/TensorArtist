@@ -13,6 +13,7 @@ from ._defaults import __default_dtype__
 from .helper import device_context, wrap_varnode_func
 from ..graph.env import get_default_env, get_default_net
 from ..graph.node import as_tftensor, as_varnode, OprNode
+from ..tfutils import assign_variable, fetch_variable
 from ...core.utils.meta import assert_notnone
 
 __all__ = ['placeholder', 'variable', 'constant']
@@ -37,11 +38,11 @@ class VariableOp(OprNode):
 
     def get_value(self):
         var = self.outputs[0].impl
-        return self.owner_env.session.run([var])[0]
+        return fetch_variable(var, self.owner_env.session)
 
     def set_value(self, value, use_locking=False):
         var = self.outputs[0].impl
-        self.owner_env.session.run([var.assign(value, use_locking=use_locking)])
+        assign_variable(var, value, self.owner_env.session, use_locking=use_locking)
         return self
 
 

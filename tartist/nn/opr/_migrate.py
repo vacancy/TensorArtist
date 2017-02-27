@@ -76,12 +76,21 @@ __all_migrated_oprs__.extend([
     ('add_n', tf.add_n)
 ])
 
+__all_migrated_oprs__.extend([
+    ('slice', tf.slice),
+    ('strided_slice', tf.strided_slice),
+    ('split', tf.split),
+    ('pad', tf.pad),
+    ('reverse', tf.reverse),
+])
+
 # array ops: creation
 __all_migrated_oprs__.extend([
     ('zeros', tf.zeros),
     ('ones', tf.ones),
     ('zeros_like', tf.zeros_like),
     ('ones_like', tf.ones_like),
+    ('range', tf.range)
 ])
 
 # array ops: advanced
