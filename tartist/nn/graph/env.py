@@ -3,7 +3,7 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/29/16
-# 
+#
 # This file is part of TensorArtist
 
 import enum
@@ -19,9 +19,9 @@ from ...core.utils.meta import assert_notnone, notnone_property, AttrObject
 from ...core.utils.nd import nd_split_n
 
 __all__ = [
-    'select_device', 'reuse_context', 
-    'Env', 'get_default_env', 
-    'Network', 'get_default_net', 
+    'select_device', 'reuse_context',
+    'Env', 'get_default_env',
+    'Network', 'get_default_net',
     'DataParallelController'
 ]
 
@@ -43,7 +43,7 @@ class Env(object):
     class SessionFlag(AttrObject):
         log_device_placement = False
         allow_soft_placement = True
-        
+
         gpu_allocator_type = 'BFC'
         gpu_allow_growth = True
         gpu_mem_fraction = 0.99
@@ -59,8 +59,9 @@ class Env(object):
 
     def __init__(self, phase=Phase.TEST, master_dev='/gpu:0', flags=None, dpflags=None):
         self.__phase = phase
-        self.__session = None 
+        self.__session = None
         self.__network = None
+        self.__current_dpc = None
 
         self._master_device = master_dev
         self._slave_devices = []
@@ -73,6 +74,10 @@ class Env(object):
     def network(self):
         return self.__network
 
+    @notnone_property
+    def current_dpc(self):
+        return self.__current_dpc
+
     @contextlib.contextmanager
     def create_network(self):
         assert self.__network is None
@@ -81,11 +86,12 @@ class Env(object):
             yield self.__network
 
     def create_dpcontroller(self):
-        return DataParallelController(self)
+        self.__current_dpc = DataParallelController(self)
+        return self.__current_dpc
 
     def register_dpsplitter(self, splitter):
         self._dpsplitters.append(splitter)
-        
+
     @property
     def phase(self):
         return self.__phase
@@ -284,7 +290,7 @@ class DataParallelController(object):
 
 class Network(object):
     def __init__(self, owner_env):
-        self.__owner_env = owner_env 
+        self.__owner_env = owner_env
 
         self.__outputs = dict()
         self.__loss = None
@@ -293,7 +299,7 @@ class Network(object):
     @property
     def owner_env(self):
         return self.__owner_env
-    
+
     @notnone_property
     def loss(self):
         return self.__loss
@@ -302,7 +308,7 @@ class Network(object):
         loss = as_varnode(loss)
         self.__loss = loss
         return self
-    
+
     @property
     def outputs(self):
         return self.__outputs

@@ -6,9 +6,10 @@
 #
 # This file is part of TensorArtist
 
+import os.path as osp
 import tensorflow as tf
 
-from tartist.core import get_env, get_logger
+from tartist.core import get_env, register_event, io, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
 
@@ -45,11 +46,16 @@ def make_network(env):
 
             def forward(img):
                 _ = img
-                _ = O.conv2d('conv1', _, 16, (3, 3), padding='SAME', nonlin=tf.nn.relu)
+                _ = O.conv2d('conv1', _, 16, (3, 3), padding='SAME', nonlin=O.identity)
+                _ = O.batchnorm('bn1', _)
+                _ = O.relu(_)
                 _ = O.pooling2d('pool1', _, kernel=2)
-                _ = O.conv2d('conv2', _, 32, (3, 3), padding='SAME', nonlin=tf.nn.relu)
+                _ = O.conv2d('conv2', _, 32, (3, 3), padding='SAME', nonlin=O.identity)
+                _ = O.batchnorm('bn2', _)
+                _ = O.relu(_)
                 _ = O.pooling2d('pool2', _, kernel=2)
                 dpc.add_output(_, name='feature')
+                summary.scalar('feature/rms', _.std())
 
             dpc.set_input_maker(inputs).set_forward_func(forward)
 
@@ -98,4 +104,10 @@ def main_train(trainer):
     snapshot.enable_snapshot_saver(trainer)
 
     trainer.train()
+
+# if True:
+#     f = env.make_func()
+#     f.compile(env.network.outputs['pred'])
+#     logger.info('final pred  ={}'.format(f(img=data_fake['img'])))
+#     logger.info('ground truth={}'.format(data_fake['label']))
 

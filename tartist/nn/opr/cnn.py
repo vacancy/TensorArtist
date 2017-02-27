@@ -3,7 +3,7 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
-# 
+#
 # This file is part of TensorArtist
 
 from ._defaults import __default_dtype__, __default_nonlin__
@@ -13,8 +13,9 @@ from .netsrc import variable
 from ..graph.env import Env, get_default_env
 
 import tensorflow as tf
+from tensorflow.python.training import moving_averages
 
-__all__ = ['conv2d', 'pooling2d', 'fc', 'dropout']
+__all__ = ['conv2d', 'pooling2d', 'fc', 'dropout', 'batchnorm']
 
 
 @wrap_named_op
@@ -101,4 +102,43 @@ def dropout(name, inpvar, keep_prob, keep_prob_sym=None, noise_shape=None, seed=
         keep_prob_sym = keep_prob if env.phase == Env.Phase.TRAIN else 1
     out = tf.nn.dropout(inpvar, keep_prob_sym, noise_shape=noise_shape, seed=seed, name=name)
     return out
+
+
+@wrap_named_op
+@wrap_varnode_func
+def batchnorm(name, inpvar, use_local_stat=None, decay=0.9, epsilon=1e-5, use_affine=True, param_dtype=__default_dtype__):
+    '''
+    inpvar(tf.Tensor): NHWC
+    '''
+    inpvar = as_varnode(inpvar)
+    shape = inpvar.static_shape
+    assert len(shape) in [2, 4]
+    out = shape[-1]
+    if len(shape) == 2:
+        inpvar = inpvar.reshape(-1, 1, 1, out)
+    with tf.variable_scope(name):
+        if use_affine:
+            beta = variable('beta', tf.constant_initializer(), shape=[out], dtype=param_dtype)
+            gamma = variable('gamma', tf.constant_initializer(1.0), shape=[out], dtype=param_dtype)
+        else:
+            beta = tf.zeros([out], name='beta')
+            gamma = tf.ones([out], name='gamma')
+        moving_mean = variable('mean/EMA', tf.constant_initializer(), shape=[out], trainable=False)
+        moving_var = variable('variance/EMA', tf.constant_initializer(), shape=[out], trainable=False)
+    env = get_default_env()
+    if env.phase == Env.Phase.TRAIN:
+        xn, batch_mean, batch_var = tf.nn.fused_batch_norm(inpvar, gamma, beta, epsilon=epsilon, is_training=True)
+    else:
+        xn = tf.nn.batch_normalization(inpvar, moving_mean, moving_var, beta, gamma, variance_epsilon=epsilon)
+
+    if len(shape) == 2:
+        xn = tf.squeeze(xn, [1, 2])
+
+    if env.current_dpc.is_master_device:
+        update_mean_op = moving_averages.assign_moving_average(moving_mean.impl, batch_mean, decay, zero_debias=False, name='mean_ema_op')
+        update_var_op = moving_averages.assign_moving_average(moving_var.impl, batch_var, decay, zero_debias=False, name='var_ema_op')
+        with tf.control_dependencies([update_mean_op, update_var_op]):
+            return tf.identity(xn, name=name)
+    else:
+        return tf.identity(xn, name=name)
 
