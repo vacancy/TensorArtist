@@ -17,7 +17,7 @@ __snapshot_dir__ = 'snapshots'
 __snapshot_ext__ = '.snapshot.pkl'
 
 
-def enable_model_saver(trainer, save_interval=1):
+def enable_snapshot_saver(trainer, save_interval=1):
     def dump_snapshot_on_epoch_after(trainer):
         if trainer.epoch % save_interval != 0:
             return
