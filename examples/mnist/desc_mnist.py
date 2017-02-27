@@ -8,13 +8,12 @@
 
 import os.path as osp
 import tensorflow as tf
-import numpy as np
-import numpy.random as npr
 
-from tartist.core import get_env
+from tartist.core import get_env, register_event, io, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
-from tartist.nn import Env, opr as O, optimizer, summary
-from tartist.data import flow
+from tartist.nn import opr as O, optimizer, summary
+
+logger = get_logger(__file__)
 
 __envs__ = {
     'dir': {
@@ -23,7 +22,8 @@ __envs__ = {
     },
 
     'trainer': {
-        'nr_iters': 1000,
+        'epoch_size': 128,
+        'nr_iters': 1280,
         'learning_rate': 0.1,
         'batch_size': 64,
 
@@ -32,6 +32,7 @@ __envs__ = {
         }
     }
 }
+
 
 def make_network(env):
     with env.create_network() as net:
@@ -76,13 +77,27 @@ def make_network(env):
 
 def make_optimizer(env):
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.SGDOptimizer(get_env('trainer.learning_rate')))
+    wrapper.set_base_optimizer(optimizer.base.MomentumOptimizer(get_env('trainer.learning_rate'), 0.9))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))
     env.set_optimizer(wrapper)
 
 from data_provider import make_dataflow_train as make_dataflow 
+
+
+def main_train(trainer):
+    from tartist.plugins.trainer_enhancer import summary_logger
+    summary_logger.enable_summary_history(trainer)
+    summary_logger.enable_echo_summary_scalar(trainer)
+
+    from tartist.plugins.trainer_enhancer import progress
+    progress.enable_epoch_progress(trainer)
+
+    from tartist.plugins.trainer_enhancer import saver
+    saver.enable_model_saver(trainer)
+
+    trainer.train()
 
 # if True:
 #     f = env.make_func()

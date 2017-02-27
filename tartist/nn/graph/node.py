@@ -106,19 +106,28 @@ class VarNodeOpDecl(object):
         return as_varnode(tf.neg(self))
 
     def __getitem__(self, slices):
-        return as_varnode(as_tftensor(self)[slices])
-   
+        from ..opr.tensor import NormalSlice
+        return NormalSlice(self)[slices]
+  
+    @property
+    def sub(self):
+        from ..opr.tensor import NormalSlice
+        return NormalSlice(self)
+
     @property
     def set_sub(self):
-        raise NotImplementedError()
+        from ..opr.tensor import NormalSliceSetter
+        return NormalSliceSetter(self)
 
     @property
     def ai(self):
-        raise NotImplementedError()
+        from ..opr.tensor import AdvancedSlice
+        return AdvancedSlice(self)
 
     @property
     def set_ai(self):
-        raise NotImplementedError()
+        from ..opr.tensor import AdvancedSliceSetter
+        return AdvancedSliceSetter(self)
 
     def __iter__(self):
         raise ValueError('iterating over {} is not allowed'.format(type(self).__name__))
@@ -140,15 +149,15 @@ class VarNodeOpDecl(object):
 
     def dimshuffle(self, *pattern, name=None):
         from ..opr.shape import dimshuffle 
-        return as_varnode(Dimshuffle(src=self, pattern=pattern, name=name))
+        return as_varnode(dimshuffle(self, perm=pattern, name=name))
 
     def add_axis(self, axis):
         from ..opr.shape import add_axis 
-        return as_varnode(add_axis(axis=axis))
+        return as_varnode(add_axis(self, axis=axis))
 
     def remove_axis(self, axis):
         from ..opr.shape import remove_axis 
-        return as_varnode(remove_axis(axis=axis))
+        return as_varnode(remove_axis(self, axis=axis))
 
     def sum(self, axis=None, keepdims=False, name=None):
         return as_varnode(tf.reduce_sum(self, axis=axis, keep_dims=keepdims, name=name))
@@ -187,7 +196,14 @@ class VarNodeOpDecl(object):
         from ..opr.shape import flatten2
         return flatten2(self)
 
-    def eval(self, session=None, **feed_dict):
+    def eval(self, session=None, feed_dict=None, **kwargs):
+        from .env import get_default_env
+        from .function import Function 
+
+        session = session or get_default_env().session
+        feed_dict = feed_dict or {}
+        feed_dict.update(kwargs)
+        feed_dict = Function.canonize_feed_dict(feed_dict)
         return as_tftensor(self).eval(feed_dict=feed_dict, session=session)
 
 

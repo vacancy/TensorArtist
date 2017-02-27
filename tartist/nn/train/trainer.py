@@ -79,35 +79,63 @@ class TrainerBase(object):
     def _run_step(self, data):
         raise NotImplementedError()
 
+    def _dump_snapshot(self):
+        raise NotImplementedError()
+
+    def _load_snapshot(self, snapshot):
+        raise NotImplementedError()
+
     def initialize(self):
         self.env.initialize_all_variables()
 
     def finalize(self):
         pass
 
+    def load_snapshot(self, snapshot):
+        trigger_event(self, 'load_snapshot:before', self, snapshot)
+        self._load_snapshot(snapshot)
+        trigger_event(self, 'load_snapshot:after', self)
+
+    def dump_snapshot(self):
+        trigger_event(self, 'dump_snapshot:before', self)
+        snapshot = self._dump_snapshot()
+        trigger_event(self, 'dump_snapshot:after', self, snapshot)
+        return snapshot
+
     def train(self):
-        trigger_event('trainer', 'initialize:before', self)
+        trigger_event(self, 'initialize:before', self)
         self.initialize()
-        trigger_event('trainer', 'initialize:after', self)
+        trigger_event(self, 'initialize:after', self)
         self.runtime.setdefault('iter', 0)
 
-        trigger_event('trainer', 'optimization:before', self)
+        trigger_event(self, 'optimization:before', self)
 
         while self.runtime['iter'] <= get_env('trainer.nr_iters') and not self.stop_signal:
-            inp, out = next(self._iter_train), {}
+            if self.runtime['iter'] == 0:
+                inp, out = {}, {}
+                trigger_event(self, 'epoch:before', self)
+                trigger_event(self, 'iter:before', self, inp)
+                trigger_event(self, 'iter:after', self, inp, out)
+                trigger_event(self, 'epoch:after', self)
+            else:
+                if self.runtime['iter'] % self.epoch_size == 1:
+                    trigger_event(self, 'epoch:before', self)
 
-            trigger_event('trainer', 'iter:before', self, inp)
-            if self.runtime['iter'] != 0:
+                inp = next(self._iter_train)
+                trigger_event(self, 'iter:before', self, inp)
                 out = self._run_step(next(self._iter_train))
-            trigger_event('trainer', 'iter:after', self, inp, out)
+                trigger_event(self, 'iter:after', self, inp, out)
+
+                if self.runtime['iter'] % self.epoch_size == 0:
+                    trigger_event(self, 'epoch:after', self)
 
             self.runtime['iter'] += 1
 
-        trigger_event('trainer', 'optimization:after', self)
+        trigger_event(self, 'optimization:after', self)
 
-        trigger_event('trainer', 'finalize:before', self)
+        trigger_event(self, 'finalize:before', self)
         self.finalize()
-        trigger_event('trainer', 'finalize:after', self)
+        trigger_event(self, 'finalize:after', self)
 
 
 class SimpleTrainer(TrainerBase):
@@ -137,20 +165,15 @@ class SimpleTrainer(TrainerBase):
             self.runtime['summaries'] = summaries
         return out
 
-    # def make_snapshot(self):
-    #     snapshot = TrainerSnapshot()
-    #     runtime = self.runtime.clone().as_dict()
-    #     for k in list(runtime.keys()):
-    #         if k.startswith('_'):
-    #             del runtime[k]
-    #     snapshot['runtime'] = runtime 
-    #     snapshot['weights'] = self.network.get_weights()
-    #     snapshot['optimizer'] = self._fn_train.optimizer_state.make_checkpoint()
-    #     return snapshot
+    def _dump_snapshot(self):
+        variables = self.network.fetch_all_variables_dict()
+        runtime = self.runtime.copy()
+        snapshot = dict(variables=variables, runtime=runtime)
+        return snapshot
 
-    # def restore_snapshot(self, snapshot):
-    #     self.runtime.load(snapshot['runtime'])
-    #     self.network.set_weights(snapshot['weights'])
-    #     self._fn_train.optimizer_state.restore_checkpoint(snapshot['optimizer'])
-    #     self.set_learning_rate()
+    def _load_snapshot(self, snapshot):
+        variables = snapshot['variables']
+        runtime = snapshot['runtime'].copy()
+        self._runtime = runtime
+        self.network.assign_all_variables_dict(variables)
 

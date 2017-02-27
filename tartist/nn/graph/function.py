@@ -149,7 +149,7 @@ class Function(object):
 
         for f in self._extra_kw_modifiers:
             f(feed_dict)
-        feed_dict = self.__canonize_feed_dict(feed_dict)
+        feed_dict = self.canonize_feed_dict(feed_dict)
 
         outputs = self.session.run(self._outputs, feed_dict=feed_dict)
         if output_raw:
@@ -174,7 +174,7 @@ class Function(object):
         return self._output_manager.reduce_format(self._outputs, all_outputs)
 
     @staticmethod
-    def __canonize_feed_dict(feed_dict):
+    def canonize_feed_dict(feed_dict):
         res = {}
         for k, v in feed_dict.items():
             if type(k) is str and not k.endswith(':0'):
