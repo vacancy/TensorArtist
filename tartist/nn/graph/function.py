@@ -3,7 +3,7 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 1/31/17
-# 
+#
 # This file is part of TensorArtist
 
 from .node import __valid_tensor_types__, as_tftensor, as_varnode
@@ -56,7 +56,7 @@ class Function(object):
                 return collections.OrderedDict(zip(self._output_names, outputs))
 
         def reduce_format(self, all_vars, all_outputs, reduce_ratios=None):
-            assert len(all_vars) == self._nr_outputs 
+            assert len(all_vars) == self._nr_outputs
             all_outputs = [o[:self._nr_outputs] for o in all_outputs]
             ret = []
             for o, *vals in zip(all_vars, *all_outputs):
@@ -124,7 +124,7 @@ class Function(object):
     def compile(self, outputs, inputs=None):
         if self.__compiled:
             logger.warn('function {} already compiled'.format(self))
-       
+
         if len(self._extra_kwoutputs):
             assert isinstance(outputs, (dict, collections.OrderedDict))
             outputs.update(self._extra_kwoutputs)
@@ -161,11 +161,11 @@ class Function(object):
 
     def call_args(self, inputs, output_raw=False):
         if isinstance(inputs, dict):
-            outputs = self(**inputs, output_raw=output_raw)
+            outputs = self(output_raw=output_raw, **inputs)
         else:
             outputs = self(*inputs, output_raw=output_raw)
         return outputs
-       
+
     def map(self, iterable, event_spec=None):
         all_outputs = []
         for inputs in iterable:
