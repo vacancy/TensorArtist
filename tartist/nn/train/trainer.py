@@ -92,20 +92,20 @@ class TrainerBase(object):
         pass
 
     def load_snapshot(self, snapshot):
-        trigger_event(self, 'load_snapshot:before', self, snapshot)
+        trigger_event(self, 'snapshot:load:before', self, snapshot)
         self._load_snapshot(snapshot)
-        trigger_event(self, 'load_snapshot:after', self)
+        trigger_event(self, 'snapshot:load:after', self)
 
     def dump_snapshot(self):
-        trigger_event(self, 'dump_snapshot:before', self)
+        trigger_event(self, 'snapshot:dump:before', self)
         snapshot = self._dump_snapshot()
-        trigger_event(self, 'dump_snapshot:after', self, snapshot)
+        trigger_event(self, 'snapshot:dump:after', self, snapshot)
         return snapshot
 
     def train(self):
-        trigger_event(self, 'initialize:before', self)
+        trigger_event(self, 'initialization:before', self)
         self.initialize()
-        trigger_event(self, 'initialize:after', self)
+        trigger_event(self, 'initialization:after', self)
         self.runtime.setdefault('iter', 0)
 
         trigger_event(self, 'optimization:before', self)
@@ -133,9 +133,9 @@ class TrainerBase(object):
 
         trigger_event(self, 'optimization:after', self)
 
-        trigger_event(self, 'finalize:before', self)
+        trigger_event(self, 'finalization:before', self)
         self.finalize()
-        trigger_event(self, 'finalize:after', self)
+        trigger_event(self, 'finalization:after', self)
 
 
 class SimpleTrainer(TrainerBase):
@@ -176,4 +176,3 @@ class SimpleTrainer(TrainerBase):
         runtime = snapshot['runtime'].copy()
         self._runtime = runtime
         self.network.assign_all_variables_dict(variables)
-

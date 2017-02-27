@@ -26,7 +26,7 @@ parser.add_argument('-r', '--root', dest='root', default=None, help='Data dump r
 
 parser.add_argument('--continue', dest='continue_flag', default=False, action='store_true',
                     help='Whether to continue, if true, continue from the last epoch')
-parser.add_argument('--continue-from', dest='continue_from', default=0, type=int,
+parser.add_argument('--continue-from', dest='continue_from', default=-1, type=int,
                     help='Continue from the given epoch')
 parser.add_argument('--quiet', dest='quiet', default=False, action='store_true', help='Quiet run')
 args = parser.parse_args()
@@ -53,6 +53,16 @@ def main():
 
     trainer = train.SimpleTrainer(env, data_provider=desc.make_dataflow)
     trainer.set_epoch_size(get_env('trainer.epoch_size', 1))
+
+    from tartist.plugins.trainer_enhancer import snapshot
+    if args.continue_flag:
+        assert args.continue_from == -1 and args.initial_weights_path is None
+        snapshot.enable_snapshot_loading_after_initialization(trainer, continue_last=True)
+    elif args.continue_from is not -1:
+        assert args.initial_weights_path is None
+        snapshot.enable_snapshot_loading_after_initialization(trainer, continue_from=args.continue_from)
+    elif args.initial_weights_path is not None:
+        snapshot.enable_weights_loading_after_intialization(trainer, weights_fpath=args.initial_weights_path)
 
     desc.main_train(trainer)
 

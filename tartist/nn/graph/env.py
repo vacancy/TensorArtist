@@ -346,7 +346,7 @@ class Network(object):
     def assign_all_variables_dict(self, all_variables):
         from ..tfutils import assign_variable
 
-        for v in tf.get_collection(tf.GraphKeys.VARIABLES):
+        for v in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
             value = all_variables.get(clean_name(v), None)
             if value is not None:
                 assign_variable(v, value, self.owner_env.session)

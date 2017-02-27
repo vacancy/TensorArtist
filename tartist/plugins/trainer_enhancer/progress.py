@@ -13,12 +13,11 @@ import tqdm
 def enable_epoch_progress(trainer):
     pbar = None
 
-    def epoch_progress_on_epoch_before(trainer):
-        nonlocal pbar
-        pbar = tqdm.tqdm(total=trainer.epoch_size, leave=False)
-
     def epoch_progress_on_iter_after(trainer, inp, out):
         nonlocal pbar
+        if pbar is None:
+            pbar = tqdm.tqdm(total=trainer.epoch_size, leave=False, initial=trainer.iter % trainer.epoch_size)
+
         desc = 'Iter={}, loss={:.4f}'.format(trainer.iter, trainer.runtime.get('loss', 0))
         if 'error' in trainer.runtime:
             desc += ', error={:.4f}'.format(trainer.runtime['error'])
@@ -28,7 +27,7 @@ def enable_epoch_progress(trainer):
     def epoch_progress_on_epoch_after(trainer):
         nonlocal pbar
         pbar.close()
+        pbar = None
 
-    register_event(trainer, 'epoch:before', epoch_progress_on_epoch_before, priority=25)
     register_event(trainer, 'iter:after', epoch_progress_on_iter_after, priority=25)
     register_event(trainer, 'epoch:after', epoch_progress_on_epoch_after, priority=5)
