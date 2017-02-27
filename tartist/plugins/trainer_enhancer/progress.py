@@ -19,8 +19,11 @@ def enable_epoch_progress(trainer):
 
     def epoch_progress_on_iter_after(trainer, inp, out):
         nonlocal pbar
+        desc = 'Iter={}, loss={:.4f}'.format(trainer.iter, trainer.runtime.get('loss', 0))
+        if 'error' in trainer.runtime:
+            desc += ', error={:.4f}'.format(trainer.runtime['error'])
+        pbar.set_description(desc)
         pbar.update()
-        pbar.set_description('Iter#{}: loss={:.4f}'.format(trainer.iter, trainer.runtime.get('loss', 0)))
 
     def epoch_progress_on_epoch_after(trainer):
         nonlocal pbar

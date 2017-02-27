@@ -3,13 +3,12 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
-# 
+#
 # This file is part of TensorArtist
 
-import os.path as osp
 import tensorflow as tf
 
-from tartist.core import get_env, register_event, io, get_logger
+from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
 
@@ -51,7 +50,6 @@ def make_network(env):
                 _ = O.conv2d('conv2', _, 32, (3, 3), padding='SAME', nonlin=tf.nn.relu)
                 _ = O.pooling2d('pool2', _, kernel=2)
                 dpc.add_output(_, name='feature')
-                summary.scalar('feature/rms', _.std())
 
             dpc.set_input_maker(inputs).set_forward_func(forward)
 
@@ -97,13 +95,7 @@ def main_train(trainer):
     progress.enable_epoch_progress(trainer)
 
     from tartist.plugins.trainer_enhancer import snapshot
-    snapshot.enable_model_saver(trainer)
+    snapshot.enable_snapshot_saver(trainer)
 
     trainer.train()
-
-# if True:
-#     f = env.make_func()
-#     f.compile(env.network.outputs['pred'])
-#     logger.info('final pred  ={}'.format(f(img=data_fake['img'])))
-#     logger.info('ground truth={}'.format(data_fake['label']))
 

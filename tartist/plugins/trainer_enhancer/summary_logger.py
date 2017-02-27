@@ -45,6 +45,9 @@ class SummaryHistoryManager(object):
     def get(self, key):
         return self._summaries.get(key, [])
 
+    def has(self, key):
+        return key in self._summaries
+
     def get_type(self, key):
         return self._summaries_type.get(key, 'unknown')
 
@@ -62,19 +65,34 @@ class SummaryHistoryManager(object):
         return sum(values) / len(values)
 
 
-def enable_summary_history(trainer, *, summary_loss=True):
+def enable_summary_history(trainer):
+    def check_proto_contains(proto, tag):
+        if proto is None:
+            return False
+        for v in proto.value:
+            if v.tag == tag:
+                return True
+        return False
+
     def summary_history_on_optimization_before(trainer):
         trainer.runtime['summary_histories'] = SummaryHistoryManager()
 
     def summary_history_on_iter_after(trainer, inp, out):
         mgr = trainer.runtime['summary_histories']
 
+        summaries = None
         if 'summaries' in trainer.runtime:
             summaries = trainer.runtime['summaries']
             mgr.put_summaries(summaries)
-        if 'loss' in trainer.runtime and summary_loss:
+        if 'loss' in trainer.runtime and check_proto_contains(summaries, 'loss'):
             mgr.set_type('loss', 'scalar')
             mgr.put_scalar('loss', trainer.runtime['loss'])
+        error_summary_key = trainer.runtime.get('error_summary_key', None)
+        if mgr.has(error_summary_key):
+            trainer.runtime['error'] = mgr.get(error_summary_key)[-1]
+            if check_proto_contains(summaries, 'error'):
+                mgr.set_type('error', 'scalar')
+                mgr.put_scalar('error', trainer.runtime['error'])
 
     register_event(trainer, 'optimization:before', summary_history_on_optimization_before)
     register_event(trainer, 'iter:after', summary_history_on_iter_after)
@@ -85,11 +103,8 @@ def enable_echo_summary_scalar(trainer):
         mgr = trainer.runtime['summary_histories']
 
         log_strs = ['Summaries: epoch = {}'.format(trainer.epoch)]
-        error_summary_key = trainer.runtime.get('error_summary_key', None)
         for k in mgr.get_all_summaries('scalar'):
             avg = mgr.average(k, trainer.epoch_size)
-            if k == error_summary_key:
-                trainer.runtime['error'] = avg
             log_strs.append('  {} = {}'.format(k, avg))
         if len(log_strs) > 1:
             logger.info('\n'.join(log_strs))
