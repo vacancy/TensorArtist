@@ -85,11 +85,18 @@ def enable_echo_summary_scalar(trainer):
         mgr = trainer.runtime['summary_histories']
 
         log_strs = ['Summaries: epoch = {}'.format(trainer.epoch)]
+        error_summary_key = trainer.runtime.get('error_summary_key', None)
         for k in mgr.get_all_summaries('scalar'):
             avg = mgr.average(k, trainer.epoch_size)
+            if k == error_summary_key:
+                trainer.runtime['error'] = avg
             log_strs.append('  {} = {}'.format(k, avg))
         if len(log_strs) > 1:
             logger.info('\n'.join(log_strs))
 
     register_event(trainer, 'epoch:after', summary_history_scalar_on_epoch_after)
+
+
+def set_error_summary_key(trainer, key):
+    trainer.runtime['error_summary_key'] = key
 
