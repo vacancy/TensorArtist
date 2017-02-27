@@ -52,3 +52,4 @@ def shuffle_multiarray(*arrs):
     return tuple(map(lambda x: x[inds], arrs))
 
 __initialize_rng()
+

@@ -41,7 +41,7 @@ class VarNodeOpDecl(object):
 
     def __rbinary(self, lhs, op_name):
         lhs = as_varnode(lhs)
-        return as_varnode(getattr(tf, op_name)(self, lhs))
+        return as_varnode(getattr(tf, op_name)(lhs, self))
 
     def __add__(self, rhs):
         return self.__binary(rhs, 'add')
@@ -149,7 +149,7 @@ class VarNodeOpDecl(object):
 
     def dimshuffle(self, *pattern, name=None):
         from ..opr.shape import dimshuffle 
-        return as_varnode(dimshuffle(self, perm=pattern, name=name))
+        return as_varnode(dimshuffle(src=self, perm=pattern, name=name))
 
     def add_axis(self, axis):
         from ..opr.shape import add_axis 
@@ -157,7 +157,7 @@ class VarNodeOpDecl(object):
 
     def remove_axis(self, axis):
         from ..opr.shape import remove_axis 
-        return as_varnode(remove_axis(self, axis=axis))
+        return as_varnode(remove_axis(axis=axis))
 
     def sum(self, axis=None, keepdims=False, name=None):
         return as_varnode(tf.reduce_sum(self, axis=axis, keep_dims=keepdims, name=name))

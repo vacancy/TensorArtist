@@ -51,7 +51,7 @@ def make_network(env):
                 _ = O.conv2d('conv2', _, 32, (3, 3), padding='SAME', nonlin=tf.nn.relu)
                 _ = O.pooling2d('pool2', _, kernel=2)
                 dpc.add_output(_, name='feature')
-                summary.scalar('feature/rms', _.rms())
+                summary.scalar('feature/rms', _.std())
 
             dpc.set_input_maker(inputs).set_forward_func(forward)
 
@@ -73,7 +73,8 @@ def make_network(env):
 
             accuracy = O.eq(label, pred).astype('float32').mean()
             summary.scalar('accuracy', accuracy)
-            
+            summary.scalar('error', 1 - accuracy)
+
 
 def make_optimizer(env):
     wrapper = optimizer.OptimizerWrapper()
@@ -90,12 +91,13 @@ def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary_logger
     summary_logger.enable_summary_history(trainer)
     summary_logger.enable_echo_summary_scalar(trainer)
+    summary_logger.set_error_summary_key(trainer, 'error')
 
     from tartist.plugins.trainer_enhancer import progress
     progress.enable_epoch_progress(trainer)
 
-    from tartist.plugins.trainer_enhancer import saver
-    saver.enable_model_saver(trainer)
+    from tartist.plugins.trainer_enhancer import snapshot
+    snapshot.enable_model_saver(trainer)
 
     trainer.train()
 
