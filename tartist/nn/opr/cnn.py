@@ -127,9 +127,10 @@ def batchnorm(name, inpvar, use_local_stat=None, decay=0.9, epsilon=1e-5, use_af
         moving_var = variable('variance/EMA', tf.constant_initializer(), shape=[out], trainable=False)
     env = get_default_env()
     if env.phase == Env.Phase.TRAIN:
-        xn, batch_mean, batch_var =  tf.nn.fused_batch_norm(inpvar, gamma, beta, epsilon=epsilon, is_training=True)
+        xn, batch_mean, batch_var = tf.nn.fused_batch_norm(inpvar, gamma, beta, epsilon=epsilon, is_training=True)
     else:
-        xn, _, _ = tf.nn.fused_batch_norm(inpvar, gamma, beta, moving_mean, moving_var, epsilon=epsilon, is_training=False)
+        xn = tf.nn.batch_normalization(inpvar, moving_mean, moving_var, beta, gamma, variance_epsilon=epsilon)
+
     if len(shape) == 2:
         xn = tf.squeeze(xn, [1, 2])
 

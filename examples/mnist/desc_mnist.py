@@ -3,7 +3,7 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
-# 
+#
 # This file is part of TensorArtist
 
 import os.path as osp
@@ -24,7 +24,7 @@ __envs__ = {
     'trainer': {
         'epoch_size': 128,
         'nr_iters': 1280,
-        'learning_rate': 0.1,
+        'learning_rate': 0.01,
         'batch_size': 64,
 
         'env_flags': {
@@ -84,7 +84,7 @@ def make_optimizer(env):
     ]))
     env.set_optimizer(wrapper)
 
-from data_provider import make_dataflow_train as make_dataflow 
+from data_provider import make_dataflow_train as make_dataflow
 
 
 def main_train(trainer):
@@ -97,7 +97,7 @@ def main_train(trainer):
     progress.enable_epoch_progress(trainer)
 
     from tartist.plugins.trainer_enhancer import snapshot
-    snapshot.enable_model_saver(trainer)
+    snapshot.enable_snapshot_saver(trainer)
 
     trainer.train()
 
