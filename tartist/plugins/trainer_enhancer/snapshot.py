@@ -71,20 +71,20 @@ def load_snapshot_file(trainer, fpath):
     return True
 
 
-def load_weights_file(trainer, fpath):
+def load_weights_file(env, fpath):
     weights = io.load(fpath)
     if weights is None:
         return False
 
     if fpath.endswith(__snapshot_ext__):
         weights = weights['variables']
-    trainer.network.assign_all_variables_dict(weights)
+    env.network.assign_all_variables_dict(weights)
     return True
 
 
-def dump_weights_file(trainer, fpath):
+def dump_weights_file(env, fpath):
     fpath = io.assert_extension(fpath, __weights_ext__)
-    weights = trainer.network.fetch_all_variables_dict()
+    weights = env.network.fetch_all_variables_dict()
     io.dump(fpath, weights)
     return fpath
 
@@ -111,7 +111,7 @@ def enable_snapshot_loading_after_initialization(trainer, *, continue_last=None,
 
 def enable_weights_loading_after_intialization(trainer, weights_fpath):
     def load_weights_on_initialization_after(trainer):
-        if load_weights_file(trainer, weights_fpath):
+        if load_weights_file(trainer.env, weights_fpath):
             logger.info('Restored weights from {}'.format(weights_fpath))
 
     register_event(trainer, 'initialization:after', load_weights_on_initialization_after, priority=25)

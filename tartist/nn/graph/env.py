@@ -352,6 +352,15 @@ class Network(object):
                 assign_variable(v, value, self.owner_env.session)
         return self
 
+    def find_opr_by_name(self, name):
+        return tf.get_default_graph().get_operation_by_name(name)
+
+    def find_var_by_name(self, name):
+        try:
+            return as_varnode(tf.get_default_graph().get_tensor_by_name(name))
+        except KeyError:
+            return as_varnode(tf.get_default_graph().get_tensor_by_name(name + ':0'))
+
     @defaults_manager.wrap_custom_as_default
     def as_default(self):
         yield

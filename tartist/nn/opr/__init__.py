@@ -9,6 +9,7 @@
 from .arith import *
 from .cnn import *
 from .helper import *
+from .image_proc import *
 from .netsrc import *
 from .shape import *
 from .tensor import *

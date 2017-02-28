@@ -60,6 +60,7 @@ __all_migrated_oprs__.extend([
     ('floordiv', tf.floordiv),
     ('mod', tf.mod),
     ('cross', tf.cross),
+    ('matmul', tf.matmul),
     ('max', tf.maximum),
     ('min', tf.minimum),
     ('argmax', tf.maximum),

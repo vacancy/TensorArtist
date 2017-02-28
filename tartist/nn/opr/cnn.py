@@ -7,13 +7,13 @@
 # This file is part of TensorArtist
 
 from ._defaults import __default_dtype__, __default_nonlin__
+from ._migrate import zeros, ones
 from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op
-from .shape import flatten2
+from .shape import flatten2, remove_axis
 from .netsrc import variable
 from ..graph.env import Env, get_default_env
 
 import tensorflow as tf
-from tensorflow.python.training import moving_averages
 
 __all__ = ['conv2d', 'pooling2d', 'fc', 'dropout', 'batchnorm']
 
@@ -106,25 +106,29 @@ def dropout(name, inpvar, keep_prob, keep_prob_sym=None, noise_shape=None, seed=
 
 @wrap_named_op
 @wrap_varnode_func
-def batchnorm(name, inpvar, use_local_stat=None, decay=0.9, epsilon=1e-5, use_affine=True, param_dtype=__default_dtype__):
-    '''
-    inpvar(tf.Tensor): NHWC
-    '''
+def batchnorm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dtype=__default_dtype__):
+    ''' inpvar should be of data_format NHWC'''
+
+    from tensorflow.python.training import moving_averages
+
     inpvar = as_varnode(inpvar)
     shape = inpvar.static_shape
+
     assert len(shape) in [2, 4]
-    out = shape[-1]
+    nr_channels = shape[-1]
     if len(shape) == 2:
-        inpvar = inpvar.reshape(-1, 1, 1, out)
+        inpvar = inpvar.reshape(-1, 1, 1, nr_channels)
+
     with tf.variable_scope(name):
         if use_affine:
-            beta = variable('beta', tf.constant_initializer(), shape=[out], dtype=param_dtype)
-            gamma = variable('gamma', tf.constant_initializer(1.0), shape=[out], dtype=param_dtype)
+            beta = variable('beta', tf.constant_initializer(), shape=[nr_channels], dtype=param_dtype)
+            gamma = variable('gamma', tf.constant_initializer(1.0), shape=[nr_channels], dtype=param_dtype)
         else:
-            beta = tf.zeros([out], name='beta')
-            gamma = tf.ones([out], name='gamma')
-        moving_mean = variable('mean/EMA', tf.constant_initializer(), shape=[out], trainable=False)
-        moving_var = variable('variance/EMA', tf.constant_initializer(), shape=[out], trainable=False)
+            beta = zeros([nr_channels], name='beta')
+            gamma = ones([nr_channels], name='gamma')
+        moving_mean = variable('mean/EMA', tf.constant_initializer(), shape=[nr_channels], trainable=False)
+        moving_var = variable('variance/EMA', tf.constant_initializer(), shape=[nr_channels], trainable=False)
+
     env = get_default_env()
     if env.phase == Env.Phase.TRAIN:
         xn, batch_mean, batch_var = tf.nn.fused_batch_norm(inpvar, gamma, beta, epsilon=epsilon, is_training=True)
@@ -132,13 +136,14 @@ def batchnorm(name, inpvar, use_local_stat=None, decay=0.9, epsilon=1e-5, use_af
         xn = tf.nn.batch_normalization(inpvar, moving_mean, moving_var, beta, gamma, variance_epsilon=epsilon)
 
     if len(shape) == 2:
-        xn = tf.squeeze(xn, [1, 2])
+        xn = remove_axis(xn, [1, 2])
 
     if env.current_dpc.is_master_device:
-        update_mean_op = moving_averages.assign_moving_average(moving_mean.impl, batch_mean, decay, zero_debias=False, name='mean_ema_op')
-        update_var_op = moving_averages.assign_moving_average(moving_var.impl, batch_var, decay, zero_debias=False, name='var_ema_op')
+        update_mean_op = moving_averages.assign_moving_average(moving_mean.impl, batch_mean, decay,
+                                                               zero_debias=False, name='mean_ema_op')
+        update_var_op = moving_averages.assign_moving_average(moving_var.impl, batch_var, decay,
+                                                              zero_debias=False, name='var_ema_op')
         with tf.control_dependencies([update_mean_op, update_var_op]):
             return tf.identity(xn, name=name)
     else:
         return tf.identity(xn, name=name)
-
