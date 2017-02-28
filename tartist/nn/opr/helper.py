@@ -13,9 +13,11 @@ import tensorflow as tf
 import functools
 import collections
 
-__all__ = ['device_context', 
-        'get_2dshape', 'get_4dshape', 
-        'wrap_varnode_func', 'wrap_named_op']
+__all__ = [
+    'device_context', 
+    'get_2dshape', 'get_4dshape', 
+    'wrap_varnode_func', 'wrap_named_op', 'unique_opr_name'
+]
 
 
 def device_context(device=None):
@@ -70,16 +72,25 @@ def wrap_varnode_func(func):
 def wrap_named_op(func):
     @functools.wraps(func)
     def new_func(name, *args, **kwargs):
-        outputs = func(name, *args, **kwargs)
-        opr = OprNode(name)
+        opr_name = unique_opr_name(name) 
+        with tf.variable_scope(name):
+            outputs = func(name, *args, **kwargs)
+        
+        opr = OprNode(opr_name)
         get_default_net().add_to_collection(opr, 'oprnodes')
         if isinstance(outputs, (tuple, list)):
             outputs = tuple(map(as_varnode, outputs))
             for o in outputs:
-                o.set_taop(opr)
+                if o.taop is None:
+                    o.set_taop(opr)
         else:
             outputs = as_varnode(outputs)
-            outputs.set_taop(opr)
+            if outputs.taop is None:
+                outputs.set_taop(opr)
         return outputs
     return new_func
+
+
+def unique_opr_name(name):
+    return tf.get_default_graph().unique_name(name, mark_as_used=False)
 

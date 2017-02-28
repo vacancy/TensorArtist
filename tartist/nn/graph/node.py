@@ -263,7 +263,7 @@ class VarNode(VarNodeOpDecl):
 
 class OprNode(object):
     def __init__(self, name, inputs=[], outputs=[]):
-        self.__name = tf.get_default_graph().unique_name(name, mark_as_used=False)
+        self.__name = name 
         self.__inputs = inputs
         self.__outputs = outputs
 

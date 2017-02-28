@@ -88,6 +88,7 @@ def enable_summary_history(trainer):
             mgr.set_type('loss', 'scalar')
             mgr.put_scalar('loss', trainer.runtime['loss'])
         error_summary_key = trainer.runtime.get('error_summary_key', None)
+
         if mgr.has(error_summary_key):
             trainer.runtime['error'] = mgr.get(error_summary_key)[-1]
             if check_proto_contains(summaries, 'error'):

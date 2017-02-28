@@ -78,9 +78,9 @@ def make_network(env, h=None, w=None):
         _ = O.pooling2d('pool5', _, (2, 2))
 
         for l in get_env('neural_style.content_layers'):
-            net.add_output(net.find_var_by_name(l[0]), name=l[0])
+            net.add_output(net.find_var_by_name(l[0] + '/bias'), name=l[0])
         for l in get_env('neural_style.style_layers'):
-            net.add_output(net.find_var_by_name(l[0]), name=l[0])
+            net.add_output(net.find_var_by_name(l[0] + '/bias'), name=l[0])
 
 
 def main():

@@ -42,21 +42,19 @@ def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID',
             assert inpvar.static_shape[1] is not None and inpvar.static_shape[2] is not None
             b_shape = inpvar.static_shape[1:3] + (cout, )
 
-    with tf.variable_scope(name + '/var', reuse=False):
-        if W is None:
-            W = variable('W', tf.contrib.layers.xavier_initializer_conv2d(), shape=W_shape, dtype=param_dtype)
-        if use_bias:
-            if b is None:
-                b = variable('b', tf.constant_initializer(), shape=b_shape, dtype=param_dtype)
+    if W is None:
+        W = variable('W', tf.contrib.layers.xavier_initializer_conv2d(), shape=W_shape, dtype=param_dtype)
+    if use_bias:
+        if b is None:
+            b = variable('b', tf.constant_initializer(), shape=b_shape, dtype=param_dtype)
 
-    with tf.name_scope(name + '/op'):
-        _ = inpvar.impl
-        _ = tf.nn.conv2d(_, W, strides=stride, padding=padding, name='conv')
-        if use_bias:
-            _ = tf.nn.bias_add(_, b, name='bias')
-        _ = nonlin(_, name='nonlin')
+    _ = inpvar.impl
+    _ = tf.nn.conv2d(_, W, strides=stride, padding=padding, name='conv')
+    if use_bias:
+        _ = tf.nn.bias_add(_, b, name='bias')
+    _ = nonlin(_, name='nonlin')
 
-    return tf.identity(_, name=name)
+    return tf.identity(_, name='out')
 
 
 @wrap_named_op
@@ -84,17 +82,15 @@ def fc(name, inpvar, nr_output_channels,
     W_shape = (inpvar.static_shape[1], nr_output_channels)
     b_shape = (nr_output_channels, )
 
-    with tf.variable_scope(name + '/var', reuse=False):
-        if W is None:
-            W = variable('W', tf.contrib.layers.xavier_initializer_conv2d(), shape=W_shape, dtype=param_dtype)
-        if use_bias:
-            if b is None:
-                b = variable('b', tf.constant_initializer(), shape=b_shape, dtype=param_dtype)
+    if W is None:
+        W = variable('W', tf.contrib.layers.xavier_initializer_conv2d(), shape=W_shape, dtype=param_dtype)
+    if use_bias:
+        if b is None:
+            b = variable('b', tf.constant_initializer(), shape=b_shape, dtype=param_dtype)
 
-    with tf.name_scope(name + '/op'):
-        out = tf.nn.xw_plus_b(inpvar, W, b, name='xwpb') if use_bias else tf.matmul(inpvar, W, name='matmul')
-        out = nonlin(out, name='nonlin')
-    return tf.identity(out, name=name)
+    out = tf.nn.xw_plus_b(inpvar, W, b, name='xwpb') if use_bias else tf.matmul(inpvar, W, name='matmul')
+    out = nonlin(out, name='nonlin')
+    return tf.identity(out, name='out')
 
 
 @wrap_named_op
@@ -111,8 +107,8 @@ def dropout(name, inpvar, keep_prob, keep_prob_sym=None, noise_shape=None, seed=
 @wrap_varnode_func
 def batchnorm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dtype=__default_dtype__):
     ''' inpvar should be of data_format NHWC'''
-
     from tensorflow.python.training import moving_averages
+    assign_moving_average = moving_averages.assign_moving_average
 
     inpvar = as_varnode(inpvar)
     shape = inpvar.static_shape
@@ -122,31 +118,30 @@ def batchnorm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dtyp
     if len(shape) == 2:
         inpvar = inpvar.reshape(-1, 1, 1, nr_channels)
 
-    with tf.variable_scope(name + '/var'):
-        if use_affine:
-            beta = variable('beta', tf.constant_initializer(), shape=[nr_channels], dtype=param_dtype)
-            gamma = variable('gamma', tf.constant_initializer(1.0), shape=[nr_channels], dtype=param_dtype)
-        else:
-            beta = zeros([nr_channels], name='beta')
-            gamma = ones([nr_channels], name='gamma')
-        moving_mean = variable('mean/EMA', tf.constant_initializer(), shape=[nr_channels], trainable=False)
-        moving_var = variable('variance/EMA', tf.constant_initializer(), shape=[nr_channels], trainable=False)
+    if use_affine:
+        beta = variable('beta', tf.constant_initializer(), shape=[nr_channels], dtype=param_dtype)
+        gamma = variable('gamma', tf.constant_initializer(1.0), shape=[nr_channels], dtype=param_dtype)
+    else:
+        beta = zeros([nr_channels], name='beta')
+        gamma = ones([nr_channels], name='gamma')
+    moving_mean = variable('mean/ema', tf.constant_initializer(), shape=[nr_channels], trainable=False)
+    moving_var = variable('variance/ema', tf.constant_initializer(), shape=[nr_channels], trainable=False)
 
     env = get_default_env()
     if env.phase == Env.Phase.TRAIN:
-        xn, batch_mean, batch_var = tf.nn.fused_batch_norm(inpvar, gamma, beta, epsilon=epsilon, is_training=True)
+        xn, batch_mean, batch_var = tf.nn.fused_batch_norm(inpvar, gamma, beta, epsilon=epsilon, is_training=True, name='bn')
     else:
-        xn = tf.nn.batch_normalization(inpvar, moving_mean, moving_var, beta, gamma, variance_epsilon=epsilon)
+        xn = tf.nn.batch_normalization(inpvar, moving_mean, moving_var, beta, gamma, variance_epsilon=epsilon, name='bn')
 
     if len(shape) == 2:
         xn = remove_axis(xn, [1, 2])
 
     if env.current_dpc.is_master_device:
-        update_mean_op = moving_averages.assign_moving_average(moving_mean.impl, batch_mean, decay,
-                                                               zero_debias=False, name='mean_ema_op')
-        update_var_op = moving_averages.assign_moving_average(moving_var.impl, batch_var, decay,
-                                                              zero_debias=False, name='var_ema_op')
+        update_mean_op = assign_moving_average(moving_mean.impl, batch_mean, decay, zero_debias=False, name='mean_ema_op')
+        update_var_op = assign_moving_average(moving_var.impl, batch_var, decay, zero_debias=False, name='var_ema_op')
+
         with tf.control_dependencies([update_mean_op, update_var_op]):
-            return tf.identity(xn, name=name)
+            return tf.identity(xn, name='out')
     else:
-        return tf.identity(xn, name=name)
+        return tf.identity(xn, name='out')
+

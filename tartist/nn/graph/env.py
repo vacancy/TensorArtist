@@ -322,7 +322,8 @@ class Network(object):
 
     @property
     def merged_summaries(self):
-        return tf.summary.merge_all()
+        with self.owner_env.graph.as_default():
+            return tf.summary.merge_all()
 
     def add_output(self, symbol, name=None):
         symbol = as_varnode(symbol)
