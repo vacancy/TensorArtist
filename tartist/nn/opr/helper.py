@@ -69,26 +69,33 @@ def wrap_varnode_func(func):
     return new_func
 
 
-def wrap_named_op(func):
-    @functools.wraps(func)
-    def new_func(name, *args, **kwargs):
-        opr_name = unique_opr_name(name) 
-        with tf.variable_scope(name):
-            outputs = func(name, *args, **kwargs)
-        
-        opr = OprNode(opr_name)
-        get_default_net().add_to_collection(opr, 'oprnodes')
-        if isinstance(outputs, (tuple, list)):
-            outputs = tuple(map(as_varnode, outputs))
-            for o in outputs:
-                if o.taop is None:
-                    o.set_taop(opr)
-        else:
-            outputs = as_varnode(outputs)
-            if outputs.taop is None:
-                outputs.set_taop(opr)
-        return outputs
-    return new_func
+def wrap_named_op(*args, use_scope=True):
+    def wrapper(func):
+        @functools.wraps(func)
+        def new_func(name, *args, **kwargs):
+            opr_name = unique_opr_name(name) 
+            if use_scope:
+                with tf.variable_scope(name):
+                    outputs = func(name, *args, **kwargs)
+            else:
+                outputs = func(name, *args, **kwargs)
+            
+            opr = OprNode(opr_name)
+            get_default_net().add_to_collection(opr, 'oprnodes')
+            if isinstance(outputs, (tuple, list)):
+                outputs = tuple(map(as_varnode, outputs))
+                for o in outputs:
+                    if o.taop is None:
+                        o.set_taop(opr)
+            else:
+                outputs = as_varnode(outputs)
+                if outputs.taop is None:
+                    outputs.set_taop(opr)
+            return outputs
+        return new_func
+    if len(args) == 1 and callable(args[0]):
+        return wrapper(args[0])
+    return wrapper
 
 
 def unique_opr_name(name):

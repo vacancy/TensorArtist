@@ -46,7 +46,7 @@ class VariableOp(OprNode):
         return self
 
 
-@wrap_named_op
+@wrap_named_op(use_scope=False)
 @wrap_varnode_func
 def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, device=None, trainable=True):
     opr_name = unique_opr_name(name) 
