@@ -3,11 +3,12 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
-# 
+#
 # This file is part of TensorArtist
 
 from .arith import *
 from .cnn import *
+from .nonlin import *
 from .helper import *
 from .netsrc import *
 from .shape import *

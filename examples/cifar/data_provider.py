@@ -1,8 +1,10 @@
 # -*- coding:utf8 -*-
 # File   : data_provider.py
 # Author : Jiayuan Mao
+#          Honghua Dong
 # Email  : maojiayuan@gmail.com
-# Date   : 12/30/16
+#          dhh19951@gmail.com
+# Date   : 2/27/17
 #
 # This file is part of TensorArtist
 

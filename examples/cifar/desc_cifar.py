@@ -1,8 +1,10 @@
 # -*- coding:utf8 -*-
-# File   : desc_mnist.py
+# File   : desc_cifar.py
 # Author : Jiayuan Mao
+#          Honghua Dong
 # Email  : maojiayuan@gmail.com
-# Date   : 12/30/16
+#          dhh19951@gmail,com
+# Date   : 2/27/17
 #
 # This file is part of TensorArtist
 
@@ -11,6 +13,8 @@ import tensorflow as tf
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
+
+import functools
 
 logger = get_logger(__file__)
 
@@ -27,7 +31,7 @@ __envs__ = {
     'trainer': {
         'epoch_size': 128,
         'nr_iters': 1280,
-        'learning_rate': 0.001,
+        'learning_rate': 0.01,
         'batch_size': 64,
 
         'env_flags': {
@@ -42,6 +46,9 @@ def make_network(env):
 
         num_classes = get_env('dataset.num_classes')
 
+        ConvBNReLU = functools.partial(O.conv2d, nonlin=O.bn_relu)
+        Conv2D = ConvBNReLU
+
         dpc = env.create_dpcontroller()
         with dpc.activate():
             def inputs():
@@ -51,15 +58,15 @@ def make_network(env):
 
             def forward(img):
                 _ = img
-                _ = O.conv2d('conv1.1', _, 16, (3, 3), padding='SAME', nonlin=O.relu)
-                _ = O.conv2d('conv1.2', _, 16, (3, 3), padding='SAME', nonlin=O.relu)
+                _ = Conv2D('conv1.1', _, 16, (3, 3), padding='SAME')
+                _ = Conv2D('conv1.2', _, 16, (3, 3), padding='SAME')
                 _ = O.pooling2d('pool1', _, kernel=3, stride=2)
-                _ = O.conv2d('conv2.1', _, 32, (3, 3), padding='SAME', nonlin=O.relu)
-                _ = O.conv2d('conv2.2', _, 32, (3, 3), padding='SAME', nonlin=O.relu)
+                _ = Conv2D('conv2.1', _, 32, (3, 3), padding='SAME')
+                _ = Conv2D('conv2.2', _, 32, (3, 3), padding='SAME')
                 _ = O.pooling2d('pool2', _, kernel=3, stride=2)
-                _ = O.conv2d('conv3.1', _, 64, (3, 3), padding='VALID', nonlin=O.relu)
-                _ = O.conv2d('conv3.2', _, 64, (3, 3), padding='VALID', nonlin=O.relu)
-                _ = O.conv2d('conv3.3', _, 64, (3, 3), padding='VALID', nonlin=O.relu)
+                _ = Conv2D('conv3.1', _, 64, (3, 3), padding='VALID')
+                _ = Conv2D('conv3.2', _, 64, (3, 3), padding='VALID')
+                _ = Conv2D('conv3.3', _, 64, (3, 3), padding='VALID')
                 #2
                 dpc.add_output(_, name='feature')
                 summary.scalar('feature/rms', _.std())

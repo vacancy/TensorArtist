@@ -53,7 +53,8 @@ def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID',
     _ = tf.nn.conv2d(_, W, strides=stride, padding=padding, name=name)
     if use_bias:
         _ = tf.nn.bias_add(_, b, name=name + '_bias')
-    _ = nonlin(_)
+    with tf.variable_scope(name, reuse=False):
+        _ = nonlin(_)
     return _
 
 
@@ -116,7 +117,7 @@ def batchnorm(name, inpvar, use_local_stat=None, decay=0.9, epsilon=1e-5, use_af
     out = shape[-1]
     if len(shape) == 2:
         inpvar = inpvar.reshape(-1, 1, 1, out)
-    with tf.variable_scope(name):
+    with tf.variable_scope(name, reuse=False):
         if use_affine:
             beta = variable('beta', tf.constant_initializer(), shape=[out], dtype=param_dtype)
             gamma = variable('gamma', tf.constant_initializer(1.0), shape=[out], dtype=param_dtype)
