@@ -13,10 +13,13 @@ import tensorflow as tf
 from .node import as_varnode
 from .function import Function
 from ..tfutils import clean_name
+from ...core.logger import get_logger
 from ...core.utils.defaults import defaults_manager
 from ...core.utils.context import EmptyContext
 from ...core.utils.meta import assert_notnone, notnone_property, AttrObject
 from ...core.utils.nd import nd_split_n
+
+logger = get_logger(__file__)
 
 __all__ = [
     'select_device', 'reuse_context',
@@ -351,12 +354,14 @@ class Network(object):
             all_variables[clean_name(v)] = fetch_variable(v, self.owner_env.session)
         return all_variables
 
-    def assign_all_variables_dict(self, all_variables):
+    def assign_all_variables_dict(self, all_variables, verbose=True):
         from ..tfutils import assign_variable
 
         for v in self.owner_env.graph.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
             value = all_variables.get(clean_name(v), None)
             if value is not None:
+                if verbose:
+                    logger.info('Assign variable from external dict: {}'.format(clean_name(v)))
                 assign_variable(v, value, self.owner_env.session)
         return self
 
