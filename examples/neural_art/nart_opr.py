@@ -12,21 +12,22 @@ import tensorflow as tf
 
 
 def get_content_loss(p, x):
-    C = p.shape[1]
-    N = p.shape[2] * p.shape[3]
-    loss = (1. / (2 * N ** 0.5 * C ** 0.5)) * ((x - p) ** 2).sum()
+    c = p.shape[3]
+    n = p.shape[1] * p.shape[2]
+    loss = (1. / (2. * n ** 0.5 * c ** 0.5)) * ((x - p) ** 2.).sum()
     return O.as_varnode(loss)
 
 
 def get_style_loss(a, x):
-    c = a.shape[1]
-    a = a.reshape(c, -1)
-    x = x.reshape(c, -1)
+    c = a.shape[3]
+    n = x.shape[1] * x.shape[2]
+    a = a.reshape(-1, c)
+    x = x.reshape(-1, c)
 
-    ga = np.dot(a, a.T)
-    gx = tf.matmul(x, x.dimshuffle(1, 0))
+    ga = np.dot(a.T, a)
+    gx = tf.matmul(x.dimshuffle(1, 0), x)
 
-    a = 1. / ((4 * a.shape[1] * c ** 2) * x.partial_shape[1])
+    a = 1. / ((4. * a.shape[0] * c ** 2.) * tf.cast(c, 'float32'))
 
-    loss = a * ((gx - ga) ** 2).sum()
+    loss = a * tf.reduce_sum((gx - ga) ** 2)
     return O.as_varnode(loss)

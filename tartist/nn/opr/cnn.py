@@ -42,19 +42,21 @@ def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID',
             assert inpvar.static_shape[1] is not None and inpvar.static_shape[2] is not None
             b_shape = inpvar.static_shape[1:3] + (cout, )
 
-    with tf.variable_scope(name, reuse=False):
+    with tf.variable_scope(name + '/var', reuse=False):
         if W is None:
             W = variable('W', tf.contrib.layers.xavier_initializer_conv2d(), shape=W_shape, dtype=param_dtype)
         if use_bias:
             if b is None:
                 b = variable('b', tf.constant_initializer(), shape=b_shape, dtype=param_dtype)
 
-    _ = inpvar.impl
-    _ = tf.nn.conv2d(_, W, strides=stride, padding=padding, name=name)
-    if use_bias:
-        _ = tf.nn.bias_add(_, b, name=name + '_bias')
-    _ = nonlin(_)
-    return _
+    with tf.name_scope(name + '/op'):
+        _ = inpvar.impl
+        _ = tf.nn.conv2d(_, W, strides=stride, padding=padding, name='conv')
+        if use_bias:
+            _ = tf.nn.bias_add(_, b, name='bias')
+        _ = nonlin(_, name='nonlin')
+
+    return tf.identity(_, name=name)
 
 
 @wrap_named_op
@@ -82,16 +84,17 @@ def fc(name, inpvar, nr_output_channels,
     W_shape = (inpvar.static_shape[1], nr_output_channels)
     b_shape = (nr_output_channels, )
 
-    with tf.variable_scope(name, reuse=False):
+    with tf.variable_scope(name + '/var', reuse=False):
         if W is None:
             W = variable('W', tf.contrib.layers.xavier_initializer_conv2d(), shape=W_shape, dtype=param_dtype)
         if use_bias:
             if b is None:
                 b = variable('b', tf.constant_initializer(), shape=b_shape, dtype=param_dtype)
 
-    out = tf.nn.xw_plus_b(inpvar, W, b) if use_bias else tf.matmul(inpvar, W)
-    out = nonlin(out)
-    return out
+    with tf.name_scope(name + '/op'):
+        out = tf.nn.xw_plus_b(inpvar, W, b, name='xwpb') if use_bias else tf.matmul(inpvar, W, name='matmul')
+        out = nonlin(out, name='nonlin')
+    return tf.identity(out, name=name)
 
 
 @wrap_named_op
@@ -119,7 +122,7 @@ def batchnorm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dtyp
     if len(shape) == 2:
         inpvar = inpvar.reshape(-1, 1, 1, nr_channels)
 
-    with tf.variable_scope(name):
+    with tf.variable_scope(name + '/var'):
         if use_affine:
             beta = variable('beta', tf.constant_initializer(), shape=[nr_channels], dtype=param_dtype)
             gamma = variable('gamma', tf.constant_initializer(1.0), shape=[nr_channels], dtype=param_dtype)

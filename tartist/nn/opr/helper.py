@@ -70,8 +70,7 @@ def wrap_varnode_func(func):
 def wrap_named_op(func):
     @functools.wraps(func)
     def new_func(name, *args, **kwargs):
-        with tf.name_scope(name):
-            outputs = func(name, *args, **kwargs)
+        outputs = func(name, *args, **kwargs)
         opr = OprNode(name)
         get_default_net().add_to_collection(opr, 'oprnodes')
         if isinstance(outputs, (tuple, list)):

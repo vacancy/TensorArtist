@@ -38,7 +38,7 @@ class OptimizerWrapper(object):
 
     def minimize(self, loss):
         all_gradients = self._base_optimizer.compute_gradients(loss)
-        self._apply_grad_modifiers(all_gradients)
+        all_gradients = self._apply_grad_modifiers(all_gradients)
         return self._base_optimizer.apply_gradients(all_gradients)
 
     def _apply_grad_modifiers(self, all_gradients):

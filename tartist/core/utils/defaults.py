@@ -26,12 +26,15 @@ class DefaultsManager(object):
     def wrap_custom_as_default(self, custom_method):
         identifier = self.__make_unique_identifier(custom_method)
 
+        custom_method = contextlib.contextmanager(custom_method)
+
         @contextlib.contextmanager
         @functools.wraps(custom_method)
         def wrapped_func(slf, *args, **kwargs):
             backup = self._defaults.get(identifier, None)
             self._defaults[identifier] = slf
-            yield custom_method(slf, *args, **kwargs)
+            with custom_method(slf, *args, **kwargs):
+                yield
             self._defaults[identifier] = backup
 
         return wrapped_func

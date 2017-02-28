@@ -9,6 +9,7 @@
 
 from tartist.core import load_env, get_env, get_logger
 from tartist.core import io
+from tartist.core.utils.cli import parse_devices
 from tartist.nn import Env
 from tartist.nn import opr as O, optimizer
 from tartist.nn.train import TrainerEnv
@@ -26,7 +27,7 @@ __envs__ = {
     'neural_style': {
         'content_layers': [('conv4_2', 1.)],
         'style_layers': [('conv1_1', 1.), ('conv2_1', 1.5), ('conv3_1', 2.), ('conv4_1', 2.5), ('conv5_1', 3.)],
-        'style_strenth': 500,
+        'style_strenth': 500.,
         'image_noise_ratio': 0.7,
         'image_mean': np.array([104, 117, 123], dtype='float32'),
         'learning_rate': 2.0
@@ -45,6 +46,8 @@ parser.add_argument('--iter', dest='nr_iters', type=int, default=1000, help='num
 parser.add_argument('--save-step', dest='save_step', type=int, default=50, help='save step (in iteration)')
 args = parser.parse_args()
 
+args.device = parse_devices([args.device])[0]
+
 
 def make_network(env, h=None, w=None):
     with env.create_network() as net:
@@ -60,7 +63,7 @@ def make_network(env, h=None, w=None):
 
         def stacked_conv(prefix, nr_convs, in_, channel, kernel=(3, 3), padding='SAME', nonlin=O.relu):
             for i in range(1, nr_convs + 1):
-                in_ = O.conv2d('{}_{}'.format(prefix, i), in_, channel, kernel, padding=padding, nonlinearity=nonlin)
+                in_ = O.conv2d('{}_{}'.format(prefix, i), in_, channel, kernel, padding=padding, nonlin=nonlin)
             return in_
 
         _ = stacked_conv('conv1', 2, _, 64)
@@ -74,12 +77,10 @@ def make_network(env, h=None, w=None):
         _ = stacked_conv('conv5', 3, _, 512)
         _ = O.pooling2d('pool5', _, (2, 2))
 
-        net.add_output('final', _)
-
         for l in get_env('neural_style.content_layers'):
-            net.add_output(l[0], net.find_var_by_name(l[0]))
+            net.add_output(net.find_var_by_name(l[0]), name=l[0])
         for l in get_env('neural_style.style_layers'):
-            net.add_output(l[0], net.find_var_by_name(l[0]))
+            net.add_output(net.find_var_by_name(l[0]), name=l[0])
 
 
 def main():
@@ -90,42 +91,48 @@ def main():
     h, w = img.shape[0:2]
 
     env = Env(master_dev=args.device)
-    make_network(env)
-    snapshot.load_weights_file(env, args.weight_path)
+    with env.as_default():
+        make_network(env)
+        snapshot.load_weights_file(env, args.weight_path)
 
-    func = env.make_func()
-    func.compile(env.network.outputs)
-
-    res_img = func(img=img[np.newaxis])
-    res_smg = func(img=img[np.newaxis])
-
+        func = env.make_func()
+        func.compile(env.network.outputs)
+    
+        env.initialize_all_variables()
+        res_img = func(img=img[np.newaxis])
+        res_smg = func(img=img[np.newaxis])
+    
     # create a new env for train
     env = TrainerEnv(master_dev=args.device)
-    make_network(env, h, w)
-    snapshot.load_weights_file(env, args.weight_path)
+    with env.as_default():
+        make_network(env, h, w)
+        snapshot.load_weights_file(env, args.weight_path)
 
     net = env.network
     netin = net.outputs['img'].taop
 
-    outputs = net.outputs
-    loss_content = 0
-    for i in get_env('neural_style.content_layers'):
-        loss_content += i[1] * nart_opr.get_content_loss(res_img[i[0]], outputs[i[0]])
-    loss_style = 0
-    for i in get_env('neural_style.style_layers'):
-        loss_style += i[1] * nart_opr.get_style_loss(res_smg[i[0]], outputs[i[0]])
-    loss = loss_content + loss_style * get_env('neural_style.style_strenth')
-    net.set_loss(loss)
+    with env.as_default():
+        outputs = net.outputs
+        loss_content = 0.
+        for i in get_env('neural_style.content_layers'):
+            loss_content += i[1] * nart_opr.get_content_loss(res_img[i[0]], outputs[i[0]])
+        loss_style = 0.
+        for i in get_env('neural_style.style_layers'):
+            loss_style += i[1] * nart_opr.get_style_loss(res_smg[i[0]], outputs[i[0]])
+        loss = loss_content + loss_style * get_env('neural_style.style_strenth')
+        net.set_loss(loss)
 
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.MomentumOptimizer(get_env('trainer.learning_rate'), 0.9))
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('neural_style.learning_rate')))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
-        ('*/b', 2.0),
+        ('img', 1.0),
+        ('*', 0.0),
     ]))
     env.set_optimizer(wrapper)
 
     func = env.make_optimizable_func()
     func.compile({'loss': net.loss})
+    env.initialize_all_variables()
 
     noise_img = np.random.uniform(-20, 20, (h, w, 3)).astype('float32')
     image_mean = get_env('neural_style.image_mean')

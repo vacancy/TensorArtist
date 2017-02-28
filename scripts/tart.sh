@@ -1,4 +1,4 @@
-#/bin/bash -E
+#!/bin/bash -E
 
 TAROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )"/../ && pwd )"
 

@@ -149,7 +149,7 @@ class VarNodeOpDecl(object):
 
     def dimshuffle(self, *pattern, name=None):
         from ..opr.shape import dimshuffle 
-        return as_varnode(dimshuffle(src=self, perm=pattern, name=name))
+        return as_varnode(dimshuffle(self, perm=pattern, name=name))
 
     def add_axis(self, axis):
         from ..opr.shape import add_axis 
@@ -300,11 +300,22 @@ __valid_tensor_types__ = (VarNode, tf.Tensor, tf.Variable, tf.Operation)
 __valid_tf_tensor_types__ = (tf.Tensor, tf.Variable, tf.Operation)
 
 
-def as_varnode(tensor, dtype='float32'):
+def infer_dtype_from_const(v):
+    def canonize(dtype):
+        if dtype == np.float64:
+            dtype = np.float32
+    if isinstance(v, np.ndarray):
+        dtype = v.dtype
+    if isinstance(v, int) or (isinstance(v, (tuple, list)) and isinstance(v[0], int)):
+        return np.int32
+    return np.float32
+
+def as_varnode(tensor, dtype=None):
     if isinstance(tensor, VarNode):
         return tensor
 
     if isinstance(tensor, (np.ndarray, int, float, tuple, list)):
+        dtype = dtype or infer_dtype_from_const(tensor) 
         from ..opr.netsrc import constant
         return constant(tensor, dtype=dtype)
 

@@ -39,7 +39,7 @@ def get_vi_2dshape(shape):
 @wrap_varnode_func
 def _crop(inpvar, shape, method='center'):
     assert method in ('center', 'leftup')
-    assert inpvar.partial_shape is None or inpvar.static_shape.ndim == 4
+    assert inpvar.partial_shape is None or len(inpvar.static_shape) == 4
 
     inpvar = as_varnode(shape)
     shape = get_vi_2dshape(shape)
@@ -53,9 +53,10 @@ crop_center = functools.partial(_crop, method='center')
 crop_lu = functools.partial(_crop, method='leftup')
 
 
+@wrap_varnode_func
 def _pad(inpvar, shape, method='center', mode='CONSTANT'):
     assert method in ('center', 'rightbottom')
-    assert inpvar.static_shape is None or inpvar.partial_shape.ndim == 4
+    assert inpvar.static_shape is not None and len(inpvar.static_shape) == 4
 
     shape = get_vi_2dshape(shape)
     h, w = inpvar.shape[2], inpvar.shape[3]
@@ -64,22 +65,26 @@ def _pad(inpvar, shape, method='center', mode='CONSTANT'):
     y1 = shape[0] - h - y0
     x1 = shape[1] - w - x0
 
-    return tf.pad(inpvar, stack([stack([x0, x1]), stack([y0, y1])]), mode=mode)
+    new_shape = [inpvar.static_shape[0], None, None, inpvar.static_shape[3]]
+    out = tf.pad(inpvar, stack([[0, 0], stack([x0, x1]), stack([y0, y1]), [0, 0]]), mode=mode)
+    out.set_shape(new_shape)
+    return out
 
 
 pad_center = functools.partial(_pad, method='center')
 pad_rb = functools.partial(_pad, method='rightbottom')
 
 
+@wrap_varnode_func
 def pad_rb_multiple_of(inpvar, multiple, val=0):
-    assert inpvar.static_shape is None or inpvar.static_shape.ndim == 4
+    assert inpvar.static_shape is None or len(inpvar.static_shape) == 4
 
     multiple = get_vi_2dshape(multiple)
     h, w = inpvar.shape[2], inpvar.shape[3]
 
     def canonicalize(x, mul):
         a = x // mul
-        return (a + 1 - (a * mul).eq(x)) * mul
+        return (a + 1 - tf.cast(tf.equal(a * mul, x), tf.int32)) * mul
     return pad_rb(inpvar, [canonicalize(h, multiple[0]), canonicalize(w, multiple[1])])
 
 
@@ -103,12 +108,14 @@ def pad_rb_multiple_of(inpvar, multiple, val=0):
 #     return opr.outputs[0]
 
 
+@wrap_varnode_func
 def img_inverse(inpvar):
     return 255 -inpvar
 
 
+@wrap_varnode_func
 def img_flip(inpvar, axis=2):
-    assert inpvar.static_shape is None or inpvar.static_shape.ndim == 4
+    assert inpvar.static_shape is None or len(inpvar.static_shape) == 4
     assert axis in (1, 2)
     if axis == 1:
         return inpvar[:, ::-1, :, :]

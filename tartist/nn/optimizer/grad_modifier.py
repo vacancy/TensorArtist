@@ -39,9 +39,10 @@ class NameBasedGradModifierBase(GradModifierBase):
         for g, v in grad_and_vars:
             name = clean_name(v)
             rule_v = self._matcher.match(name)
-            if rule_v is not None:
-                g = self._op(g, v, rule_v)
-            res.append((g, v))
+            if g is not None:
+                if rule_v is not None:
+                    g = self._op(g, v, rule_v)
+                res.append((g, v))
 
         matched, unused = self._matcher.end()
 
@@ -63,8 +64,9 @@ class GlobalGradModifierBase(GradModifierBase):
     def _do_modification(self, grad_and_vars):
         res = []
         for g, v in grad_and_vars:
-            g = self._op(g, v)
-            res.append((g, v))
+            if g is not None:
+                g = self._op(g, v)
+                res.append((g, v))
         return res
 
     def _op(self, grad, var):

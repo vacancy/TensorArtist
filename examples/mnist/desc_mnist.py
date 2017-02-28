@@ -71,7 +71,7 @@ def make_network(env):
 
             accuracy = O.eq(label, pred).astype('float32').mean()
             summary.scalar('accuracy', accuracy)
-            summary.scalar('error', 1 - accuracy)
+            summary.scalar('error', 1. - accuracy)
 
 
 def make_optimizer(env):

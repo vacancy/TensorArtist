@@ -57,7 +57,7 @@ class Env(object):
         TRAIN = 1
         TEST = 2
 
-    def __init__(self, phase=Phase.TEST, master_dev='/gpu:0', flags=None, dpflags=None):
+    def __init__(self, phase=Phase.TEST, master_dev='/gpu:0', flags=None, dpflags=None, graph=None):
         self.__phase = phase
         self.__session = None
         self.__network = None
@@ -69,6 +69,7 @@ class Env(object):
         self._flags = flags or type(self).SessionFlag()
         self._dpflags = dpflags or type(self).DataParallelFlag()
         self._dpsplitters = []
+        self._graph = graph or tf.Graph()
 
     @notnone_property
     def network(self):
@@ -77,6 +78,10 @@ class Env(object):
     @notnone_property
     def current_dpc(self):
         return self.__current_dpc
+
+    @property
+    def graph(self):
+        return self._graph
 
     @contextlib.contextmanager
     def create_network(self):
@@ -143,11 +148,13 @@ class Env(object):
 
     @defaults_manager.wrap_custom_as_default
     def as_default(self, *, activate_session=True):
-        if activate_session:
-            with self.session.as_default():
+        with self._graph.as_default():
+            assert tf.get_default_graph() == self._graph
+            if activate_session:
+                with self.session.as_default():
+                    yield
+            else:
                 yield
-        else:
-            yield
 
     def make_func(self):
         f = Function(self)
@@ -156,7 +163,7 @@ class Env(object):
 
     def initialize_all_variables(self):
         sess = self.session
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.variables_initializer(self._graph.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)))
 
     def run(self, fetches, feed_dict=None, options=None, run_metadata=None):
         return self.session.run(fetches, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
@@ -339,27 +346,27 @@ class Network(object):
         from ..tfutils import fetch_variable
 
         all_variables = {}
-        for v in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
+        for v in self.owner_env.graph.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
             all_variables[clean_name(v)] = fetch_variable(v, self.owner_env.session)
         return all_variables
 
     def assign_all_variables_dict(self, all_variables):
         from ..tfutils import assign_variable
 
-        for v in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
+        for v in self.owner_env.graph.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
             value = all_variables.get(clean_name(v), None)
             if value is not None:
                 assign_variable(v, value, self.owner_env.session)
         return self
 
     def find_opr_by_name(self, name):
-        return tf.get_default_graph().get_operation_by_name(name)
+        return self.owner_env.graph.get_operation_by_name(name)
 
     def find_var_by_name(self, name):
         try:
-            return as_varnode(tf.get_default_graph().get_tensor_by_name(name))
-        except KeyError:
-            return as_varnode(tf.get_default_graph().get_tensor_by_name(name + ':0'))
+            return as_varnode(self.owner_env.graph.get_tensor_by_name(name))
+        except ValueError:
+            return as_varnode(self.owner_env.graph.get_tensor_by_name(name + ':0'))
 
     @defaults_manager.wrap_custom_as_default
     def as_default(self):

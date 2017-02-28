@@ -31,6 +31,7 @@ class TrainerEnv(Env):
         loss = as_tftensor(loss)
 
         func = self.make_func()
-        func.add_extra_op(self.optimizer.minimize(loss))
+        with self.as_default():
+            func.add_extra_op(self.optimizer.minimize(loss))
         return func
 
