@@ -93,20 +93,19 @@ def main():
     env = Env(master_dev=args.device)
     with env.as_default():
         make_network(env)
-        snapshot.load_weights_file(env, args.weight_path)
 
         func = env.make_func()
         func.compile(env.network.outputs)
     
         env.initialize_all_variables()
+        snapshot.load_weights_file(env, args.weight_path)
         res_img = func(img=img[np.newaxis])
-        res_smg = func(img=img[np.newaxis])
+        res_smg = func(img=smg[np.newaxis])
     
     # create a new env for train
     env = TrainerEnv(master_dev=args.device)
     with env.as_default():
         make_network(env, h, w)
-        snapshot.load_weights_file(env, args.weight_path)
 
     net = env.network
     netin = net.outputs['img'].taop
@@ -132,7 +131,9 @@ def main():
 
     func = env.make_optimizable_func()
     func.compile({'loss': net.loss})
+
     env.initialize_all_variables()
+    snapshot.load_weights_file(env, args.weight_path)
 
     noise_img = np.random.uniform(-20, 20, (h, w, 3)).astype('float32')
     image_mean = get_env('neural_style.image_mean')

@@ -31,3 +31,4 @@ def get_style_loss(a, x):
 
     loss = a * tf.reduce_sum((gx - ga) ** 2)
     return O.as_varnode(loss)
+
