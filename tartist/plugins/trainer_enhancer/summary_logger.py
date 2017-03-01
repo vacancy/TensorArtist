@@ -84,14 +84,14 @@ def enable_summary_history(trainer):
         if 'summaries' in trainer.runtime:
             summaries = trainer.runtime['summaries']
             mgr.put_summaries(summaries)
-        if 'loss' in trainer.runtime and check_proto_contains(summaries, 'loss'):
+        if 'loss' in trainer.runtime and not check_proto_contains(summaries, 'loss'):
             mgr.set_type('loss', 'scalar')
             mgr.put_scalar('loss', trainer.runtime['loss'])
         error_summary_key = trainer.runtime.get('error_summary_key', None)
 
         if mgr.has(error_summary_key):
             trainer.runtime['error'] = mgr.get(error_summary_key)[-1]
-            if check_proto_contains(summaries, 'error'):
+            if not check_proto_contains(summaries, 'error'):
                 mgr.set_type('error', 'scalar')
                 mgr.put_scalar('error', trainer.runtime['error'])
 
