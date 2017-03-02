@@ -15,7 +15,7 @@ from copy import copy, deepcopy
 from threading import Thread, Event
 logger = get_logger(__file__)
 
-__all__ = ['BatchDataFlow']
+__all__ = ['BatchDataFlow', 'EpochDataFlow']
 
 
 def batch_default_filler(buffer, idx, val):
@@ -75,3 +75,26 @@ class BatchDataFlow(SimpleDataFlowBase):
             self._cond[current].set_false()
             current = 1 - current
 
+    def _len(self):
+        length = len(self._source)
+        return None if length is None else length // self._batch_size
+
+
+class EpochDataFlow(SimpleDataFlowBase):
+    def __init__(self, source, epoch_size):
+        self._source = source
+        self._source_iter = None
+        self._epoch_size = epoch_size
+
+    def _initialize(self):
+        self._source_iter = iter(self._source)
+
+    def _gen(self):
+        for i in range(self._epoch_size):
+            try:
+                yield next(self._source_iter)
+            except StopIteration:
+                return
+
+    def _len(self):
+        return self._epoch_size

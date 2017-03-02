@@ -29,17 +29,23 @@ __envs__ = {
     },
 
     'trainer': {
-        'epoch_size': 128,
-        'nr_iters': 1280,
+        'nr_iters': 1280, 
         'learning_rate': 0.01,
+
         'batch_size': 64,
+        'epoch_size': 128,
 
         'env_flags': {
             'log_device_placement': False
         }
-    }
+    },
 
+    'inference': {
+        'batch_size': 256,
+        'epoch_size': 40
+    }
 }
+
 
 def make_network(env):
     with env.create_network() as net:
@@ -89,8 +95,13 @@ def make_network(env):
             net.set_loss(loss)
 
             accuracy = O.eq(label, pred).astype('float32').mean()
+            error = 1. - accuracy
+
             summary.scalar('accuracy', accuracy)
-            summary.scalar('error', 1. - accuracy)
+            summary.scalar('error', error)
+            summary.inference.scalar('loss', loss)
+            summary.inference.scalar('accuracy', accuracy)
+            summary.inference.scalar('error', error)
 
 
 def make_optimizer(env):
@@ -102,19 +113,23 @@ def make_optimizer(env):
     env.set_optimizer(wrapper)
 
 from data_provider import make_dataflow_train as make_dataflow
+from data_provider import make_dataflow_inference
 
 
 def main_train(trainer):
-    from tartist.plugins.trainer_enhancer import summary_logger
-    summary_logger.enable_summary_history(trainer)
-    summary_logger.enable_echo_summary_scalar(trainer)
-    summary_logger.set_error_summary_key(trainer, 'error')
+    from tartist.plugins.trainer_enhancer import summary
+    summary.enable_summary_history(trainer)
+    summary.enable_echo_summary_scalar(trainer)
+    summary.set_error_summary_key(trainer, 'error')
 
     from tartist.plugins.trainer_enhancer import progress
     progress.enable_epoch_progress(trainer)
 
     from tartist.plugins.trainer_enhancer import snapshot
     snapshot.enable_snapshot_saver(trainer)
+
+    from tartist.plugins.trainer_enhancer import inference
+    inference.enable_inference_runner(trainer, make_dataflow_inference)
 
     trainer.train()
 

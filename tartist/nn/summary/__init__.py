@@ -7,5 +7,6 @@
 # This file is part of TensorArtistS
 
 
-from .impl import *
+from . import inference
+from .train import *
 

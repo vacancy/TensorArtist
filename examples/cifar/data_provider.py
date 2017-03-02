@@ -15,14 +15,16 @@ from tartist.data.datasets.cifar import load_cifar
 import numpy as np
 
 _cifar = []
-SIZE = 32
+IMG_DIM = 32
+
 
 def ensure_load(cifar_num_classes):
     global _cifar
 
     if len(_cifar) == 0:
         for xy in load_cifar(get_env('dir.data'), cifar_num_classes):
-            _cifar.append(dict(img=xy[0].astype('float32').reshape(-1, SIZE, SIZE, 3), label=xy[1]))
+            _cifar.append(dict(img=xy[0].astype('float32').reshape(-1, IMG_DIM, IMG_DIM, 3), label=xy[1]))
+
 
 def make_dataflow_train(env):
     num_classes = get_env('dataset.nr_classes')
@@ -32,9 +34,27 @@ def make_dataflow_train(env):
     df = _cifar[0]
     df = flow.DOARandomSampleDataFlow(df)
     df = flow.BatchDataFlow(df, batch_size, sample_dict={
-        'img': np.empty(shape=(batch_size, SIZE, SIZE, 3), dtype='float32'),
+        'img': np.empty(shape=(batch_size, IMG_DIM, IMG_DIM, 3), dtype='float32'),
         'label': np.empty(shape=(batch_size, ), dtype='int32')
     })
+
+    return df
+
+
+def make_dataflow_inference(env):
+    num_classes = get_env('dataset.nr_classes')
+    ensure_load(num_classes)
+    batch_size = get_env('inference.batch_size')
+    epoch_size = get_env('inference.epoch_size')
+
+    df = _cifar[1]  # use validation set actually
+    df = flow.DictOfArrayDataFlow(df)
+    df = flow.tools.cycle(df)
+    df = flow.BatchDataFlow(df, batch_size, sample_dict={
+        'img': np.empty(shape=(batch_size, IMG_DIM, IMG_DIM, 3), dtype='float32'),
+        'label': np.empty(shape=(batch_size, ), dtype='int32')
+    })
+    df = flow.EpochDataFlow(df, epoch_size)
 
     return df
 

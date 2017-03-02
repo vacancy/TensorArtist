@@ -14,6 +14,7 @@ import numpy as np
 
 _mnist = []
 
+
 def ensure_load():
     global _mnist 
 
@@ -32,6 +33,23 @@ def make_dataflow_train(env):
         'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
         'label': np.empty(shape=(batch_size, ), dtype='int32')
     })
+
+    return df
+
+
+def make_dataflow_inference(env):
+    ensure_load()
+    batch_size = get_env('inference.batch_size')
+    epoch_size = get_env('inference.epoch_size')
+
+    df = _mnist[1]  # use validation set actually
+    df = flow.DictOfArrayDataFlow(df)
+    df = flow.tools.cycle(df)
+    df = flow.BatchDataFlow(df, batch_size, sample_dict={
+        'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
+        'label': np.empty(shape=(batch_size, ), dtype='int32')
+    })
+    df = flow.EpochDataFlow(df, epoch_size)
 
     return df
 
