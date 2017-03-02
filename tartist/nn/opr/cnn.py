@@ -65,10 +65,13 @@ def pooling2d(name, inpvar, kernel, stride=None, padding='VALID', method='MAX'):
     stride = get_4dshape(stride, kernel)
 
     assert inpvar.ndims == 4
-    assert method == 'MAX'
+    assert method in ['MAX', 'AVG']
 
-    return tf.nn.max_pool(inpvar, ksize=kernel, strides=stride, padding=padding, name=name)
-
+    if method == 'MAX':
+        return tf.nn.max_pool(inpvar, ksize=kernel, strides=stride, padding=padding, name=name)
+    if method == 'AVG':
+        return tf.nn.avg_pool(inpvar, ksize=kernel, strides=stride, padding=padding, name=name)
+    assert False
 
 @wrap_named_op
 @wrap_varnode_func
