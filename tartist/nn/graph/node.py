@@ -304,11 +304,13 @@ def infer_dtype_from_const(v):
     def canonize(dtype):
         if dtype == np.float64:
             dtype = np.float32
+        return dtype
     if isinstance(v, np.ndarray):
-        dtype = v.dtype
+        return canonize(v.dtype)
     if isinstance(v, int) or (isinstance(v, (tuple, list)) and isinstance(v[0], int)):
         return np.int32
     return np.float32
+
 
 def as_varnode(tensor, dtype=None):
     if isinstance(tensor, VarNode):

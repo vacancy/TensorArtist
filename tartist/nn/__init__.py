@@ -6,6 +6,7 @@
 # 
 # This file is part of TensorArtist
 
+from .tfutils import TArtGraphKeys
 from .graph import *
 from . import opr, optimizer, summary, train
 
@@ -19,3 +20,4 @@ def varnode_to_tftensor(varnode, *args, **kwargs):
     return v
 
 tf.register_tensor_conversion_function(VarNode, varnode_to_tftensor)
+

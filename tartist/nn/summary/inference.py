@@ -6,17 +6,17 @@
 # 
 # This file is part of TensorArtistS
 
+from .. import TArtGraphKeys
 import functools
 import tensorflow as tf
 
 __all__ = ['INFERENCE_SUMMARIES', 'tensor', 'scalar', 'histogram', 'audio', 'image']
-INFERENCE_SUMMARIES = 'inference_summaries'
 
 
-def migrate_summary(tf_func):
+def _migrate_summary(tf_func):
     @functools.wraps(tf_func)
     def new_func(name, *args, **kwargs):
-        kwargs.setdefault('collections', [INFERENCE_SUMMARIES])
+        kwargs.setdefault('collections', [TArtGraphKeys.INFERENCE_SUMMARIES])
         name_prefix = kwargs.pop('name_prefix', 'inference/')
 
         if hasattr(name, 'name'):
@@ -28,8 +28,8 @@ def migrate_summary(tf_func):
 
     return new_func
 
-tensor = migrate_summary(tf.summary.tensor_summary)
-scalar = migrate_summary(tf.summary.scalar)
-histogram = migrate_summary(tf.summary.histogram)
-audio = migrate_summary(tf.summary.audio)
-image = migrate_summary(tf.summary.image)
+tensor = _migrate_summary(tf.summary.tensor_summary)
+scalar = _migrate_summary(tf.summary.scalar)
+histogram = _migrate_summary(tf.summary.histogram)
+audio = _migrate_summary(tf.summary.audio)
+image = _migrate_summary(tf.summary.image)

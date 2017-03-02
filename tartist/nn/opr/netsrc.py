@@ -23,45 +23,44 @@ __all__ = ['placeholder', 'variable', 'constant']
 def placeholder(name, shape=None, dtype=__default_dtype__, device=None):
     with device_context(device):
         var = as_varnode(tf.placeholder(name=name, shape=shape, dtype=dtype))
-        get_default_net().add_to_collection(var, 'placeholders')
         return var
 
 
 class VariableOp(OprNode):
-    def __init__(self, name, output, owner_net):
+    def __init__(self, name, output, owner_env):
         super().__init__(name, [], [output])
-        self._owner_net = owner_net
-
-    @property
-    def owner_env(self):
-        return self._owner_net.owner_env
+        self._owner_env = owner_env
 
     def get_value(self):
         var = self.outputs[0].impl
-        return fetch_variable(var, self.owner_env.session)
+        return fetch_variable(var, self._owner_env.session)
 
     def set_value(self, value, use_locking=False):
         var = self.outputs[0].impl
-        assign_variable(var, value, self.owner_env.session, use_locking=use_locking)
+        assign_variable(var, value, self._owner_env.session, use_locking=use_locking)
         return self
 
 
 @wrap_named_op(use_scope=False)
 @wrap_varnode_func
-def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, device=None, trainable=True):
+def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, device=None, trainable=True,
+             collections=None):
     opr_name = unique_opr_name(name) 
 
     with device_context(device):
-        if isinstance(value_or_initializer, np.ndarray):
-            var = tf.Variable(initial_value=value_or_initializer, trainable=trainable, name=name, dtype=dtype)
+        if isinstance(value_or_initializer, (np.ndarray, float, int)):
+            if type(value_or_initializer) is float:
+                dtype = dtype or tf.float32
+            elif type(value_or_initializer) is int:
+                dtype = dtype or tf.int32
+            var = tf.Variable(initial_value=value_or_initializer, trainable=trainable, name=name, dtype=dtype,
+                              collections=collections)
         else:
             assert_notnone(shape, name='shape')
             var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=value_or_initializer,
-                                  trainable=trainable)
+                                  trainable=trainable, collections=collections)
         var = as_varnode(var)
-        get_default_net().add_to_collection(var, 'variables')
-        get_default_net().add_to_collection(var.impl.initializer, 'variables/initializer')
-        return VariableOp(opr_name, var, get_default_net()).outputs[0]
+        return VariableOp(opr_name, var, get_default_env()).outputs[0]
 
 
 @wrap_varnode_func

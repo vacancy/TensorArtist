@@ -6,13 +6,25 @@
 # 
 # This file is part of TensorArtist
 
+import re
 import tensorflow as tf
+
+
+class TArtGraphKeys:
+    TART_OPERATORS = 'tart_operators'
+    INFERENCE_SUMMARIES = 'inference_summaries'
+    OPTIMIZER_VARIABLES = 'optimizer_variables'
+
 
 def clean_name(tensor, suffix=':0'):
     name = tensor.name
     if name.endswith(suffix):
         name = name[:-len(suffix)]
     return name
+
+
+def clean_summary_name(name):
+    return re.sub('_\d+$', '', name)
 
 
 def assign_variable(var, value, session, use_locking=False):
@@ -25,5 +37,4 @@ def fetch_variable(var, session):
     except tf.errors.FailedPreconditionError:
         session.run(var.initializer)
         return session.run(var)
-
 

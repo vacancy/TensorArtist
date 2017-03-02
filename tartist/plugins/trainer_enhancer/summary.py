@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 from tartist.core import get_logger, register_event
+from tartist.nn.tfutils import clean_summary_name
 
 logger = get_logger()
 
@@ -39,6 +40,8 @@ class SummaryHistoryManager(object):
     def put_summaries(self, summaries):
         for val in summaries.value:
             if val.WhichOneof('value') == 'simple_value':
+                # XXX: do hacks here
+                val.tag = clean_summary_name(val.tag)
                 self.put_scalar(val.tag, val.simple_value)
                 self.set_type(val.tag, 'scalar')
 
@@ -62,7 +65,7 @@ class SummaryHistoryManager(object):
         if top_k is None:
             top_k = len(values)
         values = values[-top_k:]
-        return sum(values) / len(values)
+        return sum(values) / (len(values) + 1e-4)
 
 
 def put_summary_history(trainer, summaries):
@@ -116,7 +119,7 @@ def enable_echo_summary_scalar(trainer):
         mgr = trainer.runtime['summary_histories']
 
         log_strs = ['Summaries: epoch = {}'.format(trainer.epoch)]
-        for k in mgr.get_all_summaries('scalar'):
+        for k in sorted(mgr.get_all_summaries('scalar')):
             if not k.startswith('inference'): # do hack for inference
                 avg = mgr.average(k, trainer.epoch_size)
             else:

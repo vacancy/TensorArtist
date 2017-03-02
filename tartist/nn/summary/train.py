@@ -12,7 +12,7 @@ import tensorflow as tf
 __all__ = ['tensor', 'scalar', 'histogram', 'audio', 'image']
 
 
-def migrate_summary(tf_func):
+def _migrate_summary(tf_func):
     @functools.wraps(tf_func)
     def new_func(name, *args, **kwargs):
         if hasattr(name, 'name'):
@@ -22,8 +22,8 @@ def migrate_summary(tf_func):
 
     return new_func
 
-tensor = migrate_summary(tf.summary.tensor_summary)
-scalar = migrate_summary(tf.summary.scalar)
-histogram = migrate_summary(tf.summary.histogram)
-audio = migrate_summary(tf.summary.audio)
-image = migrate_summary(tf.summary.image)
+tensor = _migrate_summary(tf.summary.tensor_summary)
+scalar = _migrate_summary(tf.summary.scalar)
+histogram = _migrate_summary(tf.summary.histogram)
+audio = _migrate_summary(tf.summary.audio)
+image = _migrate_summary(tf.summary.image)
