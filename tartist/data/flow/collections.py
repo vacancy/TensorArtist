@@ -22,6 +22,9 @@ class DictDataFlowProxy(SimpleDataFlowBase):
             assert len(self._keys) == len(v), 'DictDataFlowAdapter: length mismatched'
             yield dict(zip(self._keys, v))
 
+    def _len(self):
+        return len(self._iterable)
+
 
 class ListOfArrayDataFlow(SimpleDataFlowBase):
     def __init__(self, loa):
@@ -35,6 +38,9 @@ class ListOfArrayDataFlow(SimpleDataFlowBase):
     def _gen(self):
         for i in range(self._length):
             yield [l[i] for l in self._loa]
+
+    def _len(self):
+        return self._length
 
 
 def DictOfArrayDataFlow(doa):

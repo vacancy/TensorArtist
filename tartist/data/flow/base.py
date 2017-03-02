@@ -18,6 +18,7 @@ class DataFlowBase(object):
 
 collections.Iterable.register(DataFlowBase)
 
+
 class SimpleDataFlowBase(DataFlowBase):
     __initialized = False
 
@@ -32,6 +33,15 @@ class SimpleDataFlowBase(DataFlowBase):
 
     def _finalize(self):
         pass
+
+    def _len(self):
+        return None
+
+    def __len__(self):
+        try:
+            return self._len()
+        except TypeError:
+            return None
 
     def __iter__(self):
         if not self.__initialized:

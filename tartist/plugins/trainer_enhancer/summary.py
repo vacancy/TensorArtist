@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : summary_logger.py
+# File   : summary.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 2/26/17
@@ -65,6 +65,20 @@ class SummaryHistoryManager(object):
         return sum(values) / len(values)
 
 
+def put_summary_history(trainer, summaries):
+    mgr = trainer.runtime.get('summary_histories', None)
+    assert mgr is not None, 'you should first enable summary history'
+    mgr.put_summaries(summaries)
+
+
+def put_summary_history_scalar(trainer, name, value):
+    mgr = trainer.runtime.get('summary_histories', None)
+    assert mgr is not None, 'you should first enable summary history'
+
+    mgr.set_type(name, 'scalar')
+    mgr.put_scalar(name, value)
+
+
 def enable_summary_history(trainer):
     def check_proto_contains(proto, tag):
         if proto is None:
@@ -85,15 +99,13 @@ def enable_summary_history(trainer):
             summaries = trainer.runtime['summaries']
             mgr.put_summaries(summaries)
         if 'loss' in trainer.runtime and not check_proto_contains(summaries, 'loss'):
-            mgr.set_type('loss', 'scalar')
-            mgr.put_scalar('loss', trainer.runtime['loss'])
-        error_summary_key = trainer.runtime.get('error_summary_key', None)
+            put_summary_history_scalar(trainer, 'loss', trainer.runtime['loss'])
 
+        error_summary_key = trainer.runtime.get('error_summary_key', None)
         if mgr.has(error_summary_key):
             trainer.runtime['error'] = mgr.get(error_summary_key)[-1]
             if not check_proto_contains(summaries, 'error'):
-                mgr.set_type('error', 'scalar')
-                mgr.put_scalar('error', trainer.runtime['error'])
+                put_summary_history_scalar(trainer, 'error', trainer.runtime['error'])
 
     register_event(trainer, 'optimization:before', summary_history_on_optimization_before)
     register_event(trainer, 'iter:after', summary_history_on_iter_after)
@@ -105,7 +117,10 @@ def enable_echo_summary_scalar(trainer):
 
         log_strs = ['Summaries: epoch = {}'.format(trainer.epoch)]
         for k in mgr.get_all_summaries('scalar'):
-            avg = mgr.average(k, trainer.epoch_size)
+            if not k.startswith('inference'): # do hack for inference
+                avg = mgr.average(k, trainer.epoch_size)
+            else:
+                avg = mgr.average(k, trainer.runtime['inference_epoch_size'])
             log_strs.append('  {} = {}'.format(k, avg))
         if len(log_strs) > 1:
             logger.info('\n'.join(log_strs))
