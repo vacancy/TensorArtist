@@ -10,9 +10,10 @@ import zmq
 import socket
 import uuid
 import json
+import collections
 
 
-def router_recv_json(sock):
+def router_recv_json(sock, flag=zmq.NOBLOCK):
     try:
         identifier, delim, *payload = sock.recv_multipart(zmq.NOBLOCK)
         return [identifier] + list(map(lambda x: json.loads(x.decode('utf-8')), payload))
@@ -47,6 +48,16 @@ def req_recv_json(sock, flag=0):
         return response[0] if len(response) == 1 else response
     except zmq.error.ZMQError:
         return None
+
+
+def iter_recv(meth, sock):
+    while True:
+        res = meth(sock, flag=zmq.NOBLOCK)
+        succ = res[0] is not None if isinstance(res, (tuple, list)) else res is not None
+        if succ:
+            yield res
+        else:
+            break
 
 
 def req_send_and_recv(sock, *payloads):

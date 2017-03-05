@@ -188,43 +188,26 @@ class Controller(object):
     def _main_do_control_recv(self, socks):
         # ns
         if self._ns_socket in socks and socks[self._ns_socket] == zmq.POLLIN:
-            while True:
-                msg = utils.req_recv_json(self._ns_socket, flag=zmq.NOBLOCK)
-                if msg is not None:
-                    self._control_dispatcher.dispatch(msg['action'], msg)
-                else:
-                    break
+            for msg in utils.iter_recv(utils.req_recv_json, self._ns_socket):
+                self._control_dispatcher.dispatch(msg['action'], msg)
 
         # router
         if self._control_router in socks and socks[self._control_router] == zmq.POLLIN:
-            while True:
-                identifier, msg = utils.router_recv_json(self._control_router)
-                if msg is not None:
-                    self._control_dispatcher.dispatch(msg['action'], identifier, msg)
-                else:
-                    break
+            for identifier, msg in utils.iter_recv(utils.router_recv_json, self._control_router):
+                self._control_dispatcher.dispatch(msg['action'], identifier, msg)
 
         for k in socks:
             if k in self._ipeers_csock and socks[k] == zmq.POLLIN:
-                while True:
-                    msg = utils.req_recv_json(k, flag=zmq.NOBLOCK)
-                    if msg is not None:
-                        self._control_dispatcher.dispatch(msg['action'], msg)
-                    else:
-                        break
+                for msg in utils.iter_recv(utils.req_recv_json, k):
+                    self._control_dispatcher.dispatch(msg['action'], msg)
 
     def _main_do_input(self, socks):
         for k in socks:
             if k in self._ipeers_dsock and socks[k] == zmq.POLLIN:
-                while True:
-                    if not self._data_recv_queue.full():
-                        msg = utils.pull_pyobj(k)
-                        if msg is not None:
-                            self._data_recv_queue.put(msg)
-                        else:
-                            break
-                    else:
-                        break
+                if not self._data_recv_queue.full():
+                    msg = utils.pull_pyobj(k)
+                    if msg is not None:
+                        self._data_recv_queue.put(msg)
 
     def _main_do_output(self):
         nr_send = self._data_send_queue.qsize()

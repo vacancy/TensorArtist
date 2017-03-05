@@ -187,20 +187,12 @@ class NameServer(object):
 
     def _main_do_recv(self, socks):
         if self._router in socks and socks[self._router] == zmq.POLLIN:
-            while True:
-                identifier, msg = utils.router_recv_json(self._router)
-                if msg is not None:
-                    self._dispatcher.dispatch(msg['action'], identifier, msg)
-                else:
-                    break
+            for identifier, msg in utils.iter_recv(utils.router_recv_json, self._router):
+                self._dispatcher.dispatch(msg['action'], identifier, msg)
         for k in socks:
             if k in self._req_socks and socks[k] == zmq.POLLIN:
-                while True:
-                    msg = utils.req_recv_json(k, flag=zmq.NOBLOCK)
-                    if msg is not None:
-                        self._dispatcher.dispatch(msg['action'], msg)
-                    else:
-                        break
+                for msg in utils.iter_recv(utils.req_recv_json, k):
+                    self._dispatcher.dispatch(msg['action'], msg)
 
     def register_controller(self, identifier, msg):
         with self._context_lock:
