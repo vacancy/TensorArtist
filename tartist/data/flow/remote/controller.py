@@ -176,7 +176,10 @@ class Controller(object):
         nr_send = self._control_send_queue.qsize()
         for i in range(nr_send):
             job = self._control_send_queue.get()
-            rc = utils.req_send_json(job['sock'], job['payload'], flag=zmq.NOBLOCK)
+            if 'identifier' in job:
+                rc = utils.router_send_json(job['sock'], job['identifier'], job['payload'], flag=zmq.NOBLOCK)
+            else:
+                rc = utils.req_send_json(job['sock'], job['payload'], flag=zmq.NOBLOCK)
             if not rc:
                 job['countdown'] -= 1
                 if job['countdown'] >= 0:
@@ -332,9 +335,13 @@ class Controller(object):
         if msg['uid'] not in self._ipeers:
             self._ipeers[msg['uid']] = [msg['info'], None, None]  # info, control_socket, data_socket
             self._do_setup_ipeer_csock(msg['uid'])
-        utils.router_send_json(self._control_router, identifier, {
-            'action': configs.Actions.NS_OPEN_CTL_SUCC,
-            'uid': self._uid
+        self._control_send_queue.put({
+            'sock': self._control_router,
+            'identifier': identifier,
+            'payload': {
+                'action': configs.Actions.NS_OPEN_CTL_SUCC,
+                'uid': self._uid
+            }
         })
         logger.info('Found new controller {}'.format(msg['uid']))
 
@@ -353,9 +360,13 @@ class Controller(object):
             if record[1] is not None:
                 utils.graceful_close(record[1])
                 self._opeers_dsock.remove(record[1])
-        utils.router_send_json(self._control_router, identifier, {
-            'action': configs.Actions.NS_CLOSE_CTL_SUCC,
-            'uid': self._uid
+        self._control_send_queue.put({
+            'sock': self._control_router,
+            'identifier': identifier,
+            'payload': {
+                'action': configs.Actions.NS_CLOSE_CTL_SUCC,
+                'uid': self._uid
+            }
         })
         logger.info('Close timeout controller {}'.format(msg['uid']))
 

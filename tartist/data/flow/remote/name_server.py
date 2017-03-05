@@ -117,8 +117,8 @@ class NameServer(object):
         self._dispatcher.register(configs.Actions.NS_REGISTER_OPIPE, self.register_pipes)
         self._dispatcher.register(configs.Actions.NS_QUERY_OPIPE, self.query_output_pipe)
         self._dispatcher.register(configs.Actions.NS_HEARTBEAT, self.response_heartbeat)
-        self._dispatcher.register(configs.Actions.NS_OPEN_CTL_SUCC, lambda identifier, msg: None)
-        self._dispatcher.register(configs.Actions.NS_CLOSE_CTL_SUCC, lambda identifier, msg: None)
+        self._dispatcher.register(configs.Actions.NS_OPEN_CTL_SUCC, lambda msg: None)
+        self._dispatcher.register(configs.Actions.NS_CLOSE_CTL_SUCC, lambda msg: None)
 
     def finalize(self):
         for i in self._all_threads:
@@ -180,6 +180,8 @@ class NameServer(object):
                 job['countdown'] -= 1
                 if job['countdown'] >= 0:
                     self._control_send_queue.put(job)
+                else:
+                    print('drop job: ', job)
 
     def _main_do_recv(self, socks):
         if self._router in socks and socks[self._router] == zmq.POLLIN:
@@ -204,6 +206,7 @@ class NameServer(object):
             req_sock.connect('{}://{}:{}'.format(msg['ctl_protocal'], msg['ctl_addr'], msg['ctl_port']))
             self.control_storage.register(msg, req_sock)
             self._req_socks.add(req_sock)
+            self._poller.register(req_sock)
         utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_CTL_SUCC})
         logger.info('Controller registered: {}'.format(msg['uid']))
 
@@ -215,6 +218,7 @@ class NameServer(object):
             for i in msg['opipes']:
                 for j in self.control_storage.get_ipipe(i):
                     all_peers_to_inform.add(j)
+            print('inform', all_peers_to_inform)
             for peer in all_peers_to_inform:
                 self._control_send_queue.put({
                     'sock': self.control_storage.get_req_sock(peer),

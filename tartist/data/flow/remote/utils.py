@@ -20,10 +20,14 @@ def router_recv_json(sock):
         return None, None
 
 
-def router_send_json(sock, identifier, *payloads):
-    buf = [identifier, b'']
-    buf.extend(map(lambda x: json.dumps(x).encode('utf-8'), payloads))
-    return sock.send_multipart(buf)
+def router_send_json(sock, identifier, *payloads, flag=0):
+    try:
+        buf = [identifier, b'']
+        buf.extend(map(lambda x: json.dumps(x).encode('utf-8'), payloads))
+        sock.send_multipart(buf, flags=flag)
+    except zmq.error.ZMQError:
+        return False
+    return True
 
 
 def req_send_json(sock, *payloads, flag=0):
