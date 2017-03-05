@@ -350,9 +350,11 @@ class Controller(object):
         if uid in self._ipeers:
             record = self._ipeers.pop(uid)
             if record[1] is not None:
+                self._poller.unregister(record[1])
                 utils.graceful_close(record[1])
                 self._ipeers_csock.remove(record[1])
             if record[2] is not None:
+                self._poller.unregister(record[2])
                 utils.graceful_close(record[2])
                 self._ipeers_dsock.remove(record[2])
         if uid in self._opeers:

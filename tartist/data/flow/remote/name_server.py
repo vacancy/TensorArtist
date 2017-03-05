@@ -88,8 +88,8 @@ class NameServerControllerStorage(object):
 
 class NameServer(object):
     def __init__(self):
-        self.control_storage = NameServerControllerStorage()
-        self.storage_lock = threading.Lock()
+        self.storage = NameServerControllerStorage()
+        self._context_lock = threading.Lock()
         self._context = zmq.Context()
         self._router = self._context.socket(zmq.ROUTER)
         self._poller = zmq.Poller()
@@ -133,29 +133,30 @@ class NameServer(object):
 
     def main_cleanup(self):
         while True:
-            with self.storage_lock:
+            with self._context_lock:
                 now = time.time()
-                for k in self.control_storage.all():
-                    v = self.control_storage.get(k)
+                for k in self.storage.all():
+                    v = self.storage.get(k)
 
                     if (now - v['last_heartbeat']) > configs.NS_CLEANUP_WAIT:
-                        info, req_sock = self.control_storage.unregister(k)
+                        info, req_sock = self.storage.unregister(k)
+                        self._poller.unregister(req_sock)
                         utils.graceful_close(req_sock)
                         self._req_socks.remove(req_sock)
 
                         # TODO:: use controller's heartbeat
                         all_peers_to_inform = set()
                         for i in info['ipipes']:
-                            for j in self.control_storage.get_opipe(i):
+                            for j in self.storage.get_opipe(i):
                                 all_peers_to_inform.add(j)
                         for i in info['opipes']:
-                            for j in self.control_storage.get_ipipe(i):
+                            for j in self.storage.get_ipipe(i):
                                 all_peers_to_inform.add(j)
                         print('inform', all_peers_to_inform)
 
                         for peer in all_peers_to_inform:
                             self._control_send_queue.put({
-                                'sock': self.control_storage.get_req_sock(peer),
+                                'sock': self.storage.get_req_sock(peer),
                                 'countdown': configs.CTL_CTL_SEND_COUNTDOWN,
                                     'payload': {
                                     'action': configs.Actions.NS_CLOSE_CTL,
@@ -167,7 +168,8 @@ class NameServer(object):
 
     def main(self):
         while True:
-            socks = dict(self._poller.poll(100))
+            with self._context_lock:
+                socks = dict(self._poller.poll(100))
             self._main_do_send()
             self._main_do_recv(socks)
 
@@ -201,32 +203,32 @@ class NameServer(object):
                         break
 
     def register_controller(self, identifier, msg):
-        with self.storage_lock:
+        with self._context_lock:
             req_sock = self._context.socket(zmq.REQ)
             req_sock.connect('{}://{}:{}'.format(msg['ctl_protocal'], msg['ctl_addr'], msg['ctl_port']))
-            self.control_storage.register(msg, req_sock)
+            self.storage.register(msg, req_sock)
             self._req_socks.add(req_sock)
-            self._poller.register(req_sock)
+            self._poller.register(req_sock, zmq.POLLIN)
         utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_CTL_SUCC})
         logger.info('Controller registered: {}'.format(msg['uid']))
 
     def register_pipes(self, identifier, msg):
-        with self.storage_lock:
-            self.control_storage.register_pipes(msg)
+        with self._context_lock:
+            self.storage.register_pipes(msg)
 
             all_peers_to_inform = set()
             for i in msg['opipes']:
-                for j in self.control_storage.get_ipipe(i):
+                for j in self.storage.get_ipipe(i):
                     all_peers_to_inform.add(j)
             print('inform', all_peers_to_inform)
             for peer in all_peers_to_inform:
                 self._control_send_queue.put({
-                    'sock': self.control_storage.get_req_sock(peer),
+                    'sock': self.storage.get_req_sock(peer),
                     'countdown': configs.CTL_CTL_SEND_COUNTDOWN,
                     'payload': {
                         'action': configs.Actions.NS_OPEN_CTL,
                         'uid': msg['uid'],
-                        'info': self.control_storage.get(msg['uid'])
+                        'info': self.storage.get(msg['uid'])
                     },
                 })
         utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_OPIPE_SUCC})
@@ -236,10 +238,10 @@ class NameServer(object):
 
     def query_output_pipe(self, identifier, msg):
         res = {}
-        with self.storage_lock:
+        with self._context_lock:
             for name in msg['pipe_names']:
-                all_pipes = self.control_storage.get_opipe(name)
-                all_pipes = list(map(self.control_storage.get, all_pipes))
+                all_pipes = self.storage.get_opipe(name)
+                all_pipes = list(map(self.storage.get, all_pipes))
                 res[name] = all_pipes
 
         utils.router_send_json(self._router, identifier, {
@@ -248,9 +250,9 @@ class NameServer(object):
         })
 
     def response_heartbeat(self, identifier, msg):
-        with self.storage_lock:
-            if self.control_storage.contains(msg['uid']):
-                self.control_storage.get(msg['uid'])['last_heartbeat'] = time.time()
+        with self._context_lock:
+            if self.storage.contains(msg['uid']):
+                self.storage.get(msg['uid'])['last_heartbeat'] = time.time()
                 print('Heartbeat {}: time={}'.format(msg['uid'], time.time()))
                 utils.router_send_json(self._router, identifier, {
                     'action': configs.Actions.NS_HEARTBEAT_SUCC
