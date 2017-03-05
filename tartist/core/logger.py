@@ -130,4 +130,3 @@ def set_default_level(level, update_existing=True):
         i.setLevel(level)
 
 _logger = get_logger(__name__)
-

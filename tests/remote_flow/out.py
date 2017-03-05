@@ -1,0 +1,21 @@
+# -*- coding:utf8 -*-
+# File   : controller.py
+# Author : Jiayuan Mao
+# Email  : maojiayuan@gmail.com
+# Date   : 3/2/17
+# 
+# This file is part of TensorArtist
+
+
+from tartist.data.flow.remote.controller import control
+from tartist.data.flow.remote.pipe import OutputPipe
+import time
+import numpy
+
+q = OutputPipe('tart.pipe.test')
+with control(pipes=[q]):
+    while True:
+        data = {'msg': 'hello', 'current': time.time(), 'data': numpy.zeros(shape=(128, 224, 224, 3), dtype='float32')}
+        print('generate', data['current'])
+        q.put(data)
+
