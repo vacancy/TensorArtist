@@ -40,10 +40,12 @@ class BooleanEvent(MPLibExtension):
         self._lock = type(self).__mplib__.Lock()
 
     def is_true(self):
-        return self._t.is_set()
+        with self._lock:
+            return self._t.is_set()
 
     def is_false(self):
-        return self._f.is_set()
+        with self._lock:
+            return self._f.is_set()
 
     def set(self):
         with self._lock:
