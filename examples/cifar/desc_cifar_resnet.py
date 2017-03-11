@@ -93,7 +93,7 @@ def make_network(env):
                 for i in range(1, n):
                     _ = residual('res3.{}'.format(i), _)
 
-                _ = O.batchnorm('bn_last', _)
+                _ = O.batch_norm('bn_last', _)
                 _ = O.relu(_)
 
                 _ = _.mean(axis=[1, 2]) # global avg pool

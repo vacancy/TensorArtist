@@ -51,11 +51,11 @@ def make_network(env):
             def forward(img):
                 _ = img
                 _ = O.conv2d('conv1', _, 16, (3, 3), padding='SAME', nonlin=O.identity)
-                _ = O.batchnorm('bn1', _)
+                _ = O.batch_norm('bn1', _)
                 _ = O.relu(_)
                 _ = O.pooling2d('pool1', _, kernel=2)
                 _ = O.conv2d('conv2', _, 32, (3, 3), padding='SAME', nonlin=O.identity)
-                _ = O.batchnorm('bn2', _)
+                _ = O.batch_norm('bn2', _)
                 _ = O.relu(_)
                 _ = O.pooling2d('pool2', _, kernel=2)
                 dpc.add_output(_, name='feature')

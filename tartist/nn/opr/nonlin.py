@@ -11,14 +11,19 @@
 import tensorflow as tf
 
 from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op
-from .cnn import batchnorm
-from ._migrate import relu
+from .cnn import batch_norm
+from ._migrate import max, relu
 
-__all__ = ['bn_relu']
+__all__ = ['leaky_relu', 'bn_relu']
+
+@wrap_varnode_func
+def leaky_relu(x, alpha, name='output'):
+    return max(x, alpha * x, name=name)
+
 
 @wrap_varnode_func
 def bn_relu(inpvar, name=None):
-    _ = batchnorm('bn', inpvar)
+    _ = batch_norm('bn', inpvar)
     _ = relu(_, name='relu')
     return _
 

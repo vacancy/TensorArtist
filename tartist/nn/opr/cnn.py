@@ -15,7 +15,7 @@ from ..graph.env import Env, get_default_env
 
 import tensorflow as tf
 
-__all__ = ['conv2d', 'pooling2d', 'fc', 'dropout', 'batchnorm']
+__all__ = ['conv2d', 'pooling2d', 'fc', 'dropout', 'batch_norm']
 
 
 @wrap_named_op
@@ -108,7 +108,7 @@ def dropout(name, inpvar, keep_prob, keep_prob_sym=None, noise_shape=None, seed=
 
 @wrap_named_op
 @wrap_varnode_func
-def batchnorm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dtype=__default_dtype__):
+def batch_norm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dtype=__default_dtype__):
     ''' inpvar should be of data_format NHWC'''
     from tensorflow.python.training import moving_averages
     assign_moving_average = moving_averages.assign_moving_average
