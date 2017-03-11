@@ -6,8 +6,10 @@
 # 
 # This file is part of TensorArtist
 
-from ....core.utils.meta import notnone_property
+from ...core.utils.meta import notnone_property
 import queue
+
+__all__ = ['InputPipe', 'OutputPipe']
 
 
 class PipeBase(object):
@@ -51,6 +53,12 @@ class PipeBase(object):
         except queue.Empty:
             return None
 
+    def empty(self):
+        return self._queue.empty()
+    
+    def full(self):
+        return self._queue.full()
+
 
 class InputPipe(PipeBase):
     def __init__(self, name, bufsize=10):
@@ -60,4 +68,5 @@ class InputPipe(PipeBase):
 class OutputPipe(PipeBase):
     def __init__(self, name, bufsize=10):
         super().__init__('OUT', name, bufsize)
+
 

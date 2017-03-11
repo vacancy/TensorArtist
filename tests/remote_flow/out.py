@@ -7,8 +7,7 @@
 # This file is part of TensorArtist
 
 
-from tartist.data.flow.remote.controller import control
-from tartist.data.flow.remote.pipe import OutputPipe
+from tartist.data.rflow import control, OutputPipe
 import time
 import numpy
 

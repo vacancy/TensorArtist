@@ -6,6 +6,6 @@
 # 
 # This file is part of TensorArtist
 
-from tartist.data.flow.remote.name_server import NameServer
+from tartist.data.rflow.name_server import NameServer
 
 NameServer().mainloop()
