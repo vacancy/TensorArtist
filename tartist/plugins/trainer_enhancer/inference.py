@@ -9,14 +9,14 @@
 
 from .summary import put_summary_history
 from tartist.core import register_event
-from tartist.nn.summary.inference import INFERENCE_SUMMARIES
+from tartist.nn import TArtGraphKeys
 import tensorflow as tf
 import tqdm as tqdm
 
 
 def enable_inference_runner(trainer, dataflow, interval=1,
                             extra_outputs=None, extra_outputs_callback=None, *,
-                            run_on_epoch0=False, collection_key=INFERENCE_SUMMARIES):
+                            run_on_epoch0=False, collection_key=TArtGraphKeys.INFERENCE_SUMMARIES):
 
     extra_outputs = extra_outputs or {}
 

@@ -171,6 +171,27 @@ class Env(object):
     def run(self, fetches, feed_dict=None, options=None, run_metadata=None):
         return self.session.run(fetches, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
 
+    def find_opr_by_name(self, name):
+        return self.graph.get_operation_by_name(name)
+
+    def find_var_by_name(self, name):
+        try:
+            return as_varnode(self.graph.get_tensor_by_name(name))
+        except ValueError:
+            return as_varnode(self.graph.get_tensor_by_name(name + ':0'))
+
+    def find_in_collection_by_name(self, collection_or_key, name):
+        if type(collection_or_key) is str:
+            collection_or_key = self.graph.get_collection(collection_or_key)
+        for v in collection_or_key:
+            if v.name == name:
+                return v
+        name += ':0'
+        for v in collection_or_key:
+            if v.name == name:
+                return v
+        return None
+
 get_default_env = defaults_manager.gen_get_default(Env)
 
 
@@ -304,7 +325,6 @@ class Network(object):
 
         self.__outputs = dict()
         self.__loss = None
-        self.__collections = dict()
 
     @property
     def owner_env(self):
@@ -333,19 +353,6 @@ class Network(object):
         name = name or clean_name(symbol)
         self.__outputs[name] = symbol
 
-    def add_to_collection(self, var, collection):
-        if collection not in self.__collections:
-            self.__collections[collection] = set()
-        self.__collections[collection].add(var)
-
-    def get_all_collections(self):
-        return self.__collections
-
-    def get_collection(self, collection):
-        if collection not in self.__collections:
-            return set()
-        return self.__collections[collection]
-
     def fetch_all_variables_dict(self):
         from ..tfutils import fetch_variable
 
@@ -366,13 +373,10 @@ class Network(object):
         return self
 
     def find_opr_by_name(self, name):
-        return self.owner_env.graph.get_operation_by_name(name)
+        return self.owner_env.find_opr_by_name(name)
 
     def find_var_by_name(self, name):
-        try:
-            return as_varnode(self.owner_env.graph.get_tensor_by_name(name))
-        except ValueError:
-            return as_varnode(self.owner_env.graph.get_tensor_by_name(name + ':0'))
+        return self.owner_env.find_var_by_name(name)
 
     @defaults_manager.wrap_custom_as_default
     def as_default(self):

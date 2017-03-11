@@ -6,13 +6,13 @@
 # 
 # This file is part of TensorArtist
 
-from tartist.core import get_env, load_env, get_logger, register_event
-from tartist.core import io
+from tartist.core import get_env, get_logger
 from tartist.core.utils.cli import load_desc, parse_devices
 from tartist.nn import Env, train
 
 import argparse
 import os.path as osp
+import tensorflow as tf
 
 logger = get_logger(__file__)
 
@@ -46,10 +46,11 @@ def main():
         desc.make_network(env)
         desc.make_optimizer(env)
 
-    # debug outputs
-    for k, s in env.network.get_all_collections().items():
-        names = ['Collection ' + k] + sorted(['\t{}'.format(v.name) for v in s])
-        logger.info('\n'.join(names))
+        # debug outputs
+        for k in tf.get_default_graph().get_all_collection_keys():
+            s = tf.get_collection(k)
+            names = ['Collection ' + k] + sorted(['\t{}'.format(v.name) for v in s])
+            logger.info('\n'.join(names))
 
     trainer = train.SimpleTrainer(env, data_provider=desc.make_dataflow)
     trainer.set_epoch_size(get_env('trainer.epoch_size', 1))

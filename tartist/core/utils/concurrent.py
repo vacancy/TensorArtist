@@ -8,10 +8,12 @@
 
 import threading
 import multiprocessing
+import functools
 
 __all__ = [
     'MPLibExtension', 'instantiate_mplib_ext',
-    'MTBooleanEvent', 'MPBooleanEvent'
+    'MTBooleanEvent', 'MPBooleanEvent',
+    'MTOrEvent', 'MPOrEvent'
 ]
 
 
@@ -40,10 +42,12 @@ class BooleanEvent(MPLibExtension):
         self._lock = type(self).__mplib__.Lock()
 
     def is_true(self):
-        return self._t.is_set()
+        with self._lock:
+            return self._t.is_set()
 
     def is_false(self):
-        return self._f.is_set()
+        with self._lock:
+            return self._f.is_set()
 
     def set(self):
         with self._lock:
@@ -75,4 +79,40 @@ class BooleanEvent(MPLibExtension):
         return self.is_true()
 
 MTBooleanEvent, MPBooleanEvent = instantiate_mplib_ext(BooleanEvent)
+
+
+def _or_event_set(self):
+    self._set()
+    self.changed()
+
+def _or_event_clear(self):
+    self._clear()
+    self.changed()
+
+def _orify(e, changed_callback):
+    e._set = e.set
+    e._clear = e.clear
+    e.changed = changed_callback
+    e.set = lambda: _or_event_set(e)
+    e.clear = lambda: _or_event_clear(e)
+
+def OrEvent(*events, mplib=threading):
+    """Waiting on several events together.
+    http://stackoverflow.com/questions/12317940/python-threading-can-i-sleep-on-two-threading-events-simultaneously"""
+
+    or_event = mplib.Event()
+    def changed():
+        bools = [e.is_set() for e in events]
+        if any(bools):
+            or_event.set()
+        else:
+            or_event.clear()
+    for e in events:
+        orify(e, changed)
+    changed()
+    return or_event
+
+
+MTOrEvent = functools.partial(OrEvent, mplib=threading)
+MPOrEvent = functools.partial(OrEvent, mplib=multiprocessing)
 

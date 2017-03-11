@@ -6,6 +6,7 @@
 # 
 # This file is part of TensorArtist
 
+from .. import TArtGraphKeys
 from ..graph.env import get_default_net
 from ..graph.node import OprNode, as_varnode
 from ...core.utils.context import EmptyContext
@@ -81,16 +82,17 @@ def wrap_named_op(*args, use_scope=True):
                 outputs = func(name, *args, **kwargs)
             
             opr = OprNode(opr_name)
-            get_default_net().add_to_collection(opr, 'oprnodes')
             if isinstance(outputs, (tuple, list)):
                 outputs = tuple(map(as_varnode, outputs))
                 for o in outputs:
                     if o.taop is None:
                         o.set_taop(opr)
+                tf.add_to_collection(TArtGraphKeys.TART_OPERATORS, outputs[0].taop)
             else:
                 outputs = as_varnode(outputs)
                 if outputs.taop is None:
                     outputs.set_taop(opr)
+                tf.add_to_collection(TArtGraphKeys.TART_OPERATORS, outputs.taop)
             return outputs
         return new_func
     if len(args) == 1 and callable(args[0]):
