@@ -17,7 +17,8 @@ import collections
 __all__ = [
     'device_context', 
     'get_2dshape', 'get_4dshape', 
-    'wrap_varnode_func', 'wrap_named_op', 'unique_opr_name'
+    'wrap_varnode_func', 'wrap_named_op', 'unique_opr_name',
+    'StaticDynamicDim'
 ]
 
 
@@ -103,3 +104,31 @@ def wrap_named_op(*args, use_scope=True):
 def unique_opr_name(name):
     return tf.get_default_graph().unique_name(name, mark_as_used=False)
 
+
+class StaticDynamicDim(object):
+    """Enable shape computation for both static and dynamic shape with unknown value (None)
+    https://github.com/ppwwyyxx/tensorpack/blob/master/tensorpack/models/conv2d.py
+    """
+
+    def __init__(self, static, dynamic):
+        self.static = static
+        self.dynamic = dynamic
+
+    def op(self, func):
+        try:
+            new_static = func(self.static)
+            return StaticDynamicDim(new_static, new_static)
+        except:
+            return StaticDynamicDim(None, func(self.static))
+
+    def __add__(self, other):
+        return self.op(lambda v: v + other)
+
+    def __radd__(self, other):
+        return self.op(lambda v: other + v)
+
+    def __mul__(self, other):
+        return self.op(lambda v: v * other)
+
+    def __rmul__(self, other):
+        return self.op(lambda v: other * v)
