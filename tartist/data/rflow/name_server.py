@@ -7,10 +7,8 @@
 # This file is part of TensorArtist
 
 from . import configs, utils
-from ....core.logger import get_logger
-from ....core.utils.callback import CallbackManager
-from ....core.utils.meta import notnone_property
-from ....core.utils.cache import cached_property
+from ...core.logger import get_logger
+from ...core.utils.callback import CallbackManager
 
 import zmq
 import time
@@ -18,6 +16,8 @@ import threading
 import queue
 
 logger = get_logger(__file__)
+
+__all__ = ['NameServer']
 
 
 class NameServerControllerStorage(object):
@@ -113,12 +113,12 @@ class NameServer(object):
         self._router.bind(addr)
         self._poller.register(self._router, zmq.POLLIN)
 
-        self._dispatcher.register(configs.Actions.NS_REGISTER_CTL, self.register_controller)
-        self._dispatcher.register(configs.Actions.NS_REGISTER_OPIPE, self.register_pipes)
-        self._dispatcher.register(configs.Actions.NS_QUERY_OPIPE, self.query_output_pipe)
-        self._dispatcher.register(configs.Actions.NS_HEARTBEAT, self.response_heartbeat)
-        self._dispatcher.register(configs.Actions.NS_OPEN_CTL_SUCC, lambda msg: None)
-        self._dispatcher.register(configs.Actions.NS_CLOSE_CTL_SUCC, lambda msg: None)
+        self._dispatcher.register(configs.Actions.NS_REGISTER_CTL_REQ, self._on_ns_register_controller_req)
+        self._dispatcher.register(configs.Actions.NS_REGISTER_PIPE_REQ, self._on_ns_register_pipe_req)
+        self._dispatcher.register(configs.Actions.NS_QUERY_OPIPE_REQ, self._on_ns_query_opipe_req)
+        self._dispatcher.register(configs.Actions.NS_HEARTBEAT_REQ, self._on_ns_heartbeat_req)
+        self._dispatcher.register(configs.Actions.CTL_NOTIFY_OPEN_REP, lambda msg: None)
+        self._dispatcher.register(configs.Actions.CTL_NOTIFY_CLOSE_REP, lambda msg: None)
 
     def finalize(self):
         for i in self._all_threads:
@@ -126,8 +126,7 @@ class NameServer(object):
 
         for sock in self._req_socks:
             utils.graceful_close(sock)
-        self._router.setsockopt(zmq.LINGER, 0)
-        self._router.close()
+        utils.graceful_close(self._router)
         if not self._context.closed:
             self._context.destroy(0)
 
@@ -157,9 +156,9 @@ class NameServer(object):
                         for peer in all_peers_to_inform:
                             self._control_send_queue.put({
                                 'sock': self.storage.get_req_sock(peer),
-                                'countdown': configs.CTL_CTL_SEND_COUNTDOWN,
-                                    'payload': {
-                                    'action': configs.Actions.NS_CLOSE_CTL,
+                                'countdown': configs.CTL_CTL_SND_COUNTDOWN,
+                                'payload': {
+                                    'action': configs.Actions.CTL_NOTIFY_CLOSE_REQ,
                                     'uid': k
                                 },
                             })
@@ -170,8 +169,8 @@ class NameServer(object):
         while True:
             with self._context_lock:
                 socks = dict(self._poller.poll(100))
-            self._main_do_send()
-            self._main_do_recv(socks)
+                self._main_do_send()
+                self._main_do_recv(socks)
 
     def _main_do_send(self):
         nr_send = self._control_send_queue.qsize()
@@ -194,59 +193,54 @@ class NameServer(object):
                 for msg in utils.iter_recv(utils.req_recv_json, k):
                     self._dispatcher.dispatch(msg['action'], msg)
 
-    def register_controller(self, identifier, msg):
-        with self._context_lock:
-            req_sock = self._context.socket(zmq.REQ)
-            req_sock.connect('{}://{}:{}'.format(msg['ctl_protocal'], msg['ctl_addr'], msg['ctl_port']))
-            self.storage.register(msg, req_sock)
-            self._req_socks.add(req_sock)
-            self._poller.register(req_sock, zmq.POLLIN)
-        utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_CTL_SUCC})
+    def _on_ns_register_controller_req(self, identifier, msg):
+        req_sock = self._context.socket(zmq.REQ)
+        req_sock.connect('{}://{}:{}'.format(msg['ctl_protocal'], msg['ctl_addr'], msg['ctl_port']))
+        self.storage.register(msg, req_sock)
+        self._req_socks.add(req_sock)
+        self._poller.register(req_sock, zmq.POLLIN)
+        utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_CTL_REP})
         logger.info('Controller registered: {}'.format(msg['uid']))
 
-    def register_pipes(self, identifier, msg):
-        with self._context_lock:
-            self.storage.register_pipes(msg)
+    def _on_ns_register_pipe_req(self, identifier, msg):
+        self.storage.register_pipes(msg)
 
-            all_peers_to_inform = set()
-            for i in msg['opipes']:
-                for j in self.storage.get_ipipe(i):
-                    all_peers_to_inform.add(j)
-            print('inform', all_peers_to_inform)
-            for peer in all_peers_to_inform:
-                self._control_send_queue.put({
-                    'sock': self.storage.get_req_sock(peer),
-                    'countdown': configs.CTL_CTL_SEND_COUNTDOWN,
-                    'payload': {
-                        'action': configs.Actions.NS_OPEN_CTL,
-                        'uid': msg['uid'],
-                        'info': self.storage.get(msg['uid'])
-                    },
-                })
-        utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_OPIPE_SUCC})
+        all_peers_to_inform = set()
+        for i in msg['opipes']:
+            for j in self.storage.get_ipipe(i):
+                all_peers_to_inform.add(j)
+        print('inform', all_peers_to_inform)
+        for peer in all_peers_to_inform:
+            self._control_send_queue.put({
+                'sock': self.storage.get_req_sock(peer),
+                'countdown': configs.CTL_CTL_SND_COUNTDOWN,
+                'payload': {
+                    'action': configs.Actions.CTL_NOTIFY_OPEN_REQ,
+                    'uid': msg['uid'],
+                    'info': self.storage.get(msg['uid'])
+                },
+            })
+        utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_PIPE_REP})
 
         logger.info('Controller pipes registered: in={}, out={} (controller-uid={})'.format(
             msg['ipipes'], msg['opipes'], msg['uid']))
 
-    def query_output_pipe(self, identifier, msg):
+    def _on_ns_query_opipe_req(self, identifier, msg):
         res = {}
-        with self._context_lock:
-            for name in msg['pipe_names']:
-                all_pipes = self.storage.get_opipe(name)
-                all_pipes = list(map(self.storage.get, all_pipes))
-                res[name] = all_pipes
+        for name in msg['ipipes']:
+            all_pipes = self.storage.get_opipe(name)
+            all_pipes = list(map(self.storage.get, all_pipes))
+            res[name] = all_pipes
 
         utils.router_send_json(self._router, identifier, {
-            'action': configs.Actions.NS_QUERY_OPIPE_RESPONSE,
+            'action': configs.Actions.NS_QUERY_OPIPE_REP,
             'results': res
         })
 
-    def response_heartbeat(self, identifier, msg):
-        with self._context_lock:
-            if self.storage.contains(msg['uid']):
-                self.storage.get(msg['uid'])['last_heartbeat'] = time.time()
-                print('Heartbeat {}: time={}'.format(msg['uid'], time.time()))
-                utils.router_send_json(self._router, identifier, {
-                    'action': configs.Actions.NS_HEARTBEAT_SUCC
-                })
-
+    def _on_ns_heartbeat_req(self, identifier, msg):
+        if self.storage.contains(msg['uid']):
+            self.storage.get(msg['uid'])['last_heartbeat'] = time.time()
+            print('Heartbeat {}: time={}'.format(msg['uid'], time.time()))
+            utils.router_send_json(self._router, identifier, {
+                'action': configs.Actions.NS_HEARTBEAT_REP
+            })

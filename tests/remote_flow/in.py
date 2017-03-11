@@ -7,13 +7,11 @@
 # This file is part of TensorArtist
 
 
-from tartist.data.flow.remote.controller import control
-from tartist.data.flow.remote.pipe import InputPipe
+from tartist.data.rflow import control, InputPipe
 import time
 
 q = InputPipe('tart.pipe.test')
 with control(pipes=[q]):
-    while True:
+    for i in range(10):
         print(q.get()['current'])
         time.sleep(1)
-

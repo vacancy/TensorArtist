@@ -10,7 +10,6 @@ import zmq
 import socket
 import uuid
 import json
-import collections
 
 
 def router_recv_json(sock, flag=zmq.NOBLOCK):
