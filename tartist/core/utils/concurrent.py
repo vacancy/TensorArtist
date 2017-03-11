@@ -97,6 +97,9 @@ def _orify(e, changed_callback):
     e.clear = lambda: _or_event_clear(e)
 
 def OrEvent(*events, mplib=threading):
+    """Waiting on several events together.
+    http://stackoverflow.com/questions/12317940/python-threading-can-i-sleep-on-two-threading-events-simultaneously"""
+
     or_event = mplib.Event()
     def changed():
         bools = [e.is_set() for e in events]
