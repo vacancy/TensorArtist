@@ -8,12 +8,13 @@
 
 from ._defaults import __default_dtype__, __default_nonlin__
 from ._migrate import zeros, ones
-from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op
-from .shape import flatten2, remove_axis
+from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op, StaticDynamicDim
+from .shape import flatten2, remove_axis, canonize_sym_shape
 from .netsrc import variable
 from ..graph.env import Env, get_default_env
 
 import tensorflow as tf
+import functools
 
 __all__ = ['conv2d', 'pooling2d', 'fc', 'dropout', 'batchnorm']
 
@@ -35,6 +36,11 @@ def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID',
     assert inpvar.static_shape[3] is not None
     cin, cout = inpvar.static_shape[3], nr_output_channels
     W_shape = kernel + (cin, cout)
+    if W is None:
+        W = tf.contrib.layers.xavier_initializer_conv2d()
+    if isinstance(W, tf.Initializer):
+        W = variable('W', W, shape=W_shape, dtype=param_dtype)
+
     if use_bias:
         if bias_is_shared_in_channel:
             b_shape = (cout, )
@@ -42,13 +48,12 @@ def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID',
             assert inpvar.static_shape[1] is not None and inpvar.static_shape[2] is not None
             b_shape = inpvar.static_shape[1:3] + (cout, )
 
-    if W is None:
-        W = variable('W', tf.contrib.layers.xavier_initializer_conv2d(), shape=W_shape, dtype=param_dtype)
-    if use_bias:
         if b is None:
-            b = variable('b', tf.constant_initializer(), shape=b_shape, dtype=param_dtype)
+            b = tf.constant_initializer()
+        if isinstance(b, tf.Initializer):
+            b = variable('b', b, shape=b_shape, dtype=param_dtype)
 
-    _ = inpvar.impl
+    _ = inpvar
     _ = tf.nn.conv2d(_, W, strides=stride, padding=padding, name='conv')
     if use_bias:
         _ = tf.nn.bias_add(_, b, name='bias')
@@ -65,9 +70,18 @@ def pooling2d(name, inpvar, kernel, stride=None, padding='VALID', method='MAX'):
     stride = get_4dshape(stride, kernel)
 
     assert inpvar.ndims == 4
-    assert method == 'MAX'
 
-    return tf.nn.max_pool(inpvar, ksize=kernel, strides=stride, padding=padding, name=name)
+    if method == 'MAX':
+        func = tf.nn.max_pool
+    else:
+        assert method == 'AVG'
+        func = tf.nn.avg_pool
+
+    return func(inpvar, ksize=kernel, strides=stride, padding=padding, name='out')
+
+
+max_pooling2d = functools.partial(pooling2d, method='MAX')
+avg_pooling2d = functools.partial(pooling2d, method='AVG')
 
 
 @wrap_named_op
@@ -145,3 +159,51 @@ def batchnorm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dtyp
     else:
         return tf.identity(xn, name='out')
 
+
+@wrap_named_op
+@wrap_varnode_func
+def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID',
+        use_bias=True, bias_is_shared_in_channel=True,
+        nonlin=__default_nonlin__,
+        W=None, b=None, param_dtype=__default_dtype__):
+
+    inpvar = as_varnode(inpvar)
+    in_shape = inpvar.static_shape
+    nr_input_channels = in_shape[3]
+    assert nr_input_channels is not None
+    
+    kernel = get_2dshape(kernel)
+    stride2 = get_2dshape(stride)
+    stride4 = get_4dshape(stride)
+
+    sd_h = StaticDynamicDim(in_shape[1], inpvar.shape[1]) * stride2[0]
+    sd_w = StaticDynamicDim(in_shape[2], inpvar.shape[2]) * stride2[1]
+    out_shape_static = [in_shape[0], sd_h.static, sd_w.static, nr_output_channels]
+    out_shape_dynamic = canonize_sym_shape([inpvar.shape[0], sd_h.dynamic, sd_w.dynamic, nr_output_channels])
+
+    W_shape = kernel + (nr_output_channels, nr_input_channels)
+
+    if W is None:
+        W = tf.contrib.layers.xavier_initializer_conv2d()
+    if isinstance(W, tf.Initializer):
+        W = variable('W', W, shape=W_shape, dtype=param_dtype)
+    if use_bias:
+        if bias_is_shared_in_channel:
+            b_shape = (nr_output_channels, )
+        else:
+            assert in_shape[1] is not None and in_shape[2] is not None
+            b_shape = in_shape[1:3] + (nr_output_channels, )
+
+        if b is None:
+            b = tf.constant_initializer()
+        if isinstance(b, tf.Initializer):
+            b = variable('b', b, shape=b_shape, dtype=param_dtype)
+
+    _ = inpvar
+    _ = tf.nn.conv2d_transpose(_, W, out_shape_dynamic, stride4, padding=padding, data_format='NHWC', name='conv')
+    _.set_shape(tf.TensorShape(out_shape_static))
+    if use_bias:
+        _ = tf.nn.bias_add(_, b, name='bias')
+    _ = nonlin(_, name='nonlin')
+
+    return tf.identity(_, name='out')
