@@ -11,6 +11,7 @@ from ..core.utils.shape import get_2dshape
 import os
 import enum
 import math
+import functools
 
 import numpy as np
 
@@ -18,8 +19,25 @@ __all__ = [
     'imread', 'imwrite', 'imshow',
     'resize', 'resize_wh',
     'resize_scale', 'resize_scale_wh',
-    'crop'
+    'crop',
+    'center_crop', 'leftup_crop',
+    'dimshuffle',
+    'clip', 'clip_decorator',
+    'grayscale', 
+    'brightness', 'contrast', 'saturation'
 ]
+
+
+def _get_crop2d_rest(img, target_shape):
+    source_shape = img.shape[:2]
+    target_shape = get_2dshape(target_shape)
+    rest_shape = source_shape[0] - target_shape[0], source_shape[1] - target_shape[1]
+    assert rest_shape[0] >= 0 and rest_shape[1] >= 0
+    return rest_shape
+
+
+def _crop2d(img, start, size):
+    return img[start[0]:start[0] + size[0], start[1]:start[1] + size[1]]
 
 
 class ShuffleType(enum.Enum):
@@ -103,6 +121,22 @@ def crop(image, l, t, w, h, extra_crop=None):
     return result
 
 
+def center_crop(img, target_shape):
+    """ center crop """
+    rest = _get_crop2d_rest(img, target_shape)
+    start = rest[0] // 2, rest[1] // 2
+
+    return _crop2d(img, start, target_shape)
+
+
+def leftup_crop(img, target_shape):
+    """ left-up crop """
+    rest = _get_crop2d_rest(img, target_shape)
+    start = 0, 0
+
+    return _crop2d(img, start, target_shape)
+
+
 def dimshuffle(img, shuffle_type):
     assert len(img.shape) in (2, 3, 4), 'Image should be of dims 2, 3 or 4'
     assert isinstance(shuffle_type, ShuffleType)
@@ -119,4 +153,43 @@ def dimshuffle(img, shuffle_type):
             return np.transpose(img, (0, 3, 1, 2))
         else:
             return np.transpose(img, (0, 2, 3, 1))
+
+
+def clip(img):
+    return np.minimum(255, np.maximum(0, img))
+
+
+def clip_decorator(func):
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        img = func(*args, **kwargs)
+        return clip(img)
+    return new_func
+
+
+def grayscale(img):
+    assert len(img.shape) == 3 and img.shape[2] == 3
+    w = np.array([0.114, 0.587, 0.299]).reshape(1, 1, 3)
+    img = (img * w).sum(axis=2, keepdims=True)
+    return img
+
+
+@clip_decorator
+def brightness(img, alpha):
+    return img * alpha
+
+
+@clip_decorator
+def contrast(img, alpha):
+    gs = grayscale(img)
+    gs[:] = gs.mean()
+    img = img * alpha + gs * (1 - alpha)
+    return img
+
+
+@clip_decorator
+def saturation(img, alpha):
+    gs = grayscale(img)
+    img = img * alpha + gs * (1 - alpha)
+    return img
 
