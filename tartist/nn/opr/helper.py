@@ -7,12 +7,11 @@
 # This file is part of TensorArtist
 
 from .. import TArtGraphKeys
-from ..graph.env import get_default_net
 from ..graph.node import OprNode, as_varnode
 from ...core.utils.context import EmptyContext
+from ...core.utils.shape import get_2dshape, get_4dshape
 import tensorflow as tf
 import functools
-import collections
 
 __all__ = [
     'device_context', 
@@ -27,38 +26,6 @@ def device_context(device=None):
         return EmptyContext()
     else:
         return tf.device(device)
-
-
-def get_2dshape(x, default=None):
-    if x is None:
-        return default
-    if isinstance(x, collections.Iterable):
-        x = tuple(x)
-        if len(x) == 1:
-            return x[0], x[0]
-        else:
-            assert len(x) == 2, '2dshape must be of length 1 or 2'
-            return x
-    else:
-        x = int(x)
-        return x, x
-
-
-def get_4dshape(x, default=None):
-    if x is None:
-        return default
-    if isinstance(x, collections.Iterable):
-        x = tuple(x)
-        if len(x) == 1:
-            return 1, x[0], x[0], 1
-        elif len(x) == 2:
-            return 1, x[0], x[1], 1
-        else:
-            assert len(x) == 4, '2dshape must be of length 1, 2, or 4'
-            return x
-    else:
-        x = int(x)
-        return 1, x, x, 1
 
 
 def wrap_varnode_func(func):

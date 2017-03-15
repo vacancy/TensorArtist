@@ -12,6 +12,7 @@ from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wra
 from .shape import flatten2, remove_axis, canonize_sym_shape
 from .netsrc import variable
 from ..graph.env import Env, get_default_env
+from tensorflow.python.ops import init_ops
 
 import tensorflow as tf
 import functools
@@ -38,7 +39,7 @@ def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID',
     W_shape = kernel + (cin, cout)
     if W is None:
         W = tf.contrib.layers.xavier_initializer_conv2d()
-    if isinstance(W, tf.Initializer):
+    if isinstance(W, init_ops.Initializer):
         W = variable('W', W, shape=W_shape, dtype=param_dtype)
 
     if use_bias:
@@ -50,7 +51,7 @@ def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID',
 
         if b is None:
             b = tf.constant_initializer()
-        if isinstance(b, tf.Initializer):
+        if isinstance(b, init_ops.Initializer):
             b = variable('b', b, shape=b_shape, dtype=param_dtype)
 
     _ = inpvar
@@ -184,7 +185,7 @@ def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID'
 
     if W is None:
         W = tf.contrib.layers.xavier_initializer_conv2d()
-    if isinstance(W, tf.Initializer):
+    if isinstance(W, init_ops.Initializer):
         W = variable('W', W, shape=W_shape, dtype=param_dtype)
     if use_bias:
         if bias_is_shared_in_channel:
@@ -195,7 +196,7 @@ def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID'
 
         if b is None:
             b = tf.constant_initializer()
-        if isinstance(b, tf.Initializer):
+        if isinstance(b, init_ops.Initializer):
             b = variable('b', b, shape=b_shape, dtype=param_dtype)
 
     _ = inpvar

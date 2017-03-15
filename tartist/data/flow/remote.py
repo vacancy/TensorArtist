@@ -20,4 +20,3 @@ class RemoteFlow(SimpleDataFlowBase):
         with control([self._pipe]):
             while True:
                 yield self._pipe.get()
-

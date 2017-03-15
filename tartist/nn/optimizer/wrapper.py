@@ -55,9 +55,9 @@ class OptimizerWrapper(object):
     def pop_grad_modifier(self, index=None):
         return self._grad_modifiers.pop(index)
 
-    def minimize(self, loss):
+    def minimize(self, loss, var_list=None):
         with self._owner_env.as_default():
-            all_gradients = self._base_optimizer.compute_gradients(loss)
+            all_gradients = self._base_optimizer.compute_gradients(loss, var_list=var_list)
             all_gradients = self._apply_grad_modifiers(all_gradients)
             return self._base_optimizer.apply_gradients(all_gradients)
 

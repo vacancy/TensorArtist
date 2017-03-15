@@ -1,11 +1,7 @@
 # -*- coding:utf8 -*-
-# File   : __init__.py
+# File   : helper.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
-# Date   : 12/21/16
+# Date   : 3/14/17
 # 
 # This file is part of TensorArtist
-
-
-from .imgproc import *
-from . import aug, rect
