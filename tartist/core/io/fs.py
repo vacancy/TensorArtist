@@ -25,7 +25,7 @@ try:
     import joblib
 except ImportError:
     joblib = numpy
-    info('fail to import joblib, use built-in numpy load/dump')
+    info('Fail to import joblib, use built-in numpy load/dump')
 
 
 from ..utils.meta import assert_instance
