@@ -17,7 +17,7 @@ from tensorflow.python.ops import init_ops
 import tensorflow as tf
 import functools
 
-__all__ = ['conv2d', 'pooling2d', 'fc', 'dropout', 'batchnorm']
+__all__ = ['conv2d', 'pooling2d', 'fc', 'dropout', 'batchnorm', 'deconv2d']
 
 
 @wrap_named_op
@@ -208,3 +208,4 @@ def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID'
     _ = nonlin(_, name='nonlin')
 
     return tf.identity(_, name='out')
+
