@@ -19,11 +19,11 @@ __envs__ = {
     },
 
     'trainer': {
-        'nr_iters': 1280,
         'learning_rate': 0.01,
 
-        'batch_size': 64,
-        'epoch_size': 128,
+        'batch_size': 100,
+        'epoch_size': 500,
+        'nr_epochs': 10,
 
         'env_flags': {
             'log_device_placement': False
@@ -99,12 +99,6 @@ def main_train(trainer):
 
     from tartist.plugins.trainer_enhancer import inference
     inference.enable_inference_runner(trainer, make_dataflow_inference)
-
-    from tartist.core import register_event
-    def on_epoch_after(trainer):
-        if trainer.epoch == 5:
-            trainer.optimizer.set_learning_rate(trainer.optimizer.learning_rate * 0.1)
-    register_event(trainer, 'epoch:after', on_epoch_after)
 
     trainer.train()
 
