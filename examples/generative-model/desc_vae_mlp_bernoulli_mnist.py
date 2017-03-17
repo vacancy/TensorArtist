@@ -1,14 +1,16 @@
 # -*- coding:utf8 -*-
-# File   : desc_mnist.py
+# File   : desc_vae_mlp_bernoulli_mnist.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
-# Date   : 12/30/16
-#
+# Date   : 3/17/17
+# 
 # This file is part of TensorArtist
 
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
+
+import tensorflow as tf
 
 logger = get_logger(__file__)
 
@@ -19,7 +21,7 @@ __envs__ = {
     },
 
     'trainer': {
-        'nr_iters': 1280,
+        'nr_iters': 12800,
         'learning_rate': 0.01,
 
         'batch_size': 64,
@@ -38,32 +40,46 @@ __envs__ = {
 
 def make_network(env):
     with env.create_network() as net:
+        code_length = 64
+        h, w, c = 28, 28, 1
 
         dpc = env.create_dpcontroller()
         with dpc.activate():
             def inputs():
-                h, w, c = 28, 28, 1
                 img = O.placeholder('img', shape=(None, h, w, c))
                 return [img]
 
-            def forward(img):
-                _ = img
-                _ = O.conv2d('conv1', _, 4, (3, 3), stride=2, padding='SAME', nonlin=O.relu)
-                # shape = (14, 14)
-                _ = O.conv2d('conv2', _, 8, (3, 3), stride=2, padding='SAME', nonlin=O.relu)
-                # shape = (7, 7)
-                _ = O.fc('fc', _, 392)
-                _ = _.reshape([-1, 7, 7, 8])
-                _ = O.deconv2d('deconv1', _, 4, (3, 3), stride=2, padding='SAME', nonlin=O.relu)
-                # shape = (14, 14)
-                _ = O.deconv2d('deconv2', _, 1, (3, 3), stride=2, padding='SAME', nonlin=O.sigmoid)
-                # shape = (28, 28)
-                out = _
+            def forward(x):
+                if env.phase is env.Phase.TRAIN:
+                    with tf.variable_scope('encoder'):
+                        _ = x
+                        _ = O.fc('fc1', _, 500, nonlin=O.tanh)
+                        mu = O.fc('fc2_mu', _, code_length)
+                        std = O.fc('fc2_sigma', _, code_length)
+                        std = O.sqrt(O.exp(std))
+                        epsilon = O.as_varnode(tf.random_normal(O.canonize_sym_shape([x.shape[0], code_length])))
+                        z_given_x = mu + std * epsilon
+                else:
+                    z_given_x = O.as_varnode(tf.random_normal([1, code_length]))
 
-                loss = O.raw_cross_entropy_prob('raw_loss', out, img)
-                loss = O.get_pn_balanced_loss('loss', loss, img)
-                dpc.add_output(out, name='output')
-                dpc.add_output(loss, name='loss', reduce_method='sum')
+                with tf.variable_scope('decoder'):
+                    _ = z_given_x
+                    _ = O.fc('fc1', _, 500, nonlin=O.tanh)
+                    _ = O.fc('fc2', _, 784, nonlin=O.sigmoid)
+                    _ = _.reshape(-1, h, w, c)
+                    x_given_z = _
+
+                if env.phase is env.Phase.TRAIN:
+                    with tf.variable_scope('loss'):
+                        content_loss = O.raw_cross_entropy_prob('raw_content', x_given_z, x)
+                        content_loss = content_loss.mean(name='content')
+                        distrib_loss = 0.5 * (O.sqr(mu) + O.sqr(std) - 2. * O.log(std + 1e-8) - 1.0)
+                        distrib_loss = distrib_loss.mean(name='distrib')
+
+                        loss = content_loss + distrib_loss
+                    dpc.add_output(loss, name='loss', reduce_method='sum')
+
+                dpc.add_output(x_given_z, name='output')
 
             dpc.set_input_maker(inputs).set_forward_func(forward)
 
@@ -75,10 +91,13 @@ def make_network(env):
 
 def make_optimizer(env):
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('trainer.learning_rate'), beta1=0.9))
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('trainer.learning_rate')))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))
+    # wrapper.append_grad_modifier(optimizer.grad_modifier.WeightDecay([
+    #     ('*/W', 0.0005)
+    # ]))
     env.set_optimizer(wrapper)
 
 
