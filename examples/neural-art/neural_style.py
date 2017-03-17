@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 
+from tartist import image
 from tartist.core import load_env, get_env, get_logger
 from tartist.core import io
 from tartist.core.utils.cli import parse_devices
@@ -18,7 +19,6 @@ import nart_opr
 import argparse
 import collections
 import os
-import cv2
 import numpy as np
 
 logger = get_logger(__file__)
@@ -86,8 +86,8 @@ def make_network(env, h=None, w=None):
 def main():
     from tartist.plugins.trainer_enhancer import snapshot
 
-    img = cv2.imread(args.image_path)
-    smg = cv2.imread(args.style_path)
+    img = image.imread(args.image_path)
+    smg = image.imread(args.style_path)
     h, w = img.shape[0:2]
 
     env = Env(master_dev=args.device)
@@ -152,7 +152,7 @@ def main():
             output = netin.get_value()[0]
 
             output_path = os.path.join(args.output_path, 'iter_{:04d}.jpg'.format(i))
-            cv2.imwrite(output_path, output)
+            image.imwrite(output_path, output)
             logger.critical('output written: {}'.format(output_path))
 
 
