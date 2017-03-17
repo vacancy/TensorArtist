@@ -14,12 +14,12 @@ __all__ = ['rms', 'std']
 @wrap_varnode_func
 def rms(inpvar, name=None):
     from ._migrate import sqrt
-    return sqrt((as_varnode(inpvar) ** 2).mean(), name=name)
+    return sqrt((as_varnode(inpvar) ** 2.).mean(), name=name)
 
 
 @wrap_varnode_func
 def std(inpvar, name=None):
     from ._migrate import sqrt
     inpvar = as_varnode(inpvar)
-    return sqrt(((inpvar - inpvar.mean()) ** 2).mean(), name=name)
+    return sqrt(((inpvar - inpvar.mean()) ** 2.).mean(), name=name)
 

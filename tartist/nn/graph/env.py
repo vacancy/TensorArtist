@@ -42,6 +42,17 @@ def reuse_context(activate=True):
         return EmptyContext()
 
 
+def _on_train_flag(attr_name):
+    def compute(self, name):
+        attr = getattr(self, attr_name)
+        if attr is None:
+            return get_default_env().phase is Env.Phase.TRAIN
+        if callable(attr):
+            return attr(name)
+        return bool(attr)
+    return compute
+
+
 class Env(object):
     class SessionFlag(AttrObject):
         log_device_placement = False
@@ -51,7 +62,11 @@ class Env(object):
         gpu_allow_growth = True
         gpu_mem_fraction = 0.99
 
-        pass
+        update_batch_normalization = None
+        enable_dropout = None
+
+        compute_update_batch_normalization = _on_train_flag('update_batch_normalization')
+        compute_enable_dropout = _on_train_flag('enable_dropout')
 
     class DataParallelFlag(AttrObject):
         pass
@@ -289,7 +304,7 @@ class DataParallelController(object):
         if meth == 'concat':
             return O.concat(values, 0, name=name)
         elif meth == 'sum':
-            return O.truediv(O.add_n(values), self._nr_towers, name=name)
+            return O.truediv(O.add_n(values), float(self._nr_towers), name=name)
 
     def _split(self, kwargs):
         assert self.__activated
@@ -352,6 +367,15 @@ class Network(object):
         symbol = as_varnode(symbol)
         name = name or clean_name(symbol)
         self.__outputs[name] = symbol
+        return self
+
+    def add_all_dpc_outputs(self, dpc, loss_name='loss'):
+        for k, v in dpc.outputs.items():
+            if k == loss_name:
+                self.set_loss(v)
+            else:
+                self.add_output(v, name=k)
+        return self
 
     def fetch_all_variables_dict(self):
         from ..tfutils import fetch_variable

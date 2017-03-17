@@ -20,7 +20,8 @@ __all__ = ['BatchDataFlow', 'EpochDataFlow']
 
 def batch_default_filler(buffer, idx, val):
     for k, v in iter_kv(val):
-        buffer[k][idx] = v
+        if k in buffer:
+            buffer[k][idx] = v
 
 
 class BatchDataFlow(SimpleDataFlowBase):

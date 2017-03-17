@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 from ..core.logger import get_logger
+import time
 import functools
 import numpy as np
 
@@ -76,6 +77,7 @@ def imshow(title, image):
     else:
         image = pil_nd2img(image)
         image.show(title)
+        time.sleep(0.5)
 
 
 @opencv_or_pil

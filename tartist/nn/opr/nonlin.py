@@ -11,14 +11,15 @@
 import tensorflow as tf
 
 from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op
-from .cnn import batchnorm
+from .cnn import batch_norm
 from ._migrate import relu
 
 __all__ = ['bn_relu']
 
+
 @wrap_varnode_func
 def bn_relu(inpvar, name=None):
-    _ = batchnorm('bn', inpvar)
+    _ = batch_norm('bn', inpvar)
     _ = relu(_, name='relu')
     return _
 

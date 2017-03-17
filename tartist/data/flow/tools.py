@@ -27,6 +27,7 @@ repeat_n = repeat
 filtertrue = dropwhile
 truncate = islice
 
+
 # implement cycle self, without any cache
 def cycle(iterable, times=None):
     if times is None:
@@ -39,6 +40,7 @@ def cycle(iterable, times=None):
                 yield v
 
 cycle_n = cycle
+
 
 def ssmap(function, iterable):
     for args in iterable:

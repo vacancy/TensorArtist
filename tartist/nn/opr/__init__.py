@@ -10,7 +10,8 @@ from ..graph.node import as_varnode, as_tftensor
 from .arith import *
 from .cnn import *
 from .helper import *
-from .image_proc import *
+from .imgproc import *
+from .loss import *
 from .netsrc import *
 from .nonlin import *
 from .shape import *

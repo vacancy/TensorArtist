@@ -50,49 +50,41 @@ def make_network(env):
 
             def forward(img):
                 _ = img
-                _ = O.conv2d('conv1', _, 16, (3, 3), padding='SAME', nonlin=O.relu)
-                _ = O.pooling2d('pool1', _, kernel=2)
-                _ = O.conv2d('conv2', _, 32, (3, 3), padding='SAME', nonlin=O.relu)
-                _ = O.pooling2d('pool2', _, kernel=2)
-                dpc.add_output(_, name='feature')
+                _ = O.conv2d('conv1', _, 4, (3, 3), stride=2, padding='SAME', nonlin=O.relu)
+                # shape = (14, 14)
+                _ = O.conv2d('conv2', _, 8, (3, 3), stride=2, padding='SAME', nonlin=O.relu)
+                # shape = (7, 7)
+                _ = O.fc('fc', _, 392)
+                _ = _.reshape([-1, 7, 7, 8])
+                _ = O.deconv2d('deconv1', _, 4, (3, 3), stride=2, padding='SAME', nonlin=O.relu)
+                # shape = (14, 14)
+                _ = O.deconv2d('deconv2', _, 1, (3, 3), stride=2, padding='SAME', nonlin=O.sigmoid)
+                # shape = (28, 28)
+                out = _
+
+                loss = O.raw_cross_entropy_prob('raw_loss', out, img)
+                loss = O.get_pn_balanced_loss('loss', loss, img)
+                dpc.add_output(out, name='output')
+                dpc.add_output(loss, name='loss', reduce_method='sum')
 
             dpc.set_input_maker(inputs).set_forward_func(forward)
 
-        _ = dpc.outputs['feature']
-        _ = O.fc('fc1', _, 64)
-        _ = O.fc('fc2', _, 10)
-
-        # it's safe to use tf.xxx and O.xx together
-        prob = O.softmax(_, name='prob')
-        pred = _.argmax(axis=1).astype(tf.int32, name='pred')
-        net.add_output(prob)
-        net.add_output(pred)
+        net.add_all_dpc_outputs(dpc, loss_name='loss')
 
         if env.phase is env.Phase.TRAIN:
-            label = O.placeholder('label', shape=(None, ), dtype=tf.int32)
-            loss = O.sparse_softmax_cross_entropy_with_logits(logits=_, labels=label).mean()
-            loss = O.identity(loss, name='loss')
-            net.set_loss(loss)
-
-            accuracy = O.eq(label, pred).astype('float32').mean()
-            error = 1. - accuracy
-
-            summary.scalar('accuracy', accuracy)
-            summary.scalar('error', error)
-            summary.inference.scalar('loss', loss)
-            summary.inference.scalar('accuracy', accuracy)
-            summary.inference.scalar('error', error)
+            summary.inference.scalar('loss', net.loss)
 
 
 def make_optimizer(env):
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.MomentumOptimizer(get_env('trainer.learning_rate'), 0.9))
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('trainer.learning_rate'), beta1=0.9))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))
     env.set_optimizer(wrapper)
 
-from data_provider import *
+
+from data_provider_mnist import *
 
 
 def main_train(trainer):

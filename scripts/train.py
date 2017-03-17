@@ -11,7 +11,6 @@ from tartist.core.utils.cli import load_desc, parse_devices
 from tartist.nn import Env, train
 
 import argparse
-import os.path as osp
 import tensorflow as tf
 
 logger = get_logger(__file__)
@@ -52,7 +51,7 @@ def main():
             names = ['Collection ' + k] + sorted(['\t{}'.format(v.name) for v in s])
             logger.info('\n'.join(names))
 
-    trainer = train.SimpleTrainer(env, data_provider=desc.make_dataflow)
+    trainer = train.SimpleTrainer(env, data_provider=desc.make_dataflow_train)
     trainer.set_epoch_size(get_env('trainer.epoch_size', 1))
 
     from tartist.plugins.trainer_enhancer import snapshot

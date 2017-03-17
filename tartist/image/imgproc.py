@@ -19,6 +19,7 @@ __all__ = [
     'imread', 'imwrite', 'imshow',
     'resize', 'resize_wh',
     'resize_scale', 'resize_scale_wh',
+    'resize_minmax',
     'crop',
     'center_crop', 'leftup_crop',
     'dimshuffle',
@@ -89,6 +90,17 @@ def resize_scale_wh(img, scale_wh):
     return resize_scale(img, (scale_wh[1], scale_wh[0]))
 
 
+def resize_minmax(img, min_dim, max_dim=None):
+    if max_dim is None:
+        max_dim = min_dim
+
+    h, w = img.shape[:2]
+    short, long = min(h, w), max(h, w)
+    scale = min_dim / short
+    scale = min(max_dim / long, scale)
+    return resize_scale(img, scale)
+
+
 def crop(image, l, t, w, h, extra_crop=None):
     if extra_crop is not None and extra_crop != 1:
         new_w, new_h = round(w * extra_crop), round(h * extra_crop)
@@ -131,7 +143,6 @@ def center_crop(img, target_shape):
 
 def leftup_crop(img, target_shape):
     """ left-up crop """
-    rest = _get_crop2d_rest(img, target_shape)
     start = 0, 0
 
     return _crop2d(img, start, target_shape)
