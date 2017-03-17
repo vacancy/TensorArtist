@@ -9,7 +9,7 @@
 from .base import SimpleDataFlowBase
 from ...core.utils.meta import UniqueValueGetter
 
-__all__ = ['DictDataFlowProxy', 'ListOfArrayDataFlow', 'DictOfArrayDataFlow']
+__all__ = ['DictDataFlowProxy', 'EmptyDictDataFlow', 'ListOfArrayDataFlow', 'DictOfArrayDataFlow']
 
 
 class DictDataFlowProxy(SimpleDataFlowBase):
@@ -24,6 +24,12 @@ class DictDataFlowProxy(SimpleDataFlowBase):
 
     def _len(self):
         return len(self._iterable)
+
+
+class EmptyDictDataFlow(SimpleDataFlowBase):
+    def _gen(self):
+        while True:
+            yield {}
 
 
 class ListOfArrayDataFlow(SimpleDataFlowBase):

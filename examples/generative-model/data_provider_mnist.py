@@ -54,24 +54,13 @@ def make_dataflow_inference(env):
 
 
 def make_dataflow_demo(env):
-    ensure_load()
-
-    # return feed_dict, extra_info
-    def split_data(img, label):
-        return dict(img=img[np.newaxis].astype('float32'))
-
-    df = _mnist[1]  # use validation set actually
-    df = flow.DictOfArrayDataFlow(df)
-    df = flow.tools.cycle(df)
-    df = flow.tools.ssmap(split_data, df)
+    df = flow.EmptyDictDataFlow()
 
     return df
 
 
 def demo(feed_dict, result, extra_info):
-    img = feed_dict['img'][0, :, :, 0]
-    omg = result['output'][0, :, :, 0]
-    img = np.hstack((img, omg))
+    img = result['output'][0, :, :, 0]
 
     img = np.repeat(img[:, :, np.newaxis], 3, axis=2) * 255
     img = img.astype('uint8')

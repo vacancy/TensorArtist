@@ -43,6 +43,7 @@ __all_migrated_oprs__.extend([
     ('asin', tf.asin),
     ('acos', tf.acos),
     ('atan', tf.atan),
+    ('tanh', tf.tanh),
 ])
 
 # unary arith: advanced

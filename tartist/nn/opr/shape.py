@@ -13,6 +13,7 @@ import tensorflow as tf
 import numpy as np
 
 __all__ = [
+    'canonize_sym_shape',
     'flatten', 'flatten2', 
     'reshape', 'dimshuffle', 'broadcast', 'tile', 
     'add_axis', 'remove_axis'
