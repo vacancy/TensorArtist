@@ -112,7 +112,6 @@ def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer)
     summary.enable_echo_summary_scalar(trainer)
-    summary.set_error_summary_key(trainer, 'error')
 
     from tartist.plugins.trainer_enhancer import progress
     progress.enable_epoch_progress(trainer)

@@ -36,7 +36,7 @@ def main():
     devices = parse_devices(args.devices)
     assert len(devices) > 0, 'Must provide at least one devices'
 
-    env_cls = get_env(desc, '__trainer_env_cls__', train.TrainerEnv)
+    env_cls = getattr(desc, '__trainer_env_cls__', train.TrainerEnv)
     env = env_cls(Env.Phase.TRAIN, devices[0])
     env.flags.update(**get_env('trainer.env_flags', {}))
     if len(devices) > 1:

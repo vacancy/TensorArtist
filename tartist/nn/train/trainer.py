@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 from .env import TrainerEnv
+from ..graph.env import Env
 from ...core import trigger_event
 from ...core.utils.meta import assert_instance, notnone_property
 from ...core.utils.cache import cached_property
@@ -25,7 +26,7 @@ class TrainerBase(object):
         self._runtime = dict()
         self._stop_signal = False
 
-        assert_instance(self._env, TrainerEnv)
+        assert_instance(self._env, Env)
 
     @property
     def env(self):

@@ -9,6 +9,7 @@
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary, train
+from tartist.nn.train.gan import GANGraphKeys
 
 import tensorflow as tf
 
@@ -24,7 +25,7 @@ __envs__ = {
         'learning_rate': 0.001,
 
         'batch_size': 100,
-        'epoch_size': 500,
+        'epoch_size': 100,
         'nr_epochs': 100,
 
         'env_flags': {
@@ -41,6 +42,7 @@ def make_network(env):
     with env.create_network() as net:
         code_length = 20
         h, w, c = 28, 28, 1
+        is_train = env.phase == env.Phase.TRAIN
 
         dpc = env.create_dpcontroller()
         with dpc.activate():
@@ -48,28 +50,63 @@ def make_network(env):
                 img = O.placeholder('img', shape=(None, h, w, c))
                 return [img]
 
-            def forward(x):
-                z = O.as_varnode(tf.random_normal([1, code_length]))
-                with tf.variable_scope('generator'):
-                    out = None
+            def forward(img):
+                g_batch_size = get_env('trainer.batch_size') if env.phase is env.Phase.TRAIN else 1
+                z = O.as_varnode(tf.random_normal([g_batch_size, code_length]))
+                with tf.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
+                    _ = z
+                    with O.argscope(O.fc, nonlin=O.tanh):
+                        _ = O.fc('fc1', _, 500)
+                        _ = O.fc('fc2', _, 500)
+                    _ = O.fc('fc3', _, 784, nonlin=O.sigmoid)
+                    x_given_z = _.reshape(-1, 28, 28, 1)
 
-                with tf.variable_scope('discriminator', reuse=True):
-                    pass
+                def discriminator(x):
+                    _ = x
+                    with O.argscope(O.fc, nonlin=O.tanh):
+                        _ = O.fc('fc1', _, 500)
+                        _ = O.fc('fc2', _, 500)
+                    _ = O.fc('fc3', _, 1)
+                    logits = _
+                    return logits
 
-                if env.phase is env.Phase.TRAIN:
-                    with tf.variable_scope('discriminator'):
-                        pass
+                if is_train:
+                    with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES):
+                        logits_real = discriminator(img).flatten()
+                        score_real = O.sigmoid(logits_real)
 
-                if env.phase is env.Phase.TRAIN:
-                    g_loss = None
-                    d_loss = None
+                with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=is_train):
+                    logits_fake = discriminator(x_given_z).flatten()
+                    score_fake = O.sigmoid(logits_fake)
+
+                if is_train:
+                    with tf.variable_scope('loss'):
+                        d_loss = (
+                            O.sigmoid_cross_entropy_with_logits(
+                                labels=O.ones([logits_real.shape[0]]), logits=logits_real) +
+                            O.sigmoid_cross_entropy_with_logits(
+                                labels=O.zeros([logits_fake.shape[0]]), logits=logits_fake)
+                        ).mean() / 2.
+
+                        g_loss = O.sigmoid_cross_entropy_with_logits(
+                            labels=O.ones([logits_fake.shape[0]]), logits=logits_fake).mean()
+
+                        accuracy_real = (score_real > 0.5).astype('float32').mean()
+                        accuracy_fake = (score_fake < 0.5).astype('float32').mean()
 
                     dpc.add_output(g_loss, name='g_loss', reduce_method='sum')
                     dpc.add_output(d_loss, name='d_loss', reduce_method='sum')
+                    dpc.add_output(accuracy_real, name='d_accuracy_real', reduce_method='sum')
+                    dpc.add_output(accuracy_fake, name='d_accuracy_fake', reduce_method='sum')
 
-                dpc.add_output(out, name='output')
+                dpc.add_output(x_given_z, name='output')
+                dpc.add_output(score_fake, name='score')
 
             dpc.set_input_maker(inputs).set_forward_func(forward)
+
+        if is_train:
+            for acc in ['d_accuracy_real', 'd_accuracy_fake']:
+                summary.scalar(acc, dpc.outputs[acc], collections=[GANGraphKeys.DISCRIMINATOR_SUMMARIES])
 
         net.add_all_dpc_outputs(dpc)
 
@@ -101,7 +138,6 @@ def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer)
     summary.enable_echo_summary_scalar(trainer)
-    summary.set_error_summary_key(trainer, 'error')
 
     from tartist.plugins.trainer_enhancer import progress
     progress.enable_epoch_progress(trainer)

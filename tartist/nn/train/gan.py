@@ -10,11 +10,16 @@ from .trainer import TrainerBase
 from .. import summary
 from ..graph.env import Env
 from ..graph.node import as_tftensor
+from ...data.flow.base import SimpleDataFlowBase
+from ...data.flow.collections import EmptyDictDataFlow
+
 from ...core.utils.meta import notnone_property
 import tensorflow as tf
 
 
 class GANGraphKeys:
+    GENERATOR_VARIABLES = 'generator_variables'
+    DISCRIMINATOR_VARIABLES = 'discriminator_variables'
     GENERATOR_SUMMARIES = 'generator_summaries'
     DISCRIMINATOR_SUMMARIES = 'discriminator_summaries'
 
@@ -48,14 +53,42 @@ class GANTrainerEnv(Env):
         return self
 
     def make_optimizable_func(self, d_loss=None, g_loss=None):
-        d_loss = as_tftensor(d_loss or self.d_loss)
-        g_loss = as_tftensor(g_loss or self.g_loss)
+        # need to access collections
+        with self.as_default():
+            d_loss = as_tftensor(d_loss or self.d_loss)
+            g_loss = as_tftensor(g_loss or self.g_loss)
 
-        g_func = self.make_func()
-        g_func.add_extra_op(self.g_optimizer.minimize(g_loss))
-        d_func = self.make_func()
-        d_func.add_extra_op(self.g_optimizer.minimize(d_loss))
-        return g_func, d_func
+            g_func = self.make_func()
+            scope = GANGraphKeys.GENERATOR_VARIABLES + '/.*'
+            g_var_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
+            g_func.add_extra_op(self.g_optimizer.minimize(g_loss, var_list=g_var_list))
+
+            d_func = self.make_func()
+            scope = GANGraphKeys.DISCRIMINATOR_VARIABLES + '/.*'
+            d_var_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
+            d_func.add_extra_op(self.g_optimizer.minimize(d_loss, var_list=d_var_list))
+            return g_func, d_func
+
+
+class GANDataFlow(SimpleDataFlowBase):
+    def __init__(self, g_input, d_input, g_times, d_times):
+        super().__init__()
+        self._g_input, self._d_input = g_input, d_input
+        self._g_times, self._d_times = g_times, d_times
+
+        if self._g_input is None:
+            self._g_input = EmptyDictDataFlow()
+
+    def _gen(self):
+        g_it = iter(self._g_input)
+        d_it = iter(self._d_input)
+        while True:
+            out = {'g': [], 'd': []}
+            for i in range(self._g_times):
+                out['g'].append(next(g_it))
+            for i in range(self._d_times):
+                out['d'].append(next(d_it))
+            yield out
 
 
 class GANTrainer(TrainerBase):
@@ -64,8 +97,9 @@ class GANTrainer(TrainerBase):
 
     def initialize(self):
         super().initialize()
-        summary.scalar('g_loss', self.env.g_loss, collections=[GANGraphKeys.GENERATOR_SUMMARIES])
-        summary.scalar('d_loss', self.env.d_loss, collections=[GANGraphKeys.DISCRIMINATOR_SUMMARIES])
+        with self.env.as_default():
+            summary.scalar('g_loss', self.env.g_loss, collections=[GANGraphKeys.GENERATOR_SUMMARIES])
+            summary.scalar('d_loss', self.env.d_loss, collections=[GANGraphKeys.DISCRIMINATOR_SUMMARIES])
         self._g_func, self._d_func = self.env.make_optimizable_func()
 
     @notnone_property

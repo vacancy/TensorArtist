@@ -362,7 +362,6 @@ class Network(object):
     def merged_summaries(self):
         return self.get_merged_summaries()
 
-    @property
     def get_merged_summaries(self, collection=None):
         with self.owner_env.graph.as_default():
             return tf.summary.merge_all(key=collection)

@@ -10,6 +10,7 @@ from tartist import image
 from tartist.core import get_env
 from tartist.data import flow 
 from tartist.data.datasets.mnist import load_mnist
+from tartist.nn import train
 
 import numpy as np
 
@@ -33,29 +34,19 @@ def make_dataflow_train(env):
     df = flow.BatchDataFlow(df, batch_size, sample_dict={
         'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
     })
+    df = train.gan.GANDataFlow(None, df, get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
 
     return df
 
 
+# does not support inference during training
 def make_dataflow_inference(env):
-    ensure_load()
-    batch_size = get_env('inference.batch_size')
-    epoch_size = get_env('inference.epoch_size')
-
-    df = _mnist[1]  # use validation set actually
-    df = flow.DictOfArrayDataFlow(df)
-    df = flow.tools.cycle(df)
-    df = flow.BatchDataFlow(df, batch_size, sample_dict={
-        'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
-    })
-    df = flow.EpochDataFlow(df, epoch_size)
-
+    df = flow.tools.cycle([{'d': [], 'g': []}])
     return df
 
 
 def make_dataflow_demo(env):
     df = flow.EmptyDictDataFlow()
-
     return df
 
 
