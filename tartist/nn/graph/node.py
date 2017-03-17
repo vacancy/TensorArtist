@@ -302,14 +302,14 @@ __valid_tf_tensor_types__ = (tf.Tensor, tf.Variable, tf.Operation)
 
 def infer_dtype_from_const(v):
     def canonize(dtype):
-        if dtype == np.float64:
-            dtype = np.float32
+        if dtype == 'float64':
+            dtype = 'float32'
         return dtype
     if isinstance(v, np.ndarray):
-        return canonize(v.dtype)
+        return canonize(v.dtype.name)
     if isinstance(v, int) or (isinstance(v, (tuple, list)) and isinstance(v[0], int)):
-        return np.int32
-    return np.float32
+        return 'int32'
+    return 'float32'
 
 
 def as_varnode(tensor, dtype=None):

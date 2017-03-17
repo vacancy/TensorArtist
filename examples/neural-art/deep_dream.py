@@ -130,7 +130,7 @@ def main():
                 make_step(net)
 
             if i % args.save_step == 0:
-                output = from_netin(netin.get_host_value())
+                output = from_netin(netin.get_value())
 
                 output_path = os.path.join(args.output_path, 'iter_{:04d}.jpg'.format(i))
                 image.imwrite(output_path, output)
