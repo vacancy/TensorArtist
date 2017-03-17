@@ -86,7 +86,6 @@ avg_pooling2d = functools.partial(pooling2d, method='AVG')
 def fc(name, inpvar, nr_output_channels,
         use_bias=True, nonlin=__default_nonlin__,
         W=None, b=None, param_dtype=__default_dtype__):
-
     inpvar = flatten2(inpvar)
 
     assert inpvar.static_shape[1] is not None

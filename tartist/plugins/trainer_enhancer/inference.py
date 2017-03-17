@@ -22,8 +22,7 @@ def enable_inference_runner(trainer, dataflow, interval=1,
 
     def compile_fn_inference(trainer):
         trainer._fn_inference = trainer.env.make_func()
-        with trainer.env.as_default():
-            summaries = tf.summary.merge_all(key=collection_key)
+        summaries = trainer.network.get_merged_summaries(collection_key)
         if summaries is not None:
             trainer._fn_inference.add_extra_kwoutput('summaries', summaries)
         trainer._fn_inference.compile(extra_outputs)

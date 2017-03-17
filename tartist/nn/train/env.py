@@ -15,8 +15,6 @@ __all__ = ['TrainerEnv']
 
 class TrainerEnv(Env):
     _optimizer = None
-    _data_provider = None
-    _fn_train_step = None
 
     @notnone_property
     def optimizer(self):

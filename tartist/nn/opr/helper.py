@@ -12,6 +12,7 @@ from ...core.utils.context import EmptyContext
 from ...core.utils.shape import get_2dshape, get_4dshape
 import tensorflow as tf
 import functools
+import contextlib
 
 __all__ = [
     'device_context', 
@@ -99,3 +100,18 @@ class StaticDynamicDim(object):
 
     def __rmul__(self, other):
         return self.op(lambda v: other * v)
+
+
+@contextlib.contextmanager
+def argscope(*funcs, **kwargs):
+    from tartist.nn import opr as O
+
+    for f in funcs:
+        fname = f.__name__
+        assert hasattr(O, fname)
+        new_f = functools.partial(f, **kwargs)
+        setattr(O, fname, new_f)
+    yield
+    for f in funcs:
+        fname = f.__name__
+        setattr(O, fname, f)

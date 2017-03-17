@@ -34,9 +34,10 @@ args = parser.parse_args()
 def main():
     desc = load_desc(args.desc)
     devices = parse_devices(args.devices)
-    assert len(devices) > 0
+    assert len(devices) > 0, 'Must provide at least one devices'
 
-    env = train.TrainerEnv(Env.Phase.TRAIN, devices[0])
+    env_cls = getattr(desc, '__trainer_env_cls__', train.TrainerEnv)
+    env = env_cls(Env.Phase.TRAIN, devices[0])
     env.flags.update(**get_env('trainer.env_flags', {}))
     if len(devices) > 1:
         env.set_slave_devices(devices[1:])
@@ -52,7 +53,8 @@ def main():
             logger.info('\n'.join(names))
 
     nr_iters = get_env('trainer.nr_iters', get_env('trainer.epoch_size', 1) * get_env('trainer.nr_epochs', 0))
-    trainer = train.SimpleTrainer(nr_iters, env=env, data_provider=desc.make_dataflow_train)
+    trainer_cls = getattr(desc, '__trainer_cls__', train.SimpleTrainer)
+    trainer = trainer_cls(nr_iters, env=env, data_provider=desc.make_dataflow_train)
     trainer.set_epoch_size(get_env('trainer.epoch_size', 1))
 
     from tartist.plugins.trainer_enhancer import snapshot

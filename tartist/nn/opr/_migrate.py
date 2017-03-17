@@ -17,6 +17,7 @@ def migrate_opr(name, tf_func):
     @wrap_varnode_func
     def new_func(*args, **kwargs):
         return tf_func(*args, **kwargs)
+    new_func.__name__ = name
 
     return new_func
 

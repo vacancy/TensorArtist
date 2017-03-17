@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : data_provider_mnist.py
+# File   : data_provider_vae_mnist.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
