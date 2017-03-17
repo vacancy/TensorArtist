@@ -27,11 +27,15 @@ def clean_summary_name(name):
     return re.sub('_\d+$', '', name)
 
 
-def assign_variable(var, value, session, use_locking=False):
+def assign_variable(var, value, session=None, use_locking=False):
+    from .graph.env import get_default_env
+    session = session or get_default_env().session
     session.run(var.assign(value, use_locking=use_locking))
 
 
-def fetch_variable(var, session):
+def fetch_variable(var, session=None):
+    from .graph.env import get_default_env
+    session = session or get_default_env().session
     try:
         return session.run(var)
     except tf.errors.FailedPreconditionError:

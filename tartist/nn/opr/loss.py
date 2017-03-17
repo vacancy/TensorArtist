@@ -12,9 +12,21 @@ from ._migrate import log
 from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op
 
 __all__ = [
+    'grad',
     'raw_l2_loss', 'raw_cross_entropy', 'raw_cross_entropy_prob',
     'get_masked_loss', 'get_pn_balanced_loss'
 ]
+
+
+@wrap_varnode_func
+def grad(ys, xs, grad_ys=None, name='gradients'):
+    single_var = type(xs) not in (tuple, list)
+    if single_var:
+        xs = [xs]
+    outs = tf.gradients(ys, xs, grad_ys=grad_ys, name=name)
+    if single_var:
+        return outs[0]
+    return outs
 
 
 @wrap_named_op

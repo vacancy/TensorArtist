@@ -99,8 +99,8 @@ def main():
     
         env.initialize_all_variables()
         snapshot.load_weights_file(env, args.weight_path)
-        res_img = func(img=img[np.newaxis])
-        res_smg = func(img=smg[np.newaxis])
+    res_img = func(img=img[np.newaxis])
+    res_smg = func(img=smg[np.newaxis])
     
     # create a new env for train
     env = TrainerEnv(master_dev=args.device)
@@ -153,7 +153,7 @@ def main():
 
             output_path = os.path.join(args.output_path, 'iter_{:04d}.jpg'.format(i))
             image.imwrite(output_path, output)
-            logger.critical('output written: {}'.format(output_path))
+            logger.critical('Output written: {}'.format(output_path))
 
 
 if __name__ == '__main__':
