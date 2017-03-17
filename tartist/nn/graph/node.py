@@ -103,7 +103,7 @@ class VarNodeOpDecl(object):
         return self.__binary(rhs, 'not_equal')
 
     def __neg__(self):
-        return as_varnode(tf.neg(self))
+        return as_varnode(tf.negative(self))
 
     def __getitem__(self, slices):
         from ..opr.tensor import NormalSlice
@@ -132,8 +132,8 @@ class VarNodeOpDecl(object):
     def __iter__(self):
         raise ValueError('iterating over {} is not allowed'.format(type(self).__name__))
 
-    def astype(self, dtype):
-        return as_varnode(tf.cast(self, dtype))
+    def astype(self, dtype, name=None):
+        return as_varnode(tf.cast(self, dtype, name=name))
 
     def reshape(self, *tshape, name=None):
         if len(tshape) == 1:
@@ -302,14 +302,14 @@ __valid_tf_tensor_types__ = (tf.Tensor, tf.Variable, tf.Operation)
 
 def infer_dtype_from_const(v):
     def canonize(dtype):
-        if dtype == np.float64:
-            dtype = np.float32
+        if dtype == 'float64':
+            dtype = 'float32'
         return dtype
     if isinstance(v, np.ndarray):
-        return canonize(v.dtype)
+        return canonize(v.dtype.name)
     if isinstance(v, int) or (isinstance(v, (tuple, list)) and isinstance(v[0], int)):
-        return np.int32
-    return np.float32
+        return 'int32'
+    return 'float32'
 
 
 def as_varnode(tensor, dtype=None):

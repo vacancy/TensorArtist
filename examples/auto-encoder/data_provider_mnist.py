@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : data_provider.py
+# File   : data_provider_mnist.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
@@ -32,7 +32,6 @@ def make_dataflow_train(env):
     df = flow.DOARandomSampleDataFlow(df)
     df = flow.BatchDataFlow(df, batch_size, sample_dict={
         'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
-        'label': np.empty(shape=(batch_size, ), dtype='int32')
     })
 
     return df
@@ -48,7 +47,6 @@ def make_dataflow_inference(env):
     df = flow.tools.cycle(df)
     df = flow.BatchDataFlow(df, batch_size, sample_dict={
         'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
-        'label': np.empty(shape=(batch_size, ), dtype='int32')
     })
     df = flow.EpochDataFlow(df, epoch_size)
 
@@ -60,7 +58,7 @@ def make_dataflow_demo(env):
 
     # return feed_dict, extra_info
     def split_data(img, label):
-        return dict(img=img[np.newaxis].astype('float32')), dict(label=label)
+        return dict(img=img[np.newaxis].astype('float32'))
 
     df = _mnist[1]  # use validation set actually
     df = flow.DictOfArrayDataFlow(df)
@@ -72,18 +70,14 @@ def make_dataflow_demo(env):
 
 def demo(feed_dict, result, extra_info):
     img = feed_dict['img'][0, :, :, 0]
-    label = extra_info['label']
+    omg = result['output'][0, :, :, 0]
+    img = np.hstack((img, omg))
 
     img = np.repeat(img[:, :, np.newaxis], 3, axis=2) * 255
     img = img.astype('uint8')
     img = image.resize_minmax(img, 256)
     outputs = [img, np.zeros(shape=[50, 256, 3], dtype='uint8')]
     outputs = np.vstack(outputs)
-
-    text = 'Pred: {}'.format(result['pred'][0])
-    text += ' Gt: {}'.format(int(label))
-    # cv2.putText(outputs, text, (20, 256 + 25), cv2.FONT_HERSHEY_PLAIN, 1.5, (255, 255, 255))
-    print(text)
 
     image.imshow('demo', outputs)
 

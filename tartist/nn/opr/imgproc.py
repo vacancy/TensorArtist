@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : image_proc.py
+# File   : imgproc.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 2/27/17

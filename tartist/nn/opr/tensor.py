@@ -18,6 +18,11 @@ __all__ = ['concat', 'stack', 'cond_take', 'one_hot',
 
 @wrap_varnode_func
 def concat(inpvars, axis, name=None):
+    # hack for scalar concat
+    for i in inpvars:
+        if as_varnode(i).ndims == 0:
+            assert axis == 0
+            return stack(inpvars, axis=0, name=name)
     return tf.concat(inpvars, axis=axis, name=name)
 
 

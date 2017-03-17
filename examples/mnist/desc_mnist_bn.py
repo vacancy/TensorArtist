@@ -66,9 +66,8 @@ def make_network(env):
         _ = O.fc('fc1', _, 64)
         _ = O.fc('fc2', _, 10)
 
-        # it's safe to use tf.xxx and O.xx together
         prob = O.softmax(_, name='prob')
-        pred = _.argmax(axis=1, name='pred').astype(tf.int32)
+        pred = _.argmax(axis=1).astype(tf.int32, name='pred')
         net.add_output(prob)
         net.add_output(pred)
 
@@ -96,8 +95,7 @@ def make_optimizer(env):
     ]))
     env.set_optimizer(wrapper)
 
-from data_provider import make_dataflow_train as make_dataflow
-from data_provider import make_dataflow_inference
+from data_provider import *
 
 
 def main_train(trainer):

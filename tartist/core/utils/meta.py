@@ -171,4 +171,3 @@ class notnone_property:
         assert v is not None, '{}.{} can not be None, maybe not set yet'.format(
                 type(instance).__name__, self.__name__)
         return v
-

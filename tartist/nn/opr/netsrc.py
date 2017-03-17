@@ -11,8 +11,8 @@ import tensorflow as tf
 
 from ._defaults import __default_dtype__
 from .helper import device_context, wrap_varnode_func, wrap_named_op, unique_opr_name
-from ..graph.env import get_default_env, get_default_net
-from ..graph.node import as_tftensor, as_varnode, OprNode
+from ..graph.env import get_default_env
+from ..graph.node import as_varnode, OprNode, __valid_tensor_types__
 from ..tfutils import assign_variable, fetch_variable
 from ...core.utils.meta import assert_notnone
 
@@ -68,3 +68,8 @@ def constant(value, shape=None, dtype=None, name='const', device=None, verify_sh
     with device_context(device):
         return tf.constant(value, dtype=dtype, shape=shape, name=name, verify_shape=verify_shape)
 
+
+def ensure_variable(name, value_or_intializer, *args, **kwargs):
+    if not isinstance(value_or_intializer, __valid_tensor_types__):
+        return variable(name, value_or_intializer, *args, **kwargs)
+    return value_or_intializer
