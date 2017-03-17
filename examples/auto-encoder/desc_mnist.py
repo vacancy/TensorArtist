@@ -100,11 +100,5 @@ def main_train(trainer):
     from tartist.plugins.trainer_enhancer import inference
     inference.enable_inference_runner(trainer, make_dataflow_inference)
 
-    from tartist.core import register_event
-    def on_epoch_after(trainer):
-        if trainer.epoch == 5:
-            trainer.optimizer.set_learning_rate(trainer.optimizer.learning_rate * 0.1)
-    register_event(trainer, 'epoch:after', on_epoch_after)
-
     trainer.train()
 
