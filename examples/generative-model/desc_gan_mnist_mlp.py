@@ -25,7 +25,7 @@ __envs__ = {
         'learning_rate': 0.001,
 
         'batch_size': 100,
-        'epoch_size': 100,
+        'epoch_size': 500,
         'nr_epochs': 100,
 
         'env_flags': {
@@ -114,7 +114,7 @@ def make_network(env):
 def make_optimizer(env):
     lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
 
-    with tf.variable_scope('generator'):
+    with tf.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
         wrapper = optimizer.OptimizerWrapper()
         wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr))
         wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
@@ -122,7 +122,7 @@ def make_optimizer(env):
         ]))
         env.set_g_optimizer(wrapper)
 
-    with tf.variable_scope('discriminator'):
+    with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES):
         wrapper = optimizer.OptimizerWrapper()
         wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr))
         wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
