@@ -6,6 +6,7 @@
 # 
 # This file is part of TensorArtist
 
+from . import gan
 from .env import *
 from .trainer import *
 

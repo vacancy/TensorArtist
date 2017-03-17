@@ -86,15 +86,6 @@ class TrainerBase(object):
     def _iter_train(self):
         return iter(self.data_provider(self.env))
 
-    def _run_step(self, data):
-        raise NotImplementedError()
-
-    def _dump_snapshot(self):
-        raise NotImplementedError()
-
-    def _load_snapshot(self, snapshot):
-        raise NotImplementedError()
-
     def initialize(self):
         self.env.initialize_all_variables()
 
@@ -147,6 +138,21 @@ class TrainerBase(object):
         self.finalize()
         trigger_event(self, 'finalization:after', self)
 
+    def _run_step(self, data):
+        raise NotImplementedError()
+
+    def _dump_snapshot(self):
+        variables = self.network.fetch_all_variables_dict()
+        runtime = self.runtime.copy()
+        snapshot = dict(variables=variables, runtime=runtime)
+        return snapshot
+
+    def _load_snapshot(self, snapshot):
+        variables = snapshot['variables']
+        runtime = snapshot['runtime'].copy()
+        self._runtime = runtime
+        self.network.assign_all_variables_dict(variables)
+
 
 class SimpleTrainer(TrainerBase):
     _fn_train = None
@@ -174,15 +180,3 @@ class SimpleTrainer(TrainerBase):
             summaries = tf.Summary.FromString(out['summaries'])
             self.runtime['summaries'] = summaries
         return out
-
-    def _dump_snapshot(self):
-        variables = self.network.fetch_all_variables_dict()
-        runtime = self.runtime.copy()
-        snapshot = dict(variables=variables, runtime=runtime)
-        return snapshot
-
-    def _load_snapshot(self, snapshot):
-        variables = snapshot['variables']
-        runtime = snapshot['runtime'].copy()
-        self._runtime = runtime
-        self.network.assign_all_variables_dict(variables)

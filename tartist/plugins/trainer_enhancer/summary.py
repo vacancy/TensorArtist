@@ -8,6 +8,7 @@
 
 from tartist.core import get_logger, register_event
 from tartist.nn.tfutils import clean_summary_name
+import collections
 
 logger = get_logger()
 
@@ -100,7 +101,11 @@ def enable_summary_history(trainer):
         summaries = None
         if 'summaries' in trainer.runtime:
             summaries = trainer.runtime['summaries']
-            mgr.put_summaries(summaries)
+            if isinstance(summaries, collections.Iterable):
+                for s in summaries:
+                    mgr.put_summaries(s)
+            else:
+                mgr.put_summaries(summaries)
         if 'loss' in trainer.runtime and not check_proto_contains(summaries, 'loss'):
             put_summary_history_scalar(trainer, 'loss', trainer.runtime['loss'])
 

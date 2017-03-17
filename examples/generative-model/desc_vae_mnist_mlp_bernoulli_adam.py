@@ -105,7 +105,7 @@ def make_optimizer(env):
     env.set_optimizer(wrapper)
 
 
-from data_provider_mnist import *
+from data_provider_vae_mnist import *
 
 
 def main_train(trainer):
