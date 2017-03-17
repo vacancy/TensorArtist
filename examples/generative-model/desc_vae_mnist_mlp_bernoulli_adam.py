@@ -21,11 +21,11 @@ __envs__ = {
     },
 
     'trainer': {
-        'nr_iters': 500 * 100,
         'learning_rate': 0.001,
 
         'batch_size': 100,
         'epoch_size': 500,
+        'nr_epochs': 100,
 
         'env_flags': {
             'log_device_placement': False

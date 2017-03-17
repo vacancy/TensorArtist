@@ -29,12 +29,11 @@ __envs__ = {
     },
 
     'trainer': {
-        'nr_iters': 390 * 100,
         'learning_rate': 0.01,
 
-        'batch_size': 128,
-        'epoch_size': 390,
-        'repeat_num': 2,
+        'batch_size': 100,
+        'epoch_size': 500,
+        'nr_epochs': 100,
 
         'env_flags': {
             'log_device_placement': False
@@ -47,9 +46,10 @@ __envs__ = {
     }
 }
 
+
 def make_network(env):
     with env.create_network() as net:
-        n = get_env('trainer.repeat_num')
+        n = 2
         nr_classes = get_env('dataset.nr_classes')
 
         conv2d = functools.partial(O.conv2d, kernel=3, use_bias=False, padding='SAME')

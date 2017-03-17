@@ -7,17 +7,19 @@
 # This file is part of TensorArtist
 
 from .env import TrainerEnv
-from ...core import get_env, trigger_event
+from ...core import trigger_event
 from ...core.utils.meta import assert_instance, notnone_property
 from ...core.utils.cache import cached_property
 
+import math
 import tensorflow as tf
 
 __all__ = ['TrainerBase', 'SimpleTrainer']
 
 
 class TrainerBase(object):
-    def __init__(self, env=None, data_provider=None):
+    def __init__(self, nr_iters, env=None, data_provider=None):
+        self._nr_iters = nr_iters
         self._env = env or TrainerEnv()
         self._data_provider = data_provider
         self._runtime = dict()
@@ -66,6 +68,14 @@ class TrainerBase(object):
         return self.iter // self.epoch_size
 
     @property
+    def nr_iters(self):
+        return self._nr_iters
+
+    @property
+    def nr_epochs(self):
+        return int(math.ceil(self.nr_iters / self.epoch_size))
+
+    @property
     def stop_signal(self):
         return self._stop_signal
 
@@ -110,7 +120,7 @@ class TrainerBase(object):
 
         trigger_event(self, 'optimization:before', self)
 
-        while self.runtime['iter'] <= get_env('trainer.nr_iters') and not self.stop_signal:
+        while self.runtime['iter'] <= self.nr_iters and not self.stop_signal:
             if self.runtime['iter'] == 0:
                 inp, out = {}, {}
                 trigger_event(self, 'epoch:before', self)
