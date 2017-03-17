@@ -61,7 +61,6 @@ def make_network(env):
                         z_given_x = mu + std * epsilon
                 else:
                     z_given_x = O.as_varnode(tf.random_normal([1, code_length]))
-                    z_given_x = tf.Print(z_given_x, [z_given_x])
 
                 with tf.variable_scope('decoder'):
                     _ = z_given_x
