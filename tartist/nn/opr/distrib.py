@@ -17,7 +17,7 @@ import numpy as np
 __all__ = [
     'DistributionBase',
     'MultinomialDistribution',
-    'GaussianDistribution', 'TruncatedGaussianDistributionWithUniformSample'
+    'GaussianDistribution', 'GaussianDistributionWithUniformSample'
 ]
 
 
@@ -218,7 +218,7 @@ class GaussianDistribution(DistributionBase):
         return self._size
 
 
-class TruncatedGaussianDistributionWithUniformSample(GaussianDistribution):
+class GaussianDistributionWithUniformSample(GaussianDistribution):
     def __init__(self, name, size, fixed_std=True, nr_num_samples=10, min_val=-1, max_val=1, num_min_val=-2,
                  num_max_val=2):
         super().__init__(name, size, fixed_std=fixed_std, nr_num_samples=nr_num_samples)

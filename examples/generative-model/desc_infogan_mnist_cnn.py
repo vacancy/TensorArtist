@@ -62,8 +62,8 @@ def make_network(env):
 
         # code latent variables distribution
         zc_distrib = O.distrib.MultinomialDistribution('cat', 10)
-        zc_distrib *= O.distrib.TruncatedGaussianDistributionWithUniformSample('code_a', 1, nr_num_samples=5)
-        zc_distrib *= O.distrib.TruncatedGaussianDistributionWithUniformSample('code_b', 1, nr_num_samples=5)
+        zc_distrib *= O.distrib.GaussianDistributionWithUniformSample('code_a', 1, nr_num_samples=5)
+        zc_distrib *= O.distrib.GaussianDistributionWithUniformSample('code_b', 1, nr_num_samples=5)
         net.zc_distrib = zc_distrib
 
         # prior: the assumption how the factors are presented in the dataset
