@@ -34,6 +34,9 @@ __envs__ = {
     'inference': {
         'batch_size': 256,
         'epoch_size': 40
+    },
+    'demo': {
+        'reconstruct': False
     }
 }
 
@@ -42,6 +45,7 @@ def make_network(env):
     with env.create_network() as net:
         code_length = 20
         h, w, c = 28, 28, 1
+        reconstruct = get_env('demo.reconstruct', False)
 
         dpc = env.create_dpcontroller()
         with dpc.activate():
@@ -50,7 +54,7 @@ def make_network(env):
                 return [img]
 
             def forward(x):
-                if env.phase is env.Phase.TRAIN:
+                if reconstruct or env.phase is env.Phase.TRAIN:
                     with tf.variable_scope('encoder'):
                         _ = x
                         _ = O.fc('fc1', _, 500, nonlin=O.tanh)

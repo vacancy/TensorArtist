@@ -18,7 +18,6 @@ import functools
 
 __all__ = ['conv2d', 'pooling2d', 'fc', 'dropout', 'batch_norm', 'deconv2d']
 
-
 @wrap_named_op
 @wrap_varnode_func
 def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
@@ -172,7 +171,7 @@ def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
     in_shape = inpvar.static_shape
     nr_input_channels = in_shape[3]
     assert nr_input_channels is not None
-    
+
     kernel = get_2dshape(kernel)
     stride2 = get_2dshape(stride)
     stride4 = get_4dshape(stride)
