@@ -61,8 +61,7 @@ def demo(feed_dict, result, extra_info):
     image.imshow('demo', img)
 
 
-def main_demo(env, func):
-    assert get_env('demo.infogan', False)
+def main_demo_infogan(env, func):
     net = env.network
     samples = net.zc_distrib.numerical_sample(net.zc_distrib_num_prior)
     df = {'zc': samples.reshape(samples.shape[0], 1, -1)}
@@ -73,7 +72,7 @@ def main_demo(env, func):
         res = func(**data)
         all_outputs.append(res['output'][0, :, :, 0])
 
-    grid = get_env('demo.infogan_grid')
+    grid = get_env('demo.infogan.grid', (10, None))
     if grid[1] is None:
         grid = (grid[0], len(all_outputs) // grid[0])
     all_rows = []
@@ -84,4 +83,13 @@ def main_demo(env, func):
     final = (final * 255).astype('uint8')
     image.imwrite('infogan.png', final)
 
+
+def main_demo(env, func):
+    mode = get_env('demo.mode')
+    assert mode is not None
+    
+    if mode == 'infogan':
+        main_demo_infogan(env, func)
+    else:
+        assert False, 'Unknown mode {}'.format(mode)
 

@@ -133,7 +133,7 @@ class MergedDistribution(DistributionBase):
         res = np.empty(shape=[asam.shape[0] * bsam.shape[0], self.sample_size], dtype='float32')
         for i in range(asam.shape[0]):
             for j in range(bsam.shape[0]):
-                res[i * bsam.shape[0] + j] = np.concatenate([asam[0], bsam[0]], axis=0)
+                res[i * bsam.shape[0] + j] = np.concatenate([asam[i], bsam[j]], axis=0)
         return res
 
     def _get_sample_size(self):
@@ -226,7 +226,7 @@ class GaussianDistributionWithUniformSample(GaussianDistribution):
         self._num_min_val, self._num_max_val = num_min_val, num_max_val
 
     def _get_sample(self, batch_size, theta):
-        return O.random_uniform([batch_size, self.sample_size])
+        return O.random_uniform([batch_size, self.sample_size], self._min_val, self._max_val)
 
     def _get_numerical_sample(self, theta):
         assert self._size == 1

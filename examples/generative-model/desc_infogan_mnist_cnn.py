@@ -44,8 +44,7 @@ __envs__ = {
 
     'demo': {
         'customized': True,
-        'infogan': True,
-        'infogan_grid': (10, None)
+        'mode': 'infogan'
     }
 }
 
@@ -58,7 +57,7 @@ def make_network(env):
         g_batch_size = get_env('trainer.batch_size') if env.phase is env.Phase.TRAIN else 1
         h, w, c = 28, 28, 1
         # z noise size
-        zn_size = 100
+        zn_size = 88
 
         # code latent variables distribution
         zc_distrib = O.distrib.MultinomialDistribution('cat', 10)
@@ -121,7 +120,7 @@ def make_network(env):
                 if env.phase is env.Phase.TRAIN:
                     zc = zc_distrib.sample(g_batch_size, prior)
 
-                zn = O.random_normal([g_batch_size, zn_size])
+                zn = O.random_normal([g_batch_size, zn_size], -1 , 1)
                 z = O.concat([zc, zn], axis=1, name='z')
                 
                 with tf.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
@@ -186,11 +185,17 @@ def make_optimizer(env):
     lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
 
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, beta1=0.5, epsilon=1e-3))
+    # generator learns 5 times faster
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr * 5., beta1=0.5, epsilon=1e-6))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))
     env.set_g_optimizer(wrapper)
+    wrapper = optimizer.OptimizerWrapper()
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, beta1=0.5, epsilon=1e-6))
+    wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
+        ('*/b', 2.0),
+    ]))
     env.set_d_optimizer(wrapper)
 
 
