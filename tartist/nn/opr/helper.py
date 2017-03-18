@@ -8,11 +8,15 @@
 
 from .. import TArtGraphKeys
 from ..graph.node import OprNode, as_varnode
+from ...core.logger import get_logger
 from ...core.utils.context import EmptyContext
 from ...core.utils.shape import get_2dshape, get_4dshape
 import tensorflow as tf
 import functools
+import inspect
 import contextlib
+
+logger = get_logger(__file__)
 
 __all__ = [
     'device_context', 
@@ -102,6 +106,28 @@ class StaticDynamicDim(object):
         return self.op(lambda v: other * v)
 
 
+def _argscope_wrapped(f, **default_kwargs):
+    # TODO(MJY): default_kwargs must be provided as kwargs if you want to overwrite
+    signature = inspect.signature(f)
+    all_param_names = list(signature.parameters)
+
+    @functools.wraps(f)
+    def new_func(*args, **kwargs):
+        used_default_kwargs = set()
+        for i in range(len(args)):
+            used_default_kwargs.add(all_param_names[i])
+        for k in default_kwargs:
+            if k not in kwargs:
+                if k not in used_default_kwargs:
+                    kwargs[k] = default_kwargs[k]
+                else:
+                    logger.warn('Overwrite argscope binded kwargs using args: func_name={}, param_name={}'.format(
+                        f.__name__, k
+                    ))
+        return f(*args, **kwargs)
+    return new_func
+
+
 @contextlib.contextmanager
 def argscope(*funcs, **kwargs):
     from tartist.nn import opr as O
@@ -109,7 +135,7 @@ def argscope(*funcs, **kwargs):
     for f in funcs:
         fname = f.__name__
         assert hasattr(O, fname)
-        new_f = functools.partial(f, **kwargs)
+        new_f = _argscope_wrapped(f, **kwargs)
         setattr(O, fname, new_f)
     yield
     for f in funcs:

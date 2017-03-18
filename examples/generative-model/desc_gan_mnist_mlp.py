@@ -25,7 +25,7 @@ __envs__ = {
         'learning_rate': 0.001,
 
         'batch_size': 100,
-        'epoch_size': 100,
+        'epoch_size': 500,
         'nr_epochs': 100,
 
         'env_flags': {
@@ -57,7 +57,6 @@ def make_network(env):
                     _ = z
                     with O.argscope(O.fc, nonlin=O.tanh):
                         _ = O.fc('fc1', _, 500)
-                        _ = O.fc('fc2', _, 500)
                     _ = O.fc('fc3', _, 784, nonlin=O.sigmoid)
                     x_given_z = _.reshape(-1, 28, 28, 1)
 
@@ -65,7 +64,6 @@ def make_network(env):
                     _ = x
                     with O.argscope(O.fc, nonlin=O.tanh):
                         _ = O.fc('fc1', _, 500)
-                        _ = O.fc('fc2', _, 500)
                     _ = O.fc('fc3', _, 1)
                     logits = _
                     return logits
@@ -114,21 +112,13 @@ def make_network(env):
 def make_optimizer(env):
     lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
 
-    with tf.variable_scope('generator'):
-        wrapper = optimizer.OptimizerWrapper()
-        wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr))
-        wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
-            ('*/b', 2.0),
-        ]))
-        env.set_g_optimizer(wrapper)
-
-    with tf.variable_scope('discriminator'):
-        wrapper = optimizer.OptimizerWrapper()
-        wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr))
-        wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
-            ('*/b', 2.0),
-        ]))
-        env.set_d_optimizer(wrapper)
+    wrapper = optimizer.OptimizerWrapper()
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr))
+    wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
+        ('*/b', 2.0),
+    ]))
+    env.set_g_optimizer(wrapper)
+    env.set_d_optimizer(wrapper)
 
 
 from data_provider_gan_mnist import *

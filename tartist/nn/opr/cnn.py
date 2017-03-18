@@ -20,7 +20,7 @@ __all__ = ['conv2d', 'pooling2d', 'fc', 'dropout', 'batch_norm', 'deconv2d']
 
 @wrap_named_op
 @wrap_varnode_func
-def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID',
+def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
         use_bias=True, bias_is_shared_in_channel=True,
         nonlin=__default_nonlin__,
         W=None, b=None, param_dtype=__default_dtype__):
@@ -162,7 +162,7 @@ def batch_norm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dty
 
 @wrap_named_op
 @wrap_varnode_func
-def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='VALID',
+def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
         use_bias=True, bias_is_shared_in_channel=True,
         nonlin=__default_nonlin__,
         W=None, b=None, param_dtype=__default_dtype__):
