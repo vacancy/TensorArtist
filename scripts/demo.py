@@ -50,14 +50,17 @@ def main():
         env.initialize_all_variables()
         snapshot.load_weights_file(env, args.weights_path)
 
-    it = iter(desc.make_dataflow_demo(env))
-    for data in it:
-        if type(data) is tuple:
-            feed_dict, extra_info = data
-        else:
-            feed_dict, extra_info = data, None
-        res = func(**feed_dict)
-        desc.demo(feed_dict, res, extra_info)
+    if get_env('demo.customized'):
+        desc.main_demo(env, func)
+    else:
+        it = iter(desc.make_dataflow_demo(env))
+        for data in it:
+            if type(data) is tuple:
+                feed_dict, extra_info = data
+            else:
+                feed_dict, extra_info = data, None
+            res = func(**feed_dict)
+            desc.demo(feed_dict, res, extra_info)
 
 
 if __name__ == '__main__':

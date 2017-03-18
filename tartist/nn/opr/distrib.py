@@ -49,7 +49,7 @@ class DistributionBase(object):
     @wrap_named_class_func
     def sample(self, batch_size, theta, process_theta=False):
         shape = theta.static_shape
-        assert len(shape) in [1, 2] and shape[-1] == self.sample_size, shape
+        assert len(shape) in [1, 2] and shape[-1] == self.param_size , shape
         if len(shape) == 1:
             theta = O.tile(theta.add_axis(0), [batch_size, 1])
         else:
@@ -60,6 +60,13 @@ class DistributionBase(object):
         sam = self._get_sample(batch_size, theta)
         assert sam.ndims == 2 and sam.static_shape[1] == self.sample_size, sam.static_shape
         return O.identity(sam, name='out')
+
+    def numerical_sample(self, theta):
+        shape = theta.shape
+        assert len(shape) == 1 and shape[0] == self.param_size, shape
+        sam = self._get_numerical_sample(theta)
+        assert len(sam.shape) == 2 and sam.shape[1] == self.sample_size, sam.shape
+        return sam
 
     @property
     def sample_size(self):
@@ -76,6 +83,9 @@ class DistributionBase(object):
         raise NotImplementedError()
 
     def _get_sample(self, batch_size, theta):
+        raise NotImplementedError()
+
+    def _get_numerical_sample(self, theta):
         raise NotImplementedError()
 
     def _get_sample_size(self):
@@ -97,8 +107,12 @@ class MergedDistribution(DistributionBase):
 
     def __split(self, var, is_param):
         length = self._x.param_size if is_param else self._x.sample_size
-        yield var[:, :length]
-        yield var[:, length:]
+        if len(var.shape) == 2:
+            yield var[:, :length]
+            yield var[:, length:]
+        else:
+            yield var[:length]
+            yield var[length:]
 
     def _get_log_likelihood(self, x, theta):
         ax, bx = self.__split(x, False)
@@ -112,6 +126,15 @@ class MergedDistribution(DistributionBase):
     def _get_sample(self, batch_size, theta):
         at, bt = self.__split(theta, True)
         return O.concat([self._x.sample(batch_size, at), self._y.sample(batch_size, bt)], axis=1)
+
+    def _get_numerical_sample(self, theta):
+        at, bt = self.__split(theta, True)
+        asam, bsam = self._x.numerical_sample(at), self._y.numerical_sample(bt)
+        res = np.empty(shape=[asam.shape[0] * bsam.shape[0], self.sample_size], dtype='float32')
+        for i in range(asam.shape[0]):
+            for j in range(bsam.shape[0]):
+                res[i * bsam.shape[0] + j] = np.concatenate([asam[0], bsam[0]], axis=0)
+        return res
 
     def _get_sample_size(self):
         return self._x.sample_size + self._y.sample_size
@@ -137,6 +160,9 @@ class MultinomialDistribution(DistributionBase):
         ids = O.random_multinomial(O.log(theta + self._eps), num_samples=1).remove_axis(1)
         return O.one_hot(ids, self._nr_classes)
 
+    def _get_numerical_sample(self, theta):
+        return np.eye(self._nr_classes)
+
     def _get_sample_size(self):
         return self._nr_classes
 
@@ -148,10 +174,11 @@ class GaussianDistribution(DistributionBase):
     _eps = 1e-8
     _fixed_std_val = 1
 
-    def __init__(self, name, size, fixed_std=True):
+    def __init__(self, name, size, fixed_std=True, nr_num_samples=10):
         super().__init__(name)
         self._size = size
         self._fixed_std = fixed_std
+        self._nr_num_samples = nr_num_samples
 
     def _get_log_likelihood(self, x, theta):
         if self._fixed_std:
@@ -179,6 +206,11 @@ class GaussianDistribution(DistributionBase):
         e = O.random_normal(mean.shape)
         return mean + e * stddev
 
+    def _get_numerical_sample(self, theta):
+        assert self._size == 1
+        std = theta[1] if self._fixed_std else 1
+        return np.linspace(-std*3, std*3, self._nr_num_samples).reshape(-1, 1)
+
     def _get_param_size(self):
         return self._size if self._fixed_std else self._size * 2
 
@@ -187,11 +219,15 @@ class GaussianDistribution(DistributionBase):
 
 
 class TruncatedGaussianDistributionWithUniformSample(GaussianDistribution):
-    def __init__(self, name, size, fixed_std=True, min_val=-1, max_val=None):
-        if max_val is None:
-            max_val = -min_val
-        super().__init__(name, size, fixed_std=fixed_std)
+    def __init__(self, name, size, fixed_std=True, nr_num_samples=10, min_val=-1, max_val=1, num_min_val=-2,
+                 num_max_val=2):
+        super().__init__(name, size, fixed_std=fixed_std, nr_num_samples=nr_num_samples)
         self._min_val, self._max_val = min_val, max_val
+        self._num_min_val, self._num_max_val = num_min_val, num_max_val
 
     def _get_sample(self, batch_size, theta):
         return O.random_uniform([batch_size, self.sample_size])
+
+    def _get_numerical_sample(self, theta):
+        assert self._size == 1
+        return np.linspace(self._num_min_val, self._num_max_val, self._nr_num_samples).reshape(-1, 1)

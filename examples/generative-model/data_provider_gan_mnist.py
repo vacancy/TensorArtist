@@ -13,6 +13,7 @@ from tartist.data.datasets.mnist import load_mnist
 from tartist.nn import train
 
 import numpy as np
+import tqdm
 
 _mnist = []
 
@@ -58,4 +59,29 @@ def demo(feed_dict, result, extra_info):
     img = image.resize_minmax(img, 256)
 
     image.imshow('demo', img)
+
+
+def main_demo(env, func):
+    assert get_env('demo.infogan', False)
+    net = env.network
+    samples = net.zc_distrib.numerical_sample(net.zc_distrib_num_prior)
+    df = {'zc': samples.reshape(samples.shape[0], 1, -1)}
+    df = flow.DictOfArrayDataFlow(df)
+
+    all_outputs = []
+    for data in tqdm.tqdm(df, total=len(df)):
+        res = func(**data)
+        all_outputs.append(res['output'][0, :, :, 0])
+
+    grid = get_env('demo.infogan_grid')
+    if grid[1] is None:
+        grid = (grid[0], len(all_outputs) // grid[0])
+    all_rows = []
+    for i in range(grid[0]):
+        cur_row = all_outputs[i*grid[1]:(i+1)*grid[1]]
+        all_rows.append(np.hstack(cur_row))
+    final = np.vstack(all_rows)
+    final = (final * 255).astype('uint8')
+    image.imwrite('infogan.png', final)
+
 

@@ -8,6 +8,7 @@
 #
 # This file is part of TensorArtist
 
+import numpy as np
 import tensorflow as tf
 
 from tartist.core import get_env, get_logger
@@ -39,6 +40,12 @@ __envs__ = {
         'env_flags': {
             'log_device_placement': False
         }
+    },
+
+    'demo': {
+        'customized': True,
+        'infogan': True,
+        'infogan_grid': (10, None)
     }
 }
 
@@ -55,18 +62,23 @@ def make_network(env):
 
         # code latent variables distribution
         zc_distrib = O.distrib.MultinomialDistribution('cat', 10)
-        zc_distrib *= O.distrib.TruncatedGaussianDistributionWithUniformSample('code_a', 1)
-        zc_distrib *= O.distrib.TruncatedGaussianDistributionWithUniformSample('code_b', 1)
+        zc_distrib *= O.distrib.TruncatedGaussianDistributionWithUniformSample('code_a', 1, nr_num_samples=5)
+        zc_distrib *= O.distrib.TruncatedGaussianDistributionWithUniformSample('code_b', 1, nr_num_samples=5)
+        net.zc_distrib = zc_distrib
 
         # prior: the assumption how the factors are presented in the dataset
         prior = O.constant([0.1] * 10 + [0, 0], dtype='float32', shape=[12], name='prior')
         batch_prior = O.tile(prior.add_axis(0), [g_batch_size, 1], name='batch_prior')
 
+        net.zc_distrib_num_prior = np.array([0.1] * 10 + [0, 0], dtype='float32')
+
         dpc = env.create_dpcontroller()
         with dpc.activate():
             def inputs():
                 img = O.placeholder('img', shape=(None, h, w, c))
-                return [img]
+                # only for demo-time
+                zc = O.placeholder('zc', shape=(1, net.zc_distrib.sample_size))
+                return [img, zc]
 
             def generator(z):
                 w_init = tf.truncated_normal_initializer(stddev=0.02)
@@ -105,8 +117,10 @@ def make_network(env):
 
                 return logits, code
 
-            def forward(x):
-                zc = zc_distrib.sample(g_batch_size, prior)
+            def forward(x, zc):
+                if env.phase is env.Phase.TRAIN:
+                    zc = zc_distrib.sample(g_batch_size, prior)
+
                 zn = O.random_normal([g_batch_size, zn_size])
                 z = O.concat([zc, zn], axis=1, name='z')
                 
