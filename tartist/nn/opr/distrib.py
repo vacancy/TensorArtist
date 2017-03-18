@@ -105,9 +105,9 @@ class MergedDistribution(DistributionBase):
         self._x = x
         self._y = y
 
-    def __split(self, var, is_param):
+    def __split(self, var, is_param, incl_batch=True):
         length = self._x.param_size if is_param else self._x.sample_size
-        if len(var.shape) == 2:
+        if incl_batch:
             yield var[:, :length]
             yield var[:, length:]
         else:
@@ -128,7 +128,7 @@ class MergedDistribution(DistributionBase):
         return O.concat([self._x.sample(batch_size, at), self._y.sample(batch_size, bt)], axis=1)
 
     def _get_numerical_sample(self, theta):
-        at, bt = self.__split(theta, True)
+        at, bt = self.__split(theta, True, incl_batch=False)
         asam, bsam = self._x.numerical_sample(at), self._y.numerical_sample(bt)
         res = np.empty(shape=[asam.shape[0] * bsam.shape[0], self.sample_size], dtype='float32')
         for i in range(asam.shape[0]):
