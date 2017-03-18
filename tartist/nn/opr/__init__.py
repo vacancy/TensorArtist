@@ -14,6 +14,7 @@ from .imgproc import *
 from .loss import *
 from .netsrc import *
 from .nonlin import *
+from .rng import *
 from .shape import *
 from .tensor import *
 

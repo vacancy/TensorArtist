@@ -18,8 +18,9 @@ import tensorflow as tf
 
 
 class GANGraphKeys:
-    GENERATOR_VARIABLES = 'generator_variables'
-    DISCRIMINATOR_VARIABLES = 'discriminator_variables'
+    GENERATOR_VARIABLES = 'generator'
+    DISCRIMINATOR_VARIABLES = 'discriminator'
+
     GENERATOR_SUMMARIES = 'generator_summaries'
     DISCRIMINATOR_SUMMARIES = 'discriminator_summaries'
 

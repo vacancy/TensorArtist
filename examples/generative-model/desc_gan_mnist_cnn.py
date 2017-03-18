@@ -48,14 +48,8 @@ __trainer_env_cls__ = train.gan.GANTrainerEnv
 
 def make_network(env):
     with env.create_network() as net:
-        nr_classes = get_env('dataset.nr_classes')
         h, w, c = 28, 28, 1
         z_dim = 100
-
-        W_init = tf.truncated_normal_initializer(stddev=0.02)
-        conv2d = functools.partial(O.conv2d, nonlin=O.identity, kernel=4, stride=2, W=W_init, padding='SAME')
-        deconv2d = functools.partial(O.deconv2d, kernel=4, stride=2, W=W_init, padding='SAME')
-        fc = functools.partial(O.fc, W=W_init)
 
         dpc = env.create_dpcontroller()
         with dpc.activate():
@@ -64,32 +58,38 @@ def make_network(env):
                 return [img]
 
             def generator(z):
-                _ = z
-                _ = fc('fc0', _, 1024, nonlin=O.bn_relu)
-                _ = fc('fc1', _, 128 * 7 * 7, nonlin=O.bn_relu)
-                _ = O.reshape(_, [-1, 7, 7, 128])
-                _ = deconv2d('deconv1', _, 64, nonlin=O.bn_relu)
-                _ = deconv2d('deconv2', _, 1, nonlin=O.identity)
-                _ = O.sigmoid(_, name='gen')
+                w_init = tf.truncated_normal_initializer(stddev=0.02)
+                with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
+                     O.argscope(O.fc, W=w_init):
+
+                    _ = z
+                    _ = O.fc('fc0', _, 1024, nonlin=O.bn_relu)
+                    _ = O.fc('fc1', _, 128 * 7 * 7, nonlin=O.bn_relu)
+                    _ = O.reshape(_, [-1, 7, 7, 128])
+                    _ = O.deconv2d('deconv1', _, 64, nonlin=O.bn_relu)
+                    _ = O.deconv2d('deconv2', _, 1)
+                    _ = O.sigmoid(_, name='gen')
                 return _
 
             def discriminator(img):
-                _ = img
-                _ = conv2d('conv0', _, 64)
-                _ = O.leaky_relu(_, 0.2)
-                _ = conv2d('conv1', _, 128)
-                _ = O.batch_norm('bn1', _)
-                _ = O.leaky_relu(_, 0.2)
-                _ = fc('fc2', _, 1024, nonlin=O.identity)
-                _ = O.batch_norm('bn2', _)
-                _ = O.leaky_relu(_, 0.2)
-                _ = fc('fct', _, 1, nonlin=O.identity)
+                w_init = tf.truncated_normal_initializer(stddev=0.02)
+                with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
+                     O.argscope(O.fc, W=w_init),\
+                     O.argscope(O.leaky_relu, alpha=0.2):
+
+                    _ = img
+                    _ = O.conv2d('conv0', _, 64, nonlin=O.leaky_relu)
+                    _ = O.conv2d('conv1', _, 128, nonlin=O.bn_nonlin)
+                    _ = O.leaky_relu(_)
+                    _ = O.fc('fc2', _, 1024, nonlin=O.bn_nonlin)
+                    _ = O.leaky_relu(_)
+                    _ = O.fc('fct', _, 1)
                 return _
 
             def forward(x):
                 g_batch_size = get_env('trainer.batch_size') if env.phase is env.Phase.TRAIN else 1
-                z = O.as_varnode(tf.random_normal([g_batch_size, z_dim]))
-                
+                z = O.random_normal([g_batch_size, z_dim])
+
                 with tf.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
                     img_gen = generator(z)
                 #tf.summary.image('generated-samples', img_gen, max_outputs=30)
@@ -107,11 +107,11 @@ def make_network(env):
                     #build loss
                     with tf.variable_scope('loss'):
                         d_loss_real = O.sigmoid_cross_entropy_with_logits(
-                            logits=logits_real, labels=tf.ones_like(logits_real)).mean()
+                            logits=logits_real, labels=O.ones_like(logits_real)).mean()
                         d_loss_fake = O.sigmoid_cross_entropy_with_logits(
-                            logits=logits_fake, labels=tf.zeros_like(logits_fake)).mean()
+                            logits=logits_fake, labels=O.zeros_like(logits_fake)).mean()
                         g_loss = O.sigmoid_cross_entropy_with_logits(
-                            logits=logits_fake, labels=tf.ones_like(logits_fake)).mean()
+                            logits=logits_fake, labels=O.ones_like(logits_fake)).mean()
 
                     d_acc_real = (score_real > 0.5).astype('float32').mean()
                     d_acc_fake = (score_fake < 0.5).astype('float32').mean()

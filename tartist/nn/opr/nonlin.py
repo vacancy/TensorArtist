@@ -14,7 +14,8 @@ from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wra
 from .cnn import batch_norm
 from ._migrate import max, relu
 
-__all__ = ['leaky_relu', 'bn_relu']
+__all__ = ['leaky_relu', 'bn_relu', 'bn_nonlin']
+
 
 @wrap_varnode_func
 def leaky_relu(x, alpha, name='output'):
@@ -25,5 +26,11 @@ def leaky_relu(x, alpha, name='output'):
 def bn_relu(inpvar, name=None):
     _ = batch_norm('bn', inpvar)
     _ = relu(_, name='relu')
+    return _
+
+
+@wrap_varnode_func
+def bn_nonlin(inpvar, name=None):
+    _ = batch_norm('bn', inpvar)
     return _
 
