@@ -157,7 +157,7 @@ class VarNodeOpDecl(object):
 
     def remove_axis(self, axis):
         from ..opr.shape import remove_axis 
-        return as_varnode(remove_axis(axis=axis))
+        return as_varnode(remove_axis(self, axis=axis))
 
     def sum(self, axis=None, keepdims=False, name=None):
         return as_varnode(tf.reduce_sum(self, axis=axis, keep_dims=keepdims, name=name))
