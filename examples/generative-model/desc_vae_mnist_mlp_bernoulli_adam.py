@@ -63,10 +63,10 @@ def make_network(env):
                         log_var = O.fc('fc3_sigma', _, code_length)
                         var = O.exp(log_var)
                         std = O.sqrt(var)
-                        epsilon = O.as_varnode(tf.random_normal(O.canonize_sym_shape([x.shape[0], code_length])))
+                        epsilon = O.random_normal([x.shape[0], code_length])
                         z_given_x = mu + std * epsilon
                 else:
-                    z_given_x = O.as_varnode(tf.random_normal([1, code_length]))
+                    z_given_x = O.random_normal([1, code_length])
 
                 with tf.variable_scope('decoder'):
                     _ = z_given_x

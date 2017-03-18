@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 import tensorflow as tf
+from tensorflow.python.ops import random_ops
 
 from ._migrate import migrate_opr
 from .helper import wrap_varnode_func
@@ -33,7 +34,7 @@ def migrate_rng_opr(tf_func, name=None):
     return new_func
 
 random_normal = migrate_rng_opr(tf.random_normal)
-random_parameterized_truncated_normal = migrate_rng_opr(tf.parameterized_truncated_normal,
+random_parameterized_truncated_normal = migrate_rng_opr(random_ops.parameterized_truncated_normal,
                                                         name='random_parameterized_truncated_normal')
 random_truncated_normal = migrate_rng_opr(tf.truncated_normal, name='random_truncated_normal')
 random_uniform = migrate_rng_opr(tf.random_uniform)

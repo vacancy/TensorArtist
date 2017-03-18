@@ -19,8 +19,6 @@ def enable_epoch_progress(trainer):
             pbar = tqdm.tqdm(total=trainer.epoch_size, leave=False, initial=trainer.iter % trainer.epoch_size)
 
         desc = 'Iter={}'.format(trainer.iter)
-        if 'loss' in trainer.runtime:
-            desc += ', loss={:.4f}'.format(trainer.runtime['loss'])
         if 'error' in trainer.runtime:
             desc += ', error={:.4f}'.format(trainer.runtime['error'])
         for k in sorted(out.keys()):
