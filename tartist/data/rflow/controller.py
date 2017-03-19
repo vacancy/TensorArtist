@@ -196,7 +196,7 @@ class Controller(object):
             if self._stop_event.wait(wait):
                 break
 
-            socks = dict(self._poller.poll(50))
+            socks = dict(self._poller.poll(wait))
             if self._stop_event.is_set():
                 break
 

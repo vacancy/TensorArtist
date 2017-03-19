@@ -168,7 +168,7 @@ class NameServer(object):
     def main(self):
         while True:
             with self._context_lock:
-                socks = dict(self._poller.poll(100))
+                socks = dict(self._poller.poll(50))
                 self._main_do_send()
                 self._main_do_recv(socks)
 

@@ -11,42 +11,45 @@ import socket
 import uuid
 import json
 
+json_dumpb = lambda x: json.dumps(x).encode('utf-8')
+json_loadb = lambda x: json.loads(x.decode('utf-8'))
 
-def router_recv_json(sock, flag=zmq.NOBLOCK):
+
+def router_recv_json(sock, flag=zmq.NOBLOCK, loader=json_loadb):
     try:
-        identifier, delim, *payload = sock.recv_multipart(zmq.NOBLOCK)
-        return [identifier] + list(map(lambda x: json.loads(x.decode('utf-8')), payload))
+        identifier, delim, *payload = sock.recv_multipart(flag)
+        return [identifier] + list(map(lambda x: loader(x), payload))
     except zmq.error.ZMQError:
         return None, None
 
 
-def router_send_json(sock, identifier, *payloads, flag=0):
+def router_send_json(sock, identifier, *payloads, flag=0, dumper=json_dumpb):
     try:
         buf = [identifier, b'']
-        buf.extend(map(lambda x: json.dumps(x).encode('utf-8'), payloads))
+        buf.extend(map(lambda x: dumper(x), payloads))
         sock.send_multipart(buf, flags=flag)
     except zmq.error.ZMQError:
         return False
     return True
 
 
-def req_send_json(sock, *payloads, flag=0):
+def req_recv_json(sock, flag=0, loader=json_loadb):
+    try:
+        response = sock.recv_multipart(flag)
+        response = list(map(lambda x: loader(x), response))
+        return response[0] if len(response) == 1 else response
+    except zmq.error.ZMQError:
+        return None
+
+
+def req_send_json(sock, *payloads, flag=0, dumper=json_dumpb):
     buf = []
-    buf.extend(map(lambda x: json.dumps(x).encode('utf-8'), payloads))
+    buf.extend(map(lambda x: dumper(x), payloads))
     try:
         sock.send_multipart(buf, flag)
     except zmq.error.ZMQError:
         return False
     return True
-
-
-def req_recv_json(sock, flag=0):
-    try:
-        response = sock.recv_multipart(flag)
-        response = list(map(lambda x: json.loads(x.decode('utf-8')), response))
-        return response[0] if len(response) == 1 else response
-    except zmq.error.ZMQError:
-        return None
 
 
 def iter_recv(meth, sock):

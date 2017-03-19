@@ -45,3 +45,5 @@ class Actions:
     CTL_CONNECTED_REQ = 'ctl-connected-req'
     CTL_CONNECTED_REP = 'ctl-connected-rep'
 
+
+QUERY_REP_COUNTDOWN = 5
