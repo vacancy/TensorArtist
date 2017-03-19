@@ -19,12 +19,13 @@ __all__ = ['TrainerBase', 'SimpleTrainer']
 
 
 class TrainerBase(object):
-    def __init__(self, nr_iters, env=None, data_provider=None):
+    def __init__(self, nr_iters, env=None, data_provider=None, desc=None):
         self._nr_iters = nr_iters
         self._env = env or TrainerEnv()
         self._data_provider = data_provider
         self._runtime = dict()
         self._stop_signal = False
+        self._desc = desc
 
         assert_instance(self._env, Env)
 
@@ -39,6 +40,10 @@ class TrainerBase(object):
     @property
     def optimizer(self):
         return self._env.optimizer
+
+    @property
+    def desc(self):
+        return self._desc
 
     @notnone_property
     def data_provider(self):

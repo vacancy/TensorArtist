@@ -161,8 +161,17 @@ class Env(object):
         return self
 
     @property
+    def all_devices(self):
+        res = [self.master_device]
+        res.extend(self.slave_devices)
+        return res
+
+    @property
     def nr_total_devices(self):
         return 1 + len(self._slave_devices)
+
+    def select_device(self, devid):
+        return select_device(devid, self)
 
     @defaults_manager.wrap_custom_as_default
     def as_default(self, *, activate_session=True):
@@ -283,7 +292,7 @@ class DataParallelController(object):
                 if i == 0:
                     for v in inputs:
                         vname = v.name
-                        assert vname.startswith(name_prefix) and vname.endswith(':0')
+                        assert name_prefix in vname and vname.endswith(':0'), vname
                         self._input_names.append(vname[len(name_prefix)+1:-2])
 
                 self._forward_func(*inputs)

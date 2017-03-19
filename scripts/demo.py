@@ -30,7 +30,6 @@ def main():
     desc = load_desc(args.desc)
     devices = parse_devices(args.devices)
     assert len(devices) > 0
-    assert hasattr(desc, 'make_dataflow_demo') and hasattr(desc, 'demo')
 
     env = Env(Env.Phase.TEST, devices[0])
     env.flags.update(**get_env('demo.env_flags', {}))
@@ -53,6 +52,8 @@ def main():
     if get_env('demo.customized'):
         desc.main_demo(env, func)
     else:
+        assert hasattr(desc, 'make_dataflow_demo') and hasattr(desc, 'demo')
+
         it = iter(desc.make_dataflow_demo(env))
         for data in it:
             if type(data) is tuple:

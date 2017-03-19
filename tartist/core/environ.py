@@ -9,7 +9,10 @@
 from copy import deepcopy
 from .utils.meta import dict_deep_update, dict_deep_keys
 
-__all__ = ['env', 'load_env', 'has_env', 'get_env', 'set_env']
+import multiprocessing
+import os
+
+__all__ = ['EnvBox', 'env', 'load_env', 'has_env', 'get_env', 'set_env']
 
 
 class _Environ(object):
@@ -144,6 +147,31 @@ class _Environ(object):
         self.set(key, value)
         return value
 
+
+class EnvBox(multiprocessing.Process):
+    def __init__(self, *args, env=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._env = env
+
+        from .. import random
+        self.__seed = random.gen_seed()
+
+    def run(self):
+        if self._env:
+            global env
+            env = self._env
+        from .. import random
+        random.reset_rng(self.__seed)
+        from . import get_logger
+        logger = get_logger(__file__)
+        logger.critical('EnvBox pid={} (ppid={}) rng_seed={}'.format(
+            os.getpid(), os.getppid(), self.__seed))
+
+        super().run()
+
+    def __call__(self):
+        self.start()
+        self.join()
 
 env = _Environ()
 

@@ -7,6 +7,6 @@
 # This file is part of TensorArtist
 
 
-from .env import Env, Network
-from .node import VarNode, as_varnode
-from .function import Function
+from .env import *
+from .node import *
+from .function import *
