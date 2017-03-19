@@ -16,7 +16,7 @@ from ..graph.node import as_varnode, OprNode, __valid_tensor_types__
 from ..tfutils import assign_variable, fetch_variable
 from ...core.utils.meta import assert_notnone
 
-__all__ = ['placeholder', 'variable', 'constant']
+__all__ = ['placeholder', 'variable', 'scalar', 'constant', 'ensure_variable']
 
 
 @wrap_varnode_func
@@ -61,6 +61,10 @@ def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, de
                                   trainable=trainable, collections=collections)
         var = as_varnode(var)
         return VariableOp(opr_name, var, get_default_env()).outputs[0]
+
+
+def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False, collections=None):
+    return variable(name, value, shape=0, dtype=dtype, device=device, trainable=trainable, collections=collections)
 
 
 @wrap_varnode_func
