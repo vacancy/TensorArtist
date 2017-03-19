@@ -6,6 +6,9 @@
 # 
 # This file is part of TensorArtist
 
+"""logger module, borrow from jiakai's project"""
+
+
 import logging
 import sys
 
@@ -18,10 +21,10 @@ _all_loggers = []
 def set_output_file(fout, mode='a'):
     if isinstance(fout, str):
         fout = open(fout, mode)
-    MegSkullLogFormatter.log_fout = fout
+    TALogFormatter.log_fout = fout
 
 
-class MegSkullLogFormatter(logging.Formatter):
+class TALogFormatter(logging.Formatter):
     log_fout = None
     date_full = '[%(asctime)s %(lineno)d@%(filename)s:%(name)s] '
     date = '%(asctime)s '
@@ -87,7 +90,7 @@ class MegSkullLogFormatter(logging.Formatter):
                     '[{} log lines omitted (would be written to output file '
                     'if set_output_file() has been called;\n'
                     ' the threshold can be set at '
-                    'MegSkullLogFormatter.max_lines)]'.format(removed))
+                    'TALogFormatter.max_lines)]'.format(removed))
                 formatted = '\n'.join(
                     lines[:remain] + [mid_msg] + lines[-remain:])
 
@@ -101,8 +104,8 @@ class MegSkullLogFormatter(logging.Formatter):
             self._style._fmt = fmt
 
 
-def get_logger(name=None, formatter=MegSkullLogFormatter):
-    """get megskull logger with given name"""
+def get_logger(name=None, formatter=TALogFormatter):
+    """get logger with given name"""
 
     logger = logging.getLogger(name)
     if getattr(logger, '_init_done__', None):
@@ -122,8 +125,7 @@ def get_logger(name=None, formatter=MegSkullLogFormatter):
 def set_default_level(level, update_existing=True):
     """set default logging level
 
-    :param level: loggin level given by python :mod:`logging` module
-    :param update_existing: whether to update existing loggers"""
+    :param level: loggin level given by python :mod:`logging` module"""
     global _default_level
     _default_level = level
     for i in _all_loggers:

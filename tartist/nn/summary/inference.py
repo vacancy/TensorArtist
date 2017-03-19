@@ -10,7 +10,7 @@ from .. import TArtGraphKeys
 import functools
 import tensorflow as tf
 
-__all__ = ['INFERENCE_SUMMARIES', 'tensor', 'scalar', 'histogram', 'audio', 'image']
+__all__ = ['tensor', 'scalar', 'histogram', 'audio', 'image']
 
 
 def _migrate_summary(tf_func):

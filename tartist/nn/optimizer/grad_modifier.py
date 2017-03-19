@@ -14,6 +14,12 @@ from ...core.utils.match import NameMatcher
 
 logger = get_logger(__file__)
 
+__all__ = [
+    'GradModifierBase', 'NameBasedGradModifierBase', 'GlobalGradModifierBase',
+    'LearningRateMultiplier', 'WeightDecay',
+    'GradClip', 'GlobalGradClip'
+]
+
 
 class GradModifierBase(object):
     def __call__(self, grads_and_vars):
@@ -83,11 +89,24 @@ class WeightDecay(NameBasedGradModifierBase):
         return grad + var * rule
 
 
-class GradClip(GlobalGradModifierBase):
+class GradClip(NameBasedGradModifierBase):
+    def _op(self, grad, var, rule):
+        if type(rule) in (tuple, list):
+            assert len(rule) == 2, rule
+            lower, upper = rule
+        else:
+            rule = float(rule)
+            lower, upper = -rule, rule
+        _ = grad
+        _ = tf.maximum(_, upper)
+        _ = tf.minimum(_, lower)
+        return _
+
+
+class GlobalGradClip(GlobalGradModifierBase):
     def __init__(self, lower, upper=None):
         if upper is None:
-            upper = lower
-            lower = -lower
+            lower, upper = -lower, lower
         self._lower, self._upper = lower, upper
 
     def _op(self, grad, var):
@@ -95,4 +114,3 @@ class GradClip(GlobalGradModifierBase):
         _ = tf.maximum(_, self._upper)
         _ = tf.minimum(_, self._lower)
         return _
-
