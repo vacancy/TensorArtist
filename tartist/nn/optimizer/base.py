@@ -7,8 +7,7 @@
 # This file is part of TensorArtist
 
 
-from .. import TArtGraphKeys, opr as O, summary
-from ..graph.env import get_default_env
+from .. import TArtGraphKeys, opr as O
 import functools
 import tensorflow as tf
 
@@ -18,19 +17,16 @@ __all__ = ['make_optimizer_variable', 'get_optimizer_variable,'
 ]
 
 
-def make_optimizer_variable(name, value, prefix='', collections=TArtGraphKeys.OPTIMIZER_VARIABLES):
+def make_optimizer_variable(name, value, prefix='',
+                            collections=TArtGraphKeys.OPTIMIZER_VARIABLES):
+
     name = prefix + name
-    value = float(value)
-    sym = O.variable(name, value, shape=0, trainable=False)
-    tf.add_to_collection(collections, sym)
-    summary.scalar(name, sym)
-    return sym
+    return O.scalar(name, value, collections=collections, trainable=False)
 
 
-def get_optimizer_variable(name, prefix='', env=None):
-    env = env or get_default_env()
-    sym = env.find_in_collection_by_name(TArtGraphKeys.OPTIMIZER_VARIABLES, prefix + name)
-    return sym.taop
+def get_optimizer_variable(name, prefix='', env=None, collection=TArtGraphKeys.OPTIMIZER_VARIABLES):
+    name = prefix + name
+    return O.get_scalar(name, env=env, collection=collection)
 
 
 def _migrate_lr_based_optimizer(tf_optimizer):

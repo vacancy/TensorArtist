@@ -13,10 +13,11 @@ from ._defaults import __default_dtype__
 from .helper import device_context, wrap_varnode_func, wrap_named_op, unique_opr_name
 from ..graph.env import get_default_env
 from ..graph.node import as_varnode, OprNode, __valid_tensor_types__
-from ..tfutils import assign_variable, fetch_variable
+from ..tfutils import assign_variable, fetch_variable, TArtGraphKeys, extend_collection_list
 from ...core.utils.meta import assert_notnone
 
-__all__ = ['placeholder', 'variable', 'scalar', 'constant', 'ensure_variable']
+__all__ = ['placeholder', 'variable', 'scalar', 'constant', 'ensure_variable',
+           'get_scalar', 'get_scalar_value', 'set_scalar_value']
 
 
 @wrap_varnode_func
@@ -63,8 +64,35 @@ def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, de
         return VariableOp(opr_name, var, get_default_env()).outputs[0]
 
 
-def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False, collections=None):
-    return variable(name, value, shape=0, dtype=dtype, device=device, trainable=trainable, collections=collections)
+def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False,
+           collections=None, summary=False):
+
+    collections = extend_collection_list(collections, TArtGraphKeys.SCALAR_VARIABLES, tf.GraphKeys.GLOBAL_VARIABLES)
+
+    value = float(value)
+    var = variable(name, value, shape=0, dtype=dtype, device=device, trainable=trainable, collections=collections)
+    if summary:
+        from .. import summary
+        summary.scalar(name, var)
+    return var
+
+
+def get_scalar(name, env=None, collection=TArtGraphKeys.SCALAR_VARIABLES):
+    env = env or get_default_env()
+    sym = env.find_in_collection_by_name(collection, name)
+    return sym.taop
+
+
+def get_scalar_value(name, env=None, collection=TArtGraphKeys.SCALAR_VARIABLES):
+    env = env or get_default_env()
+    sym = env.find_in_collection_by_name(collection, name)
+    return sym.taop.get_value()
+
+
+def set_scalar_value(name, value, env=None, collection=TArtGraphKeys.SCALAR_VARIABLES):
+    env = env or get_default_env()
+    sym = env.find_in_collection_by_name(collection, name)
+    return sym.taop.set_value(value)
 
 
 @wrap_varnode_func

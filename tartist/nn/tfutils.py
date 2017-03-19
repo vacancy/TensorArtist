@@ -13,6 +13,7 @@ import tensorflow as tf
 class TArtGraphKeys:
     TART_OPERATORS = 'tart_operators'
     INFERENCE_SUMMARIES = 'inference_summaries'
+    SCALAR_VARIABLES = 'scalar_variables'
     OPTIMIZER_VARIABLES = 'optimizer_variables'
 
 
@@ -41,3 +42,12 @@ def fetch_variable(var, session=None):
     except tf.errors.FailedPreconditionError:
         session.run(var.initializer)
         return session.run(var)
+
+
+def extend_collection_list(base, *others):
+    if base is None:
+        return others
+    if type(base) is str:
+        return (base, ) + others
+    assert isinstance(base, (tuple, list))
+    return tuple(base) + others
