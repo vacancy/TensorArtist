@@ -148,8 +148,8 @@ def make_network(env):
                         g_loss = O.sigmoid_cross_entropy_with_logits(
                             logits=logits_fake, labels=O.ones_like(logits_fake)).mean()
 
-                        entropy = zc_distrib.entropy(zc, batch_prior)
-                        cond_entropy = zc_distrib.entropy(zc, code_fake, process_theta=True)
+                        entropy = zc_distrib.cross_entropy(zc, batch_prior)
+                        cond_entropy = zc_distrib.cross_entropy(zc, code_fake, process_theta=True)
                         info_gain = entropy - cond_entropy
 
                     d_acc_real = (score_real > 0.5).astype('float32').mean()

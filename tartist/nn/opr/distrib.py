@@ -42,7 +42,7 @@ class DistributionBase(object):
         return O.identity(logl, name='out')
 
     @wrap_named_class_func
-    def entropy(self, x, theta, process_theta=False):
+    def cross_entropy(self, x, theta, process_theta=False):
         log_likelihood = self.log_likelihood(x, theta, process_theta=process_theta)
         return -log_likelihood.mean(name='out')
 
