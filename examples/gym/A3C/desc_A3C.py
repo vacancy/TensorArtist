@@ -103,6 +103,18 @@ def make_network(env):
                     value.mean(name='predict_value'), advantage.rms(name='rms_advantage'), cost]:
                 summary.scalar(v)
 
+def player_func(i, requester):
+    player = make_player()
+    state = player.get_observation()
+    while True:
+        action = requester.request(state)
+        state, reward = player.step(action)
+
+def predictor_func(i, queue, func):
+    while True:
+        inp, cb = queue.get()
+        oup = func(inp)
+        cb(oup)
 
 def make_optimizer(env):
     lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
