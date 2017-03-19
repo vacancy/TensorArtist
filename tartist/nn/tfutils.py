@@ -41,4 +41,3 @@ def fetch_variable(var, session=None):
     except tf.errors.FailedPreconditionError:
         session.run(var.initializer)
         return session.run(var)
-

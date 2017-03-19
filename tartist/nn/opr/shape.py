@@ -16,7 +16,8 @@ __all__ = [
     'canonize_sym_shape',
     'flatten', 'flatten2', 
     'reshape', 'dimshuffle', 'broadcast', 'tile', 
-    'add_axis', 'remove_axis'
+    'add_axis', 'remove_axis',
+    'split'
 ]
 
 
@@ -81,3 +82,7 @@ def broadcast(inpvar, tshape, name=None):
     multiples = tshape // sshape 
     return tf.tile(inpvar, multiples, name=name)
 
+
+@wrap_varnode_func
+def split(value, num_or_size_splits, axis=0, num=None, name='split'):
+    return tf.split(value, num_or_size_splits, axis=axis, num=num, name=name)

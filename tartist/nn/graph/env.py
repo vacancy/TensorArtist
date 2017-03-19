@@ -207,6 +207,11 @@ class Env(object):
                 return v
         return None
 
+    def get_name_scope(self):
+        random_str = 'mrm_msh'
+        name = self.graph.unique_name(random_str, mark_as_used=False)
+        return name[-(len(random_str) + 1)]
+
 get_default_env = defaults_manager.gen_get_default(Env)
 
 

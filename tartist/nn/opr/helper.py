@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 from .. import TArtGraphKeys
+from ..graph.env import get_default_env
 from ..graph.node import OprNode, as_varnode
 from ...core.logger import get_logger
 from ...core.utils.context import EmptyContext
@@ -21,8 +22,8 @@ logger = get_logger(__file__)
 __all__ = [
     'device_context', 
     'get_2dshape', 'get_4dshape', 
-    'wrap_varnode_func', 'wrap_named_op', 'unique_opr_name',
-    'StaticDynamicDim'
+    'wrap_varnode_func', 'wrap_named_op', 'wrap_named_class_func',
+    'unique_opr_name', 'StaticDynamicDim', 'lazy_O'
 ]
 
 
@@ -67,6 +68,22 @@ def wrap_named_op(*args, use_scope=True):
                     outputs.set_taop(opr)
                 tf.add_to_collection(TArtGraphKeys.TART_OPERATORS, outputs.taop)
             return outputs
+        return new_func
+    if len(args) == 1 and callable(args[0]):
+        return wrapper(args[0])
+    return wrapper
+
+
+def wrap_named_class_func(*args, in_class=True):
+    def wrapper(func):
+        @functools.wraps(func)
+        def new_func(self, *args, **kwargs):
+            opr_name = unique_opr_name(self.name)
+            if opr_name not in get_default_env().get_name_scope():
+                with tf.variable_scope(opr_name + '/' + func.__name__):
+                    return func(self, *args, **kwargs)
+            else:
+                return func(self, *args, **kwargs)
         return new_func
     if len(args) == 1 and callable(args[0]):
         return wrapper(args[0])
@@ -141,3 +158,11 @@ def argscope(*funcs, **kwargs):
     for f in funcs:
         fname = f.__name__
         setattr(O, fname, f)
+
+
+class AllOprGetter(object):
+    def __getattr__(self, item):
+        from .. import opr as O
+        return getattr(O, item)
+
+lazy_O = AllOprGetter()

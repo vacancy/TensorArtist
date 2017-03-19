@@ -80,6 +80,16 @@ __all_migrated_oprs__.extend([
 ])
 
 __all_migrated_oprs__.extend([
+    ('reduce_sum', tf.reduce_sum),
+    ('reduce_prod', tf.reduce_prod),
+    ('reduce_mean', tf.reduce_mean),
+    ('reduce_max', tf.reduce_max),
+    ('reduce_min', tf.reduce_min),
+    ('reduce_all', tf.reduce_all),
+    ('reduce_any', tf.reduce_any)
+])
+
+__all_migrated_oprs__.extend([
     ('slice', tf.slice),
     ('strided_slice', tf.strided_slice),
     ('split', tf.split),
@@ -93,6 +103,7 @@ __all_migrated_oprs__.extend([
     ('ones', tf.ones),
     ('zeros_like', tf.zeros_like),
     ('ones_like', tf.ones_like),
+    ('one_hot', tf.one_hot),
     ('range', tf.range)
 ])
 
