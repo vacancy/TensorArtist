@@ -12,9 +12,16 @@ import tensorflow as tf
 
 from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op
 from .cnn import batch_norm
-from ._migrate import max, relu
+from ._migrate import max, abs, mul, relu
 
-__all__ = ['leaky_relu', 'bn_relu', 'bn_nonlin']
+__all__ = ['p_relu', 'leaky_relu', 'bn_relu', 'bn_nonlin']
+
+@wrap_varnode_func
+def p_relu(x, init=0.001, name='output'):
+    init = tf.constant_initializer(init)
+    alpha = tf.get_variable('alpha', [], initializer=init)
+    x = ((1 + alpha) * x + (1 - alpha) * abs(x))
+    return mul(x, 0.5, name=name)
 
 
 @wrap_varnode_func

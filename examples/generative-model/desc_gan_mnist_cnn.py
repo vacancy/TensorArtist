@@ -90,7 +90,7 @@ def make_network(env):
             def forward(x):
                 g_batch_size = get_env('trainer.batch_size') if env.phase is env.Phase.TRAIN else 1
                 z = O.random_normal([g_batch_size, z_dim])
-                
+
                 with tf.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
                     img_gen = generator(z)
                 # tf.summary.image('generated-samples', img_gen, max_outputs=30)

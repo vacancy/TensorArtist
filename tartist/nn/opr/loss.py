@@ -8,7 +8,7 @@
 
 import tensorflow as tf
 
-from ._migrate import log
+from ._migrate import log, sqr
 from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op
 
 __all__ = [
@@ -32,7 +32,7 @@ def grad(ys, xs, grad_ys=None, name='gradients'):
 @wrap_named_op
 @wrap_varnode_func
 def raw_l2_loss(name, pred, label):
-    return tf.nn.l2_loss(pred - label, name)
+    return 0.5 * sqr(pred - label)
 
 
 @wrap_named_op
