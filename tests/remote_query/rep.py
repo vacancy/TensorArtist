@@ -17,6 +17,7 @@ def answer(pipe, identifier, inp):
 rep = QueryRepPipe('rep')
 rep.dispatcher.register('calc', answer)
 with rep.activate():
-    print(rep.conn_info)
+    print('tart req.py', *rep.conn_info)
     while True:
         time.sleep(1)
+
