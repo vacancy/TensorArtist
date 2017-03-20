@@ -91,6 +91,10 @@ class Function(object):
         self.__compiled = False
 
     @property
+    def owner_env(self):
+        return self._env
+
+    @property
     def session(self):
         return self._env.session
 

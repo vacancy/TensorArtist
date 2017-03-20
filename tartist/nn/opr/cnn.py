@@ -16,7 +16,7 @@ from ..graph.env import Env, get_default_env
 import tensorflow as tf
 import functools
 
-__all__ = ['conv2d', 'pooling2d', 'fc', 'dropout', 'batch_norm', 'deconv2d']
+__all__ = ['conv2d', 'pooling2d', 'max_pooling2d', 'avg_pooling2d', 'fc', 'dropout', 'batch_norm', 'deconv2d']
 
 @wrap_named_op
 @wrap_varnode_func

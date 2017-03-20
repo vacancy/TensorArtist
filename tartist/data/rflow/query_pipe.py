@@ -106,7 +106,7 @@ class QueryRepPipe(object):
         nr_done = 0
         if self._router in socks:
             for identifier, msg in utils.iter_recv(router_recv, self._router):
-                self._dispatcher.dispatch(msg['action'], self, identifier, msg)
+                self._dispatcher.dispatch(msg['type'], self, identifier, msg)
                 nr_done += 1
         return nr_done
 

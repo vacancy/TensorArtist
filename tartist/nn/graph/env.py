@@ -216,10 +216,16 @@ class Env(object):
                 return v
         return None
 
-    def get_name_scope(self):
+    def get_name_scope(self, use_name=None):
+        if use_name:
+            name = self.graph.unique_name(use_name, mark_as_used=False)
+            return name
+
         random_str = 'mrm_msh'
         name = self.graph.unique_name(random_str, mark_as_used=False)
-        return name[-(len(random_str) + 1)]
+        if len(name) > len(random_str):
+            return name[-(len(random_str) + 1)]
+        return ''
 
 get_default_env = defaults_manager.gen_get_default(Env)
 
@@ -239,7 +245,9 @@ class DataParallelController(object):
 
         self._nr_towers = 1
         self._current_tower = 0
+
         self._name_scope_prefix = name_scope_prefix
+        self._real_name_scope_prefix = owner_env.get_name_scope(name_scope_prefix)
 
     @property
     def owner_env(self):
@@ -292,8 +300,8 @@ class DataParallelController(object):
                 if i == 0:
                     for v in inputs:
                         vname = v.name
-                        assert name_prefix in vname and vname.endswith(':0'), vname
-                        self._input_names.append(vname[len(name_prefix)+1:-2])
+                        assert vname.startswith(self._real_name_scope_prefix) and vname.endswith(':0'), vname
+                        self._input_names.append(vname[len(self._real_name_scope_prefix) + 3:-2])
 
                 self._forward_func(*inputs)
 
@@ -323,12 +331,12 @@ class DataParallelController(object):
     def _split(self, kwargs):
         assert self.__activated
 
-        for name in self._input_names:
-            if name in kwargs:
+        for name in kwargs:
+            if name in self._input_names:
                 value = kwargs.pop(name)
 
                 if type(value) is list and len(value) == self._nr_towers:
-                    pass # directly use
+                    pass  # directly use
                 else:
                     value = nd_split_n(value, self._nr_towers)
 

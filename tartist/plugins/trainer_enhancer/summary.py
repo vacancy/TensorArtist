@@ -13,13 +13,14 @@ import threading
 
 logger = get_logger()
 
+summary_async_lock = threading.Lock()
+
 
 class SummaryHistoryManager(object):
     def __init__(self):
         self._summaries = {}
         self._summaries_type = {}
         self._summaries_last_query = {}
-        self._async_lock = threading.Lock()
 
     @property
     def all_summaries(self):
@@ -43,7 +44,7 @@ class SummaryHistoryManager(object):
 
     def put_async_scalar(self, key, value):
         value = float(value)
-        with self._async_lock:
+        with summary_async_lock:
             self._summaries.setdefault(key, []).append(value)
 
     def put_summaries(self, summaries):
@@ -78,7 +79,7 @@ class SummaryHistoryManager(object):
             values = values[-top_k:]
             return sum(values) / (len(values) + 1e-4)
         elif type == 'async_scalar':
-            with self._async_lock:
+            with summary_async_lock:
                 values = self._summaries.get(key, [])
                 last_query = self._summaries_last_query.get(key, 0)
                 values = values[last_query:]
@@ -86,7 +87,7 @@ class SummaryHistoryManager(object):
 
                 if len(values):
                     return sum(values) / (len(values) + 1e-4)
-            return 'not_available'
+            return 'N/A'
 
 
 def put_summary_history(trainer, summaries):
@@ -103,7 +104,7 @@ def put_summary_history_scalar(trainer, name, value):
     mgr.put_scalar(name, value)
 
 
-def enable_summary_history(trainer):
+def enable_summary_history(trainer, extra_summary_types=None):
     def check_proto_contains(proto, tag):
         if proto is None:
             return False
@@ -114,6 +115,9 @@ def enable_summary_history(trainer):
 
     def summary_history_on_optimization_before(trainer):
         trainer.runtime['summary_histories'] = SummaryHistoryManager()
+        if extra_summary_types is not None:
+            for k, v in extra_summary_types.items():
+                trainer.runtime['summary_histories'].set_type(k, v)
 
     def summary_history_on_iter_after(trainer, inp, out):
         mgr = trainer.runtime['summary_histories']

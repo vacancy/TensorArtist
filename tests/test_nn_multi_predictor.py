@@ -6,6 +6,7 @@
 # 
 # This file is part of TensorArtist
 
+import numpy as np
 import tensorflow as tf
 
 from tartist.core import get_env, get_logger
@@ -78,6 +79,7 @@ def main():
             f = new_env.make_func()
             f.compile(outputs=new_env.network.outputs)
             fs.append(f)
+    img = np.zeros(shape=(1, 28, 28, 1))
     from IPython import embed; embed()
 
 

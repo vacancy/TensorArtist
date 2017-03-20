@@ -68,7 +68,6 @@ def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False,
            collections=None, summary=False):
 
     collections = extend_collection_list(collections, TArtGraphKeys.SCALAR_VARIABLES, tf.GraphKeys.GLOBAL_VARIABLES)
-
     value = float(value)
     var = variable(name, value, shape=0, dtype=dtype, device=device, trainable=trainable, collections=collections)
     if summary:

@@ -36,12 +36,15 @@ class A3CTrainerEnv(TrainerEnv):
     on_data_func = None
     on_stat_func = None
 
+    @property
     def players_router(self):
         return self._players_router
 
+    @property
     def predictors_queue(self):
         return self._predictors_queue
 
+    @property
     def data_queue(self):
         return self._data_queue
 
@@ -52,7 +55,7 @@ class A3CTrainerEnv(TrainerEnv):
         def on_stat(router, identifier, inp):
             if self.on_stat_func:
                 self.on_stat_func(self, inp)
-            router.send(identifier, {'action': 'stat_rep'})
+            router.send(identifier, {'type': 'stat-rep'})
 
         self._players_router = QueryRepPipe('a3c-player-master')
         self._players_router.dispatcher.register('data', on_data)
@@ -81,25 +84,31 @@ class A3CTrainerEnv(TrainerEnv):
         for p in self._predictors:
             p.start()
 
+    def finialize_all_peers(self):
+        self._players_router.finalize()
+
     def _make_predictor_net_func(self, i, dev):
+        def prefix_adder(feed_dict):
+            for k in list(feed_dict.keys()):
+                feed_dict['predictor/{}/{}'.format(i, k)] = feed_dict.pop(k)
+
         outputs_name = get_env('a3c.predictor.outputs_name')
         new_env = Env(master_dev=dev, flags=self.flags, dpflags=self.dpflags, graph=self.graph)
         with new_env.as_default():
             with tf.name_scope('predictor/{}'.format(i)), reuse_context(True):
                 self.network_maker(new_env)
+            new_env.initialize_all_variables()
             outs = {k: new_env.network.outputs[k] for k in outputs_name}
             f = new_env.make_func()
+            f.extend_extra_kw_modifiers([prefix_adder])
             f.compile(outputs=outs)
-
-            f = new_env.make_func()
-            f.compile(outputs=new_env.network.outputs)
         return f
 
 
 class A3CTrainer(SimpleTrainer):
     def initialize(self):
         super().initialize()
-        self.env.network_maker = self.env.desc.make_network
+        self.env.network_maker = self.desc.make_network
         self.env.owner_trainer = self
-        self.env.desc.make_a3c_configs(self.env)
+        self.desc.make_a3c_configs(self.env)
         self.env.initialize_all_peers()

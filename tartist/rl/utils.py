@@ -9,9 +9,12 @@
 from .base import ProxyRLEnvironBase
 
 
+__all__ = ['AutoRestartProxyRLEnviron', 'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron']
+
+
 class AutoRestartProxyRLEnviron(ProxyRLEnvironBase):
     def _action(self, action):
-        r, is_over = super().action(action)
+        r, is_over = self.proxy.action(action)
         if is_over:
             self.finish()
             self.restart()
@@ -26,7 +29,7 @@ class LimitLengthProxyRLEnviron(ProxyRLEnvironBase):
         self._cnt = 0
 
     def _action(self, action):
-        r, is_over = super().action(action)
+        r, is_over = self.proxy.action(action)
         self._cnt += 1
         if self._cnt >= self._limit:
             is_over = True
@@ -40,18 +43,11 @@ class LimitLengthProxyRLEnviron(ProxyRLEnvironBase):
         super()._restart()
         self._cnt = 0
 
-class HistoryProxyRLEnviron(ProxyRLEnvironBase):
-    def __init__(self, other, history_length):
+
+class MapStateProxyRLEnviron(ProxyRLEnvironBase):
+    def __init__(self, other, func):
         super().__init__(other)
-        self._history = deque(maxlen=history_length)
+        self._func = func
 
     def _get_current_state(self):
-        return self.__proxy.current_state
-
-    def _action(self, action):
-        return self.__proxy.action(action)
-
-    def _restart(self):
-        return self.__proxy.restart()
-
-        
+        return self._func(self.proxy.current_state)

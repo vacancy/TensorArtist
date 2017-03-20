@@ -151,13 +151,13 @@ class VarNodeOpDecl(object):
         from ..opr.shape import dimshuffle 
         return as_varnode(dimshuffle(self, perm=pattern, name=name))
 
-    def add_axis(self, axis):
+    def add_axis(self, axis, name=None):
         from ..opr.shape import add_axis 
-        return as_varnode(add_axis(self, axis=axis))
+        return as_varnode(add_axis(self, axis=axis, name=name))
 
-    def remove_axis(self, axis):
+    def remove_axis(self, axis, name=None):
         from ..opr.shape import remove_axis 
-        return as_varnode(remove_axis(self, axis=axis))
+        return as_varnode(remove_axis(self, axis=axis, name=name))
 
     def sum(self, axis=None, keepdims=False, name=None):
         return as_varnode(tf.reduce_sum(self, axis=axis, keep_dims=keepdims, name=name))
@@ -180,21 +180,21 @@ class VarNodeOpDecl(object):
     def prod(self, axis=None, keepdims=False, name=None):
         return as_varnode(tf.reduce_prod(self, axis=axis, keep_dims=keepdims, name=name))
 
-    def std(self):
+    def std(self, name=None):
         from ..opr.arith import std
-        return std(self)
+        return std(self, name=name)
 
-    def rms(self):
+    def rms(self, name=None):
         from ..opr.arith import rms
-        return rms(self)
+        return rms(self, name=name)
 
-    def flatten(self):
+    def flatten(self, name=None):
         from ..opr.shape import flatten
-        return flatten(self)
+        return flatten(self, name=name)
 
-    def flatten2(self):
+    def flatten2(self, name=None):
         from ..opr.shape import flatten2
-        return flatten2(self)
+        return flatten2(self, name=name)
 
     def eval(self, session=None, feed_dict=None, **kwargs):
         from .env import get_default_env
