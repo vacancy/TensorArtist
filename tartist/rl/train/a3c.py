@@ -50,7 +50,7 @@ class A3CTrainerEnv(TrainerEnv):
         self._players_router = QueryRepPipe('a3c-player-master')
         self._players_router.dispatcher.register('data', on_data)
         self._players_router.initialize()
-        self._data_queue = queue.Queue()
+        self._data_queue = queue.Queue(get_env('trainer.batch_size') * get_env('a3c.data_queue_length_factor', 16))
 
         nr_players = get_env('a3c.nr_players')
         self._players = []
