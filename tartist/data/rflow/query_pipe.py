@@ -34,7 +34,7 @@ class QueryRepPipe(object):
         self._context_lock = threading.Lock()
         self._context = zmq.Context()
         self._router = self._context.socket(zmq.ROUTER)
-        self._poller = zmq.Poller()
+        self._dealer = self._context.dealer(zmq.DEALER)
         self._dispatcher = CallbackManager()
 
         self._send_queue = queue.Queue()
@@ -50,9 +50,12 @@ class QueryRepPipe(object):
         return self._conn_info
 
     def initialize(self):
+        self._conn_info = []
         port = self._router.bind_to_random_port('tcp://*')
-        self._conn_info = 'tcp://{}:{}'.format(utils.get_addr(), port)
-        self._poller.register(self._router, zmq.POLLIN)
+        self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
+        port = self._dealer.bind_to_random_port('tcp://*')
+        self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
+
         self._thread = threading.Thread(target=self.mainloop)
         self._thread.start()
 
@@ -70,20 +73,13 @@ class QueryRepPipe(object):
             self.finalize()
 
     def mainloop(self):
-        wait = 0
         while True:
-            socks = dict(self._poller.poll(wait))
             if self._stop_event.is_set():
                 break
             
             nr_done = 0
             nr_done += self._main_do_send()
-            nr_done += self._main_do_recv(socks)
-
-            if nr_done > 0:
-                wait = wait / 2 if wait > 1 else 0
-            else:
-                wait = wait + 1 if wait < 50 else 50
+            nr_done += self._main_do_recv()
 
     def _main_do_send(self):
         nr_send = self._send_queue.qsize()
@@ -91,7 +87,7 @@ class QueryRepPipe(object):
 
         for i in range(nr_send):
             job = self._send_queue.get()
-            rc = router_send(self._router, job.identifier, job.payload, flag=zmq.NOBLOCK)
+            rc = router_send(self._dealer, job.identifier, job.payload, flag=zmq.NOBLOCK)
             if not rc:
                 if job.countdown > 0:
                     self._send_queue.put(QueryMessage(job[0], job[1], job[2] - 1))
@@ -99,12 +95,11 @@ class QueryRepPipe(object):
                 nr_done += 1
         return nr_done
 
-    def _main_do_recv(self, socks):
+    def _main_do_recv(self):
         nr_done = 0
-        if self._router in socks:
-            for identifier, msg in utils.iter_recv(router_recv, self._router):
-                self._dispatcher.dispatch(msg['type'], self, identifier, msg)
-                nr_done += 1
+        for identifier, msg in utils.iter_recv(router_recv, self._router):
+            self._dispatcher.dispatch(msg['type'], self, identifier, msg)
+            nr_done += 1
         return nr_done
 
     def send(self, identifier, msg):
@@ -116,15 +111,19 @@ class QueryReqPipe(object):
         self._name = name
         self._conn_info = conn_info
         self._context = None
-        self._socket = None
+        self._push = None
+        self._pull = None
 
     def initialize(self):
         self._context = zmq.Context()
-        self._socket = self._context.socket(zmq.REQ)
-        self._socket.connect(self._conn_info)
+        self._push = self._context.socket(zmq.PUSH)
+        self._pull = self._context.socket(zmq.PULL)
+        self._push.connect(self._conn_info[0])
+        self._pull.connect(self._conn_info[1])
 
     def finalize(self):
-        utils.graceful_close(self._socket)
+        utils.graceful_close(self._push)
+        utils.graceful_close(self._pull)
 
     @contextlib.contextmanager
     def activate(self):
@@ -135,7 +134,7 @@ class QueryReqPipe(object):
             self.finalize()
 
     def query(self, inp):
-        req_send(self._socket, inp)
-        out = req_recv(self._socket)
+        req_send(self._push, inp)
+        out = req_recv(self._pull)
         return out
 
