@@ -75,7 +75,7 @@ class Env(object):
         TRAIN = 1
         TEST = 2
 
-    def __init__(self, phase=Phase.TEST, master_dev='/gpu:0', flags=None, dpflags=None, graph=None):
+    def __init__(self, phase=Phase.TEST, master_dev='/gpu:0', flags=None, dpflags=None, graph=None, session=None):
         self.__phase = phase
         self.__session = None
         self.__network = None
@@ -88,6 +88,9 @@ class Env(object):
         self._dpflags = dpflags or type(self).DataParallelFlag()
         self._dpsplitters = []
         self._graph = graph or tf.Graph()
+
+        if session is not None:
+            self.__session = session
 
     @notnone_property
     def network(self):
@@ -331,8 +334,8 @@ class DataParallelController(object):
     def _split(self, kwargs):
         assert self.__activated
 
-        for name in kwargs:
-            if name in self._input_names:
+        for name in self._input_names:
+            if name in kwargs:
                 value = kwargs.pop(name)
 
                 if type(value) is list and len(value) == self._nr_towers:
@@ -384,7 +387,7 @@ class Network(object):
     def merged_summaries(self):
         return self.get_merged_summaries()
 
-    def get_merged_summaries(self, collection=None):
+    def get_merged_summaries(self, collection='summaries'):
         with self.owner_env.graph.as_default():
             return tf.summary.merge_all(key=collection)
 

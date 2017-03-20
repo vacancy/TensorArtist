@@ -72,13 +72,10 @@ class QueryRepPipe(object):
     def mainloop(self):
         wait = 0
         while True:
-            if self._stop_event.wait(wait):
-                break
-
             socks = dict(self._poller.poll(wait))
             if self._stop_event.is_set():
                 break
-
+            
             nr_done = 0
             nr_done += self._main_do_send()
             nr_done += self._main_do_recv(socks)

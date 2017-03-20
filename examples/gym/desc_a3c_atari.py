@@ -8,6 +8,8 @@
 #
 # This file is part of TensorArtist
 
+import time
+import queue
 import threading
 import collections
 import numpy as np
@@ -35,10 +37,11 @@ __envs__ = {
         'frame_history': 4,
         'limit_length': 40000,
         'max_time': 5,
-        'nr_players': 2,
+        'nr_players': 50,
         'nr_predictors': 2,
         'gamma': 0.99,
         'predictor': {
+            'batch_size': 16,
             'outputs_name': ['value', 'policy']
         }
     },
@@ -50,7 +53,7 @@ __envs__ = {
     'trainer': {
         'learning_rate': 2e-4,
 
-        'batch_size': 8,
+        'batch_size': 128,
         'epoch_size': 100,
         'nr_epochs': 200,
 
@@ -67,6 +70,11 @@ __trainer_env_cls__ = rl.train.A3CTrainerEnv
 
 
 def make_network(env):
+    is_train = env.phase is env.Phase.TRAIN
+    if is_train:
+        slave_devices = env.slave_devices
+        env.set_slave_devices([])
+
     with env.create_network() as net:
         input_shape = get_env('dataset.input_shape')
         frame_history = get_env('a3c.frame_history')
@@ -127,6 +135,9 @@ def make_network(env):
                       value.mean(name='predict_value'), advantage.rms(name='rms_advantage'), loss]:
                 summary.scalar(v)
 
+    if is_train:
+        env.set_slave_devices(slave_devices)
+
 
 def make_player():
     def resize_state(s):
@@ -147,6 +158,14 @@ def get_player_nr_actions():
     return n
 
 
+@cached_result
+def get_input_shape():
+    input_shape = get_env('dataset.input_shape')
+    frame_history = get_env('a3c.frame_history')
+    h, w, c = input_shape[0], input_shape[1], 3 * frame_history
+    return h, w, c
+
+
 def player_func(i, requester):
     player = make_player()
     player.restart()
@@ -163,7 +182,8 @@ def player_func(i, requester):
                 'is_over': is_over
             })
             reward, is_over = player.action(action)
-            if is_over:
+            
+            if len(player.stats['score']) > 0:
                 _ = requester.query({
                     'type': 'stat',
                     'score': player.stats['score'][-1]
@@ -173,16 +193,23 @@ def player_func(i, requester):
 
 
 def predictor_func(i, queue, func):
+    batch_size = get_env('a3c.predictor.batch_size')
     while True:
-        inp, callback = queue.get()
-        out = func(state=inp['state'][np.newaxis])
-        policy = out['policy'][0]
-        action = random.choice(len(policy), p=policy)
-        callback({
-            'type': 'data-rep',
-            'action': action,
-            'value': out['value'][0]
-        })
+        batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
+        callbacks = []
+        for i in range(batch_size):
+            inp, callback = queue.get()
+            batched_state[i] = inp['state']
+            callbacks.append(callback)
+        out = func(state=batched_state)
+        for i in range(batch_size):
+            policy = out['policy'][i]
+            action = random.choice(len(policy), p=policy)
+            callbacks[i]({
+                'type': 'data-rep',
+                'action': action,
+                'value': out['value'][i]
+            })
 
 
 PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward'))
@@ -208,7 +235,10 @@ def on_data_func(env, player_router, identifier, inp_data):
         gamma = get_env('a3c.gamma')
         for i in history[::-1]:
             r = np.clip(i.reward, -1, 1) + gamma * r
-            data_queue.put_nowait({'state': i.state, 'action': i.action, 'future_reward': r})
+            try:
+                data_queue.put_nowait({'state': i.state, 'action': i.action, 'future_reward': r})
+            except queue.Full:
+                pass
 
     def callback(out_data):
         state = inp_data['state']
@@ -257,13 +287,10 @@ def make_optimizer(env):
 
 def make_dataflow_train(env):
     batch_size = get_env('trainer.batch_size')
-    input_shape = get_env('dataset.input_shape')
-    frame_history = get_env('a3c.frame_history')
-    h, w, c = input_shape[0], input_shape[1], 3 * frame_history
 
     df = flow.QueueDataFlow(env.data_queue)
     df = flow.BatchDataFlow(df, batch_size, sample_dict={
-        'state': np.empty((batch_size, h, w, c), dtype='float32'),
+        'state': np.empty((batch_size, ) + get_input_shape(), dtype='float32'),
         'action': np.empty((batch_size, ), dtype='int32'),
         'future_reward': np.empty((batch_size, ), dtype='float32')
     })

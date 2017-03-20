@@ -193,9 +193,6 @@ class Controller(object):
     def _main(self):
         wait = 0
         while True:
-            if self._stop_event.wait(wait):
-                break
-
             socks = dict(self._poller.poll(wait))
             if self._stop_event.is_set():
                 break

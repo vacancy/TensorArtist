@@ -43,7 +43,6 @@ class RLEnvironBase(object):
         return self._action(action)
 
     def restart(self):
-        self._stats = collections
         return self._restart()
 
     def finish(self):
