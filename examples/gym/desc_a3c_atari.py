@@ -179,7 +179,8 @@ def player_func(i, requester):
             reward, is_over = player.action(action)
             
             if len(player.stats['score']) > 0:
-                requester.query('score', (score, ), do_recv=False)
+                score = player.stats['score'][-1]
+                requester.query('stat', (score, ), do_recv=False)
                 player.clear_stats()
             state = player.current_state
 
@@ -245,9 +246,9 @@ def on_data_func(env, player_router, identifier, inp_data):
 
 def on_stat_func(env, inp_data):
     if env.owner_trainer is not None:
-        mgr = env.owner_trainer.runtime.get('summary_history', None)
+        mgr = env.owner_trainer.runtime.get('summary_histories', None)
         if mgr is not None:
-            mgr.put_async_scalar('async/score', inp_data['score'])
+            mgr.put_async_scalar('async/score', inp_data[0])
 
 
 def make_a3c_configs(env):
