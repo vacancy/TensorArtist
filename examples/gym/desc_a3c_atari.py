@@ -185,20 +185,24 @@ def player_func(i, requester):
             state = player.current_state
 
 
-def predictor_func(i, queue, func):
+def predictor_func(i, router, queue, func):
     batch_size = get_env('a3c.predictor.batch_size')
     while True:
         batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
         callbacks = []
         for i in range(batch_size):
-            inp, callback = queue.get()
+            identifier, inp, callback = queue.get()
             batched_state[i] = inp[0]
             callbacks.append(callback)
         out = func(state=batched_state)
+        actions = []
         for i in range(batch_size):
             policy = out['policy'][i]
             action = random.choice(len(policy), p=policy)
-            callbacks[i](action, out['value'][i])
+            actions.append(action)
+
+        for i in range(batch_size):
+            callbacks[i](actions[i], out['value'][i])
 
 
 PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward'))
@@ -233,15 +237,14 @@ def on_data_func(env, player_router, identifier, inp_data):
 
     def callback(action, predict_value):
         player_router.send(identifier, action)
-        with env.players_history_lock:
-            player_history.append(PlayerHistory(state, action, predict_value, None))
+        player_history.append(PlayerHistory(state, action, predict_value, None))
+
+    predictor_queue.put((identifier, inp_data, callback))
 
     if len(player_history) > 0:
         last = player_history[-1]
         player_history[-1] = PlayerHistory(last[0], last[1], last[2], reward)
         parse_history(player_history, is_over)
-
-    predictor_queue.put((inp_data, callback))
 
 
 def on_stat_func(env, inp_data):

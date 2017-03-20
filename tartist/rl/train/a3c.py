@@ -80,7 +80,7 @@ class A3CTrainerEnv(TrainerEnv):
         for i in range(nr_predictors):
             dev = all_devices[i % len(all_devices)]
             func = self._make_predictor_net_func(i, dev)
-            prc = threading.Thread(target=self.predictor_func, args=(i, self._predictors_queue, func), daemon=True)
+            prc = threading.Thread(target=self.predictor_func, args=(i, self._players_router, self._predictors_queue, func), daemon=True)
             self._predictors.append(prc)
         for p in self._predictors:
             p.start()
