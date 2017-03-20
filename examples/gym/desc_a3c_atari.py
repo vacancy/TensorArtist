@@ -175,19 +175,11 @@ def player_func(i, requester):
     with requester.activate():
         while True:
             # must have an action field
-            action = requester.query({
-                'type': 'data',
-                'state': state,
-                'reward': reward,
-                'is_over': is_over
-            })
+            action = requester.query('data', (state, reward, is_over))
             reward, is_over = player.action(action)
             
             if len(player.stats['score']) > 0:
-                _ = requester.query({
-                    'type': 'stat',
-                    'score': player.stats['score'][-1]
-                })
+                requester.query('score', (score, ), do_recv=False)
                 player.clear_stats()
             state = player.current_state
 
@@ -199,17 +191,13 @@ def predictor_func(i, queue, func):
         callbacks = []
         for i in range(batch_size):
             inp, callback = queue.get()
-            batched_state[i] = inp['state']
+            batched_state[i] = inp[0]
             callbacks.append(callback)
         out = func(state=batched_state)
         for i in range(batch_size):
             policy = out['policy'][i]
             action = random.choice(len(policy), p=policy)
-            callbacks[i]({
-                'type': 'data-rep',
-                'action': action,
-                'value': out['value'][i]
-            })
+            callbacks[i](action, out['value'][i])
 
 
 PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward'))
@@ -219,6 +207,8 @@ def on_data_func(env, player_router, identifier, inp_data):
     predictor_queue = env.predictors_queue
     data_queue = env.data_queue
     player_history = env.players_history[identifier]
+
+    state, reward, is_over = inp_data
 
     def parse_history(history, is_over):
         num = len(history)
@@ -240,19 +230,15 @@ def on_data_func(env, player_router, identifier, inp_data):
             except queue.Full:
                 pass
 
-    def callback(out_data):
-        state = inp_data['state']
-        predict_value, action = out_data['value'], out_data['action']
+    def callback(action, predict_value):
         player_router.send(identifier, action)
         with env.players_history_lock:
             player_history.append(PlayerHistory(state, action, predict_value, None))
 
     if len(player_history) > 0:
-        with env.players_history_lock:
-            last, reward = player_history[-1], inp_data['reward']
-            is_over = inp_data['is_over']
-            player_history[-1] = PlayerHistory(last[0], last[1], last[2], reward)
-            parse_history(player_history, is_over)
+        last = player_history[-1]
+        player_history[-1] = PlayerHistory(last[0], last[1], last[2], reward)
+        parse_history(player_history, is_over)
 
     predictor_queue.put((inp_data, callback))
 
