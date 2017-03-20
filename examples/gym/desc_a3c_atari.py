@@ -51,7 +51,7 @@ __envs__ = {
     },
 
     'trainer': {
-        'learning_rate': 2e-4,
+        'learning_rate': 0.001,
 
         'batch_size': 128,
         'epoch_size': 100,
@@ -123,7 +123,7 @@ def make_network(env):
             log_pi_a_given_s = (log_logits * tf.one_hot(action, get_player_nr_actions())).sum(axis=1)
             advantage = future_reward - O.zero_grad(value, name='advantage')
             policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
-            xentropy_cost = (-logits * log_logits).mean(name='xentropy_cost')
+            xentropy_cost = (-logits * log_logits).sum(axis=1).mean(name='xentropy_cost')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
             # value_loss = O.truediv(value_loss, future_reward.shape[0].astype('float32'), name='value_loss')
             entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
@@ -277,11 +277,11 @@ def make_optimizer(env):
     lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
 
     wrapper = optimizer.OptimizerWrapper()
-    # generator learns 5 times faster
-    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr * 5., beta1=0.5, epsilon=1e-6))
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, epsilon=1e-3))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))
+    wrapper.append_grad_modifier(optimizer.grad_modifier.GlobalGradClipByAvgNorm(0.1))
     env.set_optimizer(wrapper)
 
 

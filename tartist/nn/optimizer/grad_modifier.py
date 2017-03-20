@@ -17,7 +17,7 @@ logger = get_logger(__file__)
 __all__ = [
     'GradModifierBase', 'NameBasedGradModifierBase', 'GlobalGradModifierBase',
     'LearningRateMultiplier', 'WeightDecay',
-    'GradClip', 'GlobalGradClip'
+    'GradClip', 'GlobalGradClip', 'GlobalGradClipByAvgNorm'
 ]
 
 
@@ -113,4 +113,14 @@ class GlobalGradClip(GlobalGradModifierBase):
         _ = grad
         _ = tf.maximum(_, self._upper)
         _ = tf.minimum(_, self._lower)
+        return _
+
+
+class GlobalGradClipByAvgNorm(GlobalGradModifierBase):
+    def __init__(self, clip_norm):
+        self._clip_norm = clip_norm
+
+    def _op(self, grad, var):
+        _ = grad
+        _ = tf.clip_by_average_norm(_, self._clip_norm)
         return _
