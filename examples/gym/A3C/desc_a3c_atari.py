@@ -8,6 +8,7 @@
 #
 # This file is part of TensorArtist
 
+import threading
 import collections
 import numpy as np
 import tensorflow as tf
@@ -93,7 +94,7 @@ def make_network(env):
         value = O.fc('fc_value', _, 1)
 
         logits = O.softmax(policy, name='logits')
-        value = O.squeeze(value, [1], name='value')
+        value = value.remove_axis(1, name='value')
 
         expf = O.scalar('explore_factor', 1, trainable=False)
         policy = O.softmax(policy * expf, name='policy')
@@ -104,9 +105,10 @@ def make_network(env):
         if env.phase is env.Phase.TRAIN:
             action = O.placeholder('action', shape=(None, ), dtype=tf.int32)
             future_reward = O.placeholder('future_reward', shape=(None, ))
+
             log_logits = O.log(logits + 1e-6)
             log_pi_a_given_s = (log_logits * tf.one_hot(action, get_player_nr_actions())).sum(axis=1)
-            advantage = future_reward - O.stop_gradient(value, name='advantage')
+            advantage = future_reward - O.zero_grad(value, name='advantage')
             policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
             xentropy_cost = (-logits * log_logits).mean(name='xentropy_cost')
             value_loss = O.raw_l2_loss(future_reward, value).mean(name='value_loss')
@@ -167,41 +169,48 @@ def predictor_func(i, queue, func):
         callback(out)
 
 
+PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward'))
+
+
 def on_data_func(env, player_router, identifier, inp_data):
     predictor_queue = env.predictors_queue
     data_queue = env.data_queue
-
-    reward = inp_data['reward']
-    is_over = inp_data['is_over']
     player_history = env.players_history[identifier]
-    if len(player_history) > 0:
-        player_history[-1]['reward'] = reward
-        env.players_history[identifier] = parse_history(player_history, is_over)
 
     def parse_history(history, is_over):
         num = len(history)
         if is_over:
-            R = 0
+            r = 0
+            env.players_history[identifier] = []
         elif num == get_env('a3c.max_time') + 1:
-            last = history[-1]
-            history = history[:-1]
-            R = last.value
+            history, last = history[:-1], history[-1]
+            r = last.reward
+            env.players_history[identifier] = [last]
         else:
-            return history
-        for i in history[::-1]:
-            R = np.clip(i['reward'], -1, 1) + get_env('a3c.gamma') * R
-            data_queue.put_nowait([i['state'], i['action'], R])
-        return [] if is_over else [last]
+            return
 
+        gamma = get_env('a3c.gamma')
+        for i in history[::-1]:
+            r = np.clip(i['reward'], -1, 1) + gamma * r
+            data_queue.put_nowait([i['state'], i['action'], r])
 
     def callback(out_data):
         state = inp_data['state']
         predict_value = out_data['value']
         policy = out_data['policy']
-        action = random.choice(len(policy), p=policy)
+        action = random.choice(policy)
         player_router.send(action)
-        players_history.append({'state': state, 'action': action, 'value': predict_value})
+        with env.players_history_lock:
+            player_history.append(PlayerHistory(state, action, predict_value, None))
 
+    if len(player_history) > 0:
+        with env.players_history_lock:
+            last, reward = player_history[-1], inp_data['reward']
+            is_over = inp_data['is_over']
+            player_history[-1] = PlayerHistory(last[0], last[1], last[2], reward)
+            parse_history(player_history, is_over)
+
+    predictor_queue.put((inp_data, callback))
 
 
 def on_stat_func(env, inp_data):
@@ -218,6 +227,7 @@ def make_a3c_configs(env):
     env.on_data_func = on_data_func
     env.on_stat_func = on_stat_func
     env.players_history = collections.defaultdict(list)
+    env.players_history_lock = threading.Lock()
 
 
 def make_optimizer(env):

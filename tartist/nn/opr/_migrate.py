@@ -118,6 +118,11 @@ __all_migrated_oprs__.extend([
     ('cond', tf.cond),
 ])
 
+# control
+__all_migrated_oprs__.extend([
+    ('zero_grad', tf.stop_gradient)
+])
+
 # softmax related
 __all_migrated_oprs__.extend([
     ('softmax', tf.nn.softmax),
