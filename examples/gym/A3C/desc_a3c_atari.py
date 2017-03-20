@@ -199,7 +199,12 @@ def make_optimizer(env):
 
 
 def make_dataflow_train(env):
-    df = flow.EmptyDictDataFlow()
+    batch_size = get_env('trainer.batch_size')
+
+    df = flow.QueueDataFlow(env.data_queue)
+    df = flow.BatchDataFlow(df, batch_size, sample_dict={
+        # write input here
+    })
     return df
 
 
