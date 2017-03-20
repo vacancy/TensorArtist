@@ -51,10 +51,12 @@ class QueryRepPipe(object):
 
     def initialize(self):
         self._conn_info = []
-        port = self._frsock.bind_to_random_port('tcp://*')
-        self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
-        port = self._tosock.bind_to_random_port('tcp://*')
-        self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
+        # port = self._frsock.bind_to_random_port('tcp://*')
+        # self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
+        # port = self._tosock.bind_to_random_port('tcp://*')
+        # self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
+        self._conn_info.append(utils.bind_to_random_ipc(self._frsock, self._name + '-c2s-'))
+        self._conn_info.append(utils.bind_to_random_ipc(self._tosock, self._name + '-s2c-'))
 
         self._rcv_thread = threading.Thread(target=self.mainloop_recv)
         self._rcv_thread.start()
@@ -87,7 +89,7 @@ class QueryRepPipe(object):
         try:
             while True:
                 job = self._send_queue.get()
-                self._tosock.send_multipart((job.identifier, dumpb(job.payload)), copy=False)
+                self._tosock.send_multipart((job.identifier, b'', dumpb(job.payload)), copy=False)
         except zmq.ContextTerminated:
             pass
 
@@ -133,5 +135,5 @@ class QueryReqPipe(object):
     def query(self, type, inp, do_recv=True):
         self._tosock.send(dumpb((self.identity, type, inp)))
         if do_recv:
-            out = loadb(self._frsock.recv(copy=False).bytes)
+            out = loadb(self._frsock.recv_multipart(copy=False)[1].bytes)
             return out
