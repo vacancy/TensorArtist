@@ -11,8 +11,8 @@ import time
 import sys
 
 
-req = QueryReqPipe('req', conn_info=sys.argv[1])
+req = QueryReqPipe('req', conn_info=sys.argv[1:3])
 with req.activate():
-    out = req.query(dict(action='calc', a=1, b=2))
+    out = req.query('calc', dict(a=1, b=2))
     print(out)
     time.sleep(1)

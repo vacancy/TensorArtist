@@ -19,11 +19,9 @@ import collections
 import pickle
 import functools
 
-QueryMessage = collections.namedtuple('QueryMessage', ['identifier', 'payload', 'countdown'])
-router_recv = functools.partial(utils.router_recv_json, loader=pickle.loads)
-router_send = functools.partial(utils.router_send_json, dumper=pickle.dumps)
-req_recv = functools.partial(utils.req_recv_json, loader=pickle.loads)
-req_send = functools.partial(utils.req_send_json, dumper=pickle.dumps)
+QueryMessage = collections.namedtuple('QueryMessage', ['identifier', 'payload'])
+dumpb = pickle.dumps
+loadb = pickle.loads
 
 
 class QueryRepPipe(object):
@@ -33,13 +31,15 @@ class QueryRepPipe(object):
 
         self._context_lock = threading.Lock()
         self._context = zmq.Context()
-        self._router = self._context.socket(zmq.ROUTER)
-        self._dealer = self._context.dealer(zmq.DEALER)
+        self._tosock = self._context.socket(zmq.ROUTER)
+        self._frsock = self._context.socket(zmq.PULL)
+        self._tosock.set_hwm(10)
+        self._frsock.set_hwm(10)
         self._dispatcher = CallbackManager()
 
         self._send_queue = queue.Queue()
-        self._thread = None
-        self._stop_event = threading.Event()
+        self._rcv_thread = None
+        self._snd_thread = None
 
     @property
     def dispatcher(self):
@@ -51,18 +51,20 @@ class QueryRepPipe(object):
 
     def initialize(self):
         self._conn_info = []
-        port = self._router.bind_to_random_port('tcp://*')
+        port = self._frsock.bind_to_random_port('tcp://*')
         self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
-        port = self._dealer.bind_to_random_port('tcp://*')
+        port = self._tosock.bind_to_random_port('tcp://*')
         self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
 
-        self._thread = threading.Thread(target=self.mainloop)
-        self._thread.start()
+        self._rcv_thread = threading.Thread(target=self.mainloop_recv)
+        self._rcv_thread.start()
+        self._snd_thread = threading.Thread(target=self.mainloop_send)
+        self._snd_thread.start()
 
     def finalize(self):
-        self._stop_event.set()
-        self._thread.join()
-        utils.graceful_close(self._router)
+        utils.graceful_close(self._tosock)
+        utils.graceful_close(self._frsock)
+        self._context.term()
 
     @contextlib.contextmanager
     def activate(self):
@@ -72,38 +74,25 @@ class QueryRepPipe(object):
         finally:
             self.finalize()
 
-    def mainloop(self):
-        while True:
-            if self._stop_event.is_set():
-                break
-            
-            nr_done = 0
-            nr_done += self._main_do_send()
-            nr_done += self._main_do_recv()
+    def mainloop_recv(self):
+        try:
+            while True:
+                msg = loadb(self._frsock.recv(copy=False).bytes)
+                identifier, type, payload = msg
+                self._dispatcher.dispatch(type, self, identifier, payload)
+        except zmq.ContextTerminated:
+            pass
 
-    def _main_do_send(self):
-        nr_send = self._send_queue.qsize()
-        nr_done = 0
-
-        for i in range(nr_send):
-            job = self._send_queue.get()
-            rc = router_send(self._dealer, job.identifier, job.payload, flag=zmq.NOBLOCK)
-            if not rc:
-                if job.countdown > 0:
-                    self._send_queue.put(QueryMessage(job[0], job[1], job[2] - 1))
-            else:
-                nr_done += 1
-        return nr_done
-
-    def _main_do_recv(self):
-        nr_done = 0
-        for identifier, msg in utils.iter_recv(router_recv, self._router):
-            self._dispatcher.dispatch(msg['type'], self, identifier, msg)
-            nr_done += 1
-        return nr_done
+    def mainloop_send(self):
+        try:
+            while True:
+                job = self._send_queue.get()
+                self._tosock.send_multipart((job.identifier, dumpb(job.payload)), copy=False)
+        except zmq.ContextTerminated:
+            pass
 
     def send(self, identifier, msg):
-        self._send_queue.put(QueryMessage(identifier, msg, configs.QUERY_REP_COUNTDOWN))
+        self._send_queue.put(QueryMessage(identifier, msg))
 
 
 class QueryReqPipe(object):
@@ -111,19 +100,27 @@ class QueryReqPipe(object):
         self._name = name
         self._conn_info = conn_info
         self._context = None
-        self._push = None
-        self._pull = None
+        self._tosock = None
+        self._frsock = None
+
+    @property
+    def identity(self):
+        return self._name.encode('utf-8')
 
     def initialize(self):
         self._context = zmq.Context()
-        self._push = self._context.socket(zmq.PUSH)
-        self._pull = self._context.socket(zmq.PULL)
-        self._push.connect(self._conn_info[0])
-        self._pull.connect(self._conn_info[1])
+        self._tosock = self._context.socket(zmq.PUSH)
+        self._frsock = self._context.socket(zmq.DEALER)
+        self._tosock.setsockopt(zmq.IDENTITY, self.identity)
+        self._frsock.setsockopt(zmq.IDENTITY, self.identity)
+        self._tosock.set_hwm(2)
+        self._tosock.connect(self._conn_info[0])
+        self._frsock.connect(self._conn_info[1])
 
     def finalize(self):
-        utils.graceful_close(self._push)
-        utils.graceful_close(self._pull)
+        utils.graceful_close(self._frsock)
+        utils.graceful_close(self._tosock)
+        self._context.term()
 
     @contextlib.contextmanager
     def activate(self):
@@ -133,8 +130,8 @@ class QueryReqPipe(object):
         finally:
             self.finalize()
 
-    def query(self, inp):
-        req_send(self._push, inp)
-        out = req_recv(self._pull)
-        return out
-
+    def query(self, type, inp, do_recv=True):
+        self._tosock.send(dumpb((self.identity, type, inp)))
+        if do_recv:
+            out = loadb(self._frsock.recv(copy=False).bytes)
+            return out
