@@ -28,11 +28,13 @@ class A3CTrainerEnv(TrainerEnv):
     _predictors_queue = None
     _data_queue = None
 
+    owner_trainer = None
     network_maker = None
 
     player_func = None
     predictor_func = None
     on_data_func = None
+    on_stat_func = None
 
     def players_router(self):
         return self._players_router
@@ -47,8 +49,13 @@ class A3CTrainerEnv(TrainerEnv):
         def on_data(router, identifier, inp):
             return self.on_data_func(self, router, identifier, inp)
 
+        def on_stat(router, identifier, inp):
+            self.on_stat_func(self, inp)
+            router.send(identifier, {'action': 'stat_rep'})
+
         self._players_router = QueryRepPipe('a3c-player-master')
         self._players_router.dispatcher.register('data', on_data)
+        self._players_router.dispatcher.register('stat', on_stat)
         self._players_router.initialize()
         self._data_queue = queue.Queue(get_env('trainer.batch_size') * get_env('a3c.data_queue_length_factor', 16))
 
@@ -92,5 +99,6 @@ class A3CTrainer(SimpleTrainer):
     def initialize(self):
         super().initialize()
         self.env.network_maker = self.env.desc.make_network
+        self.env.owner_trainer = self
         self.env.desc.make_a3c_configs(self.env)
         self.env.initialize_all_peers()

@@ -17,6 +17,7 @@ class SummaryHistoryManager(object):
     def __init__(self):
         self._summaries = {}
         self._summaries_type = {}
+        self._summaries_last_query = {}
 
     @property
     def all_summaries(self):
@@ -35,6 +36,10 @@ class SummaryHistoryManager(object):
         self._summaries[key] = []
 
     def put_scalar(self, key, value):
+        value = float(value)
+        self._summaries.setdefault(key, []).append(value)
+
+    def put_async_scalar(self, key, value):
         value = float(value)
         self._summaries.setdefault(key, []).append(value)
 
@@ -63,10 +68,20 @@ class SummaryHistoryManager(object):
 
     def average(self, key, top_k=None):
         values = self._summaries.get(key, [])
-        if top_k is None:
-            top_k = len(values)
-        values = values[-top_k:]
-        return sum(values) / (len(values) + 1e-4)
+        type = self.get_type(key)
+        if type == 'scalar':
+            if top_k is None:
+                top_k = len(values)
+            values = values[-top_k:]
+            return sum(values) / (len(values) + 1e-4)
+        elif type == 'async_scalar':
+            last_query = self._summaries_last_query.get(key, 0)
+            values = values[last_query:]
+            self._summaries_last_query[key] = len(values)
+
+            if len(values):
+                return sum(values) / (len(values) + 1e-4)
+            return 'not_available'
 
 
 def put_summary_history(trainer, summaries):
@@ -130,6 +145,10 @@ def enable_echo_summary_scalar(trainer):
             else:
                 avg = mgr.average(k, trainer.runtime['inference_epoch_size'])
             log_strs.append('  {} = {}'.format(k, avg))
+        for k in sorted(mgr.get_all_summaries('async_scalar')):
+            avg = mgr.average(k)
+            log_strs.append('  {} = {}'.format(k, avg))
+
         if len(log_strs) > 1:
             logger.info('\n'.join(log_strs))
 
