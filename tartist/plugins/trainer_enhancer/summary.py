@@ -9,6 +9,7 @@
 from tartist.core import get_logger, register_event
 from tartist.nn.tfutils import clean_summary_name
 import collections
+import threading
 
 logger = get_logger()
 
@@ -18,6 +19,7 @@ class SummaryHistoryManager(object):
         self._summaries = {}
         self._summaries_type = {}
         self._summaries_last_query = {}
+        self._async_lock = threading.Lock()
 
     @property
     def all_summaries(self):
@@ -41,7 +43,8 @@ class SummaryHistoryManager(object):
 
     def put_async_scalar(self, key, value):
         value = float(value)
-        self._summaries.setdefault(key, []).append(value)
+        with self._async_lock:
+            self._summaries.setdefault(key, []).append(value)
 
     def put_summaries(self, summaries):
         for val in summaries.value:
@@ -67,20 +70,22 @@ class SummaryHistoryManager(object):
         self._summaries_type[key] = value
 
     def average(self, key, top_k=None):
-        values = self._summaries.get(key, [])
         type = self.get_type(key)
         if type == 'scalar':
+            values = self._summaries.get(key, [])
             if top_k is None:
                 top_k = len(values)
             values = values[-top_k:]
             return sum(values) / (len(values) + 1e-4)
         elif type == 'async_scalar':
-            last_query = self._summaries_last_query.get(key, 0)
-            values = values[last_query:]
-            self._summaries_last_query[key] = len(values)
+            with self._async_lock:
+                values = self._summaries.get(key, [])
+                last_query = self._summaries_last_query.get(key, 0)
+                values = values[last_query:]
+                self._summaries_last_query[key] = len(values)
 
-            if len(values):
-                return sum(values) / (len(values) + 1e-4)
+                if len(values):
+                    return sum(values) / (len(values) + 1e-4)
             return 'not_available'
 
 
