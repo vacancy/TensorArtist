@@ -33,6 +33,7 @@ __envs__ = {
         'env_name': 'Breakout-v0',
         'frame_history': 4,
         'limit_length': 40000,
+        'max_time': 5,
         'nr_players': 10,
         'nr_predictors': 4,
         'predictor': {
@@ -169,13 +170,28 @@ def predictor_func(i, queue, func):
 def on_data_func(env, player_router, identifier, inp_data):
     predictor_queue = env.predictors_queue
     data_queue = env.data_queue
+
     reward = inp_data['reward']
+    is_over = inp_data['is_over']
     player_history = env.players_history[identifier]
-    player_history[-1]['reward'] = reward
+    if len(player_history) > 0:
+        player_history[-1]['reward'] = reward
+        env.players_history[identifier] = parse_history(player_history, is_over)
 
     def parse_history(history, is_over):
         num = len(history)
-        
+        if is_over:
+            R = 0
+        elif num == get_env('a3c.max_time') + 1:
+            last = history[-1]
+            history = history[:-1]
+            R = last.value
+        else:
+            return history
+        for i in history[::-1]:
+            R = np.clip(i['reward'], -1, 1) + get_env('a3c.gamma') * R
+            data_queue.put_nowait([i['state'], i['action'], R])
+        return [] if is_over else [last]
 
 
     def callback(out_data):
@@ -184,11 +200,8 @@ def on_data_func(env, player_router, identifier, inp_data):
         policy = out_data['policy']
         action = random.choice(len(policy), p=policy)
         player_router.send(action)
-        
         players_history.append({'state': state, 'action': action, 'value': predict_value})
-        training_data = parse_history(player_history, is_over)
-        if training_data is not None:
-            data_queue.put_nowait(training_data)
+
 
 
 def on_stat_func(env, inp_data):
