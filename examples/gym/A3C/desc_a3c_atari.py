@@ -8,16 +8,17 @@
 #
 # This file is part of TensorArtist
 
+import collections
 import numpy as np
 import tensorflow as tf
 
 from tartist.core import get_env, get_logger
-from taritst.core.utils.cache import cached_result
+from tartist.core.utils.cache import cached_result
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.data import flow
 from tartist.nn import opr as O, optimizer, summary, train
 from tartist.nn.train.gan import GANGraphKeys
-from tartist import rl
+from tartist import rl, random
 
 
 logger = get_logger(__file__)
@@ -113,8 +114,9 @@ def make_network(env):
             cost = tf.add_n([-policy_cost, -xentropy_cost * entropy_beta, value_loss], name='loss')
 
             for v in [policy_cost, xentropy_cost, value_loss, 
-                    value.mean(name='predict_value'), advantage.rms(name='rms_advantage'), cost]:
+                      value.mean(name='predict_value'), advantage.rms(name='rms_advantage'), cost]:
                 summary.scalar(v)
+
 
 def make_player():
     p = rl.GymRLEnviron(get_env('a3c.env_name'))
@@ -123,6 +125,7 @@ def make_player():
     p = rl.HistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
     return p
 
+
 @cached_result
 def get_player_nr_actions():
     p = make_player()
@@ -130,8 +133,10 @@ def get_player_nr_actions():
     del p
     return n
 
+
 def player_func(i, requester):
     player = make_player()
+    player.restart()
     state = player.current_state
     reward = 0
     is_over = False
@@ -145,6 +150,12 @@ def player_func(i, requester):
         })
         action = response['action']
         reward, is_over = player.action(action)
+        if is_over:
+            _ = requester.query({
+                'action': 'stat',
+                'score': player.stats['score'][-1]
+            })
+            player.clear_stats()
         state = player.current_state
 
 
@@ -179,10 +190,20 @@ def on_data_func(env, player_router, identifier, inp_data):
         if training_data is not None:
             data_queue.put_nowait(training_data)
 
+
+def on_stat_func(env, inp_data):
+    if env.owner_trainer is not None:
+        mgr = env.owner_trainer.runtime.get('summary_history', None)
+        if mgr is not None:
+            mgr.set_tyype('async/score')
+            mgr.put_async_scalar('async/score', inp_data['score'])
+
+
 def make_a3c_configs(env):
     env.player_func = player_func
     env.predictor_func = predictor_func
     env.on_data_func = on_data_func
+    env.on_stat_func = on_stat_func
     env.players_history = collections.defaultdict(list)
 
 
