@@ -12,10 +12,12 @@ import numpy as np
 import tensorflow as tf
 
 from tartist.core import get_env, get_logger
+from taritst.core.utils.cache import cached_result
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.data import flow
 from tartist.nn import opr as O, optimizer, summary, train
 from tartist.nn.train.gan import GANGraphKeys
+from tartist import rl
 
 
 logger = get_logger(__file__)
@@ -26,10 +28,19 @@ __envs__ = {
         'data': get_data_directory('WellKnown/mnist')
     },
 
-    'dataset': {
+    'a3c': {
         'env_name': 'Breakout-v0',
-        'input_shape': 84,
         'frame_history': 4,
+        'limit_length': 40000,
+        'nr_players': 10,
+        'nr_predictors': 4,
+        'predictor': {
+            'outputs_name': ['value', 'policy']
+        }
+    },
+
+    'dataset': {
+        'input_shape': 84,
     },
 
     'trainer': {
@@ -50,7 +61,8 @@ __envs__ = {
 def make_network(env):
     with env.create_network() as net:
         input_shape = get_env('dataset.input_shape')
-        h, w, c = input_shape, input_shape, 12
+        frame_history = get_env('a3c.frame_history')
+        h, w, c = input_shape, input_shape, 3 * frame_history
 
         dpc = env.create_dpcontroller()
         with dpc.activate():
@@ -75,23 +87,23 @@ def make_network(env):
 
         _ = dpc.outputs['feature']
         _ = O.fc('fc0', _, 512, nonlin=O.p_relu)
-        policy = O.fc('fc_policy', _, NUM_ACTIONS)
+        policy = O.fc('fc_policy', _, get_player_nr_actions())
         value = O.fc('fc_value', _, 1)
 
         logits = O.softmax(policy, name='logits')
         value = O.squeeze(value, [1], name='value')
 
         expf = O.scalar('explore_factor', 1, trainable=False)
-        logits_t = O.softmax(policy * expf, name='logits_t')
+        policy = O.softmax(policy * expf, name='policy')
 
-        net.add_output(logits_t)
+        net.add_output(policy)
         net.add_output(value)
 
         if env.phase is env.Phase.TRAIN:
             action = O.placeholder('action', shape=(None, ), dtype=tf.int32)
             future_reward = O.placeholder('future_reward', shape=(None, ))
             log_logits = O.log(logits + 1e-6)
-            log_pi_a_given_s = (log_logits * tf.one_hot(action, NUM_ACTIONS)).sum(axis=1)
+            log_pi_a_given_s = (log_logits * tf.one_hot(action, get_player_nr_actions())).sum(axis=1)
             advantage = future_reward - O.stop_gradient(value, name='advantage')
             policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
             xentropy_cost = (-logits * log_logits).mean(name='xentropy_cost')
@@ -104,40 +116,74 @@ def make_network(env):
                     value.mean(name='predict_value'), advantage.rms(name='rms_advantage'), cost]:
                 summary.scalar(v)
 
+def make_player():
+    p = rl.GymRLEnviron(get_env('a3c.env_name'))
+    p = rl.AutoRestartProxyRLEnviron(p)
+    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
+    p = rl.HistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
+    return p
+
+@cached_result
+def get_player_nr_actions():
+    p = make_player()
+    n = p.action_space.nr_actions
+    del p
+    return n
 
 def player_func(i, requester):
     player = make_player()
     state = player.current_state
+    reward = 0
+    is_over = False
     while True:
         # must have an action field
         response = requester.query({
             'action': 'data',
-            'state': state
+            'state': state,
+            'reward': reward,
+            'is_over': is_over
         })
         action = response['action']
-        state, reward = player.action(action)
+        reward, is_over = player.action(action)
+        state = player.current_state
 
 
 def predictor_func(i, queue, func):
     while True:
-        inp, cb = queue.get()
-        out = func(inp)
-        cb(out)
+        inp, callback = queue.get()
+        out = func(state=inp['state'])
+        callback(out)
 
 
 def on_data_func(env, player_router, identifier, inp_data):
     predictor_queue = env.predictors_queue
     data_queue = env.data_queue
+    reward = inp_data['reward']
+    player_history = env.players_history[identifier]
+    player_history[-1]['reward'] = reward
+
+    def parse_history(history, is_over):
+        num = len(history)
+        
+
 
     def callback(out_data):
-        # data_queue.put_nowait(some_composed_data)
-        # player_router.send(out_data)
-
+        state = inp_data['state']
+        predict_value = out_data['value']
+        policy = out_data['policy']
+        action = random.choice(len(policy), p=policy)
+        player_router.send(action)
+        
+        players_history.append({'state': state, 'action': action, 'value': predict_value})
+        training_data = parse_history(player_history, is_over)
+        if training_data is not None:
+            data_queue.put_nowait(training_data)
 
 def make_a3c_configs(env):
     env.player_func = player_func
     env.predictor_func = predictor_func
     env.on_data_func = on_data_func
+    env.players_history = collections.defaultdict(list)
 
 
 def make_optimizer(env):

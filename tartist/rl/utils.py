@@ -39,3 +39,19 @@ class LimitLengthProxyRLEnviron(ProxyRLEnvironBase):
     def _restart(self):
         super()._restart()
         self._cnt = 0
+
+class HistoryProxyRLEnviron(ProxyRLEnvironBase):
+    def __init__(self, other, history_length):
+        super().__init__(other)
+        self._history = deque(maxlen=history_length)
+
+    def _get_current_state(self):
+        return self.__proxy.current_state
+
+    def _action(self, action):
+        return self.__proxy.action(action)
+
+    def _restart(self):
+        return self.__proxy.restart()
+
+        
