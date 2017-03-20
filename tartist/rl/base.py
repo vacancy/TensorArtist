@@ -23,15 +23,13 @@ class RLEnvironBase(object):
     def stats(self):
         return self._stats
 
-    def get_stat(self, name):
-        return self._stats[name]
-
     def append_stat(self, name, value):
         self._stats[name].append(value)
         return self
 
     def clear_stats(self):
         self._stats = collections.defaultdict(list)
+        return self
 
     @property
     def action_space(self):
@@ -94,6 +92,18 @@ class ProxyRLEnvironBase(RLEnvironBase):
     @property
     def proxy(self):
         return self.__proxy
+
+    @property
+    def stats(self):
+        return self.__proxy.stats
+
+    def append_stat(self, name, value):
+        self.__proxy.append_stat(name)
+        return self
+
+    def clear_stats(self):
+        self.__proxy.clear_stats()
+        return self
 
     def _get_action_space(self):
         return self.__proxy.action_space
