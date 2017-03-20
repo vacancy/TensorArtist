@@ -50,7 +50,8 @@ class A3CTrainerEnv(TrainerEnv):
             return self.on_data_func(self, router, identifier, inp)
 
         def on_stat(router, identifier, inp):
-            self.on_stat_func(self, inp)
+            if self.on_stat_func:
+                self.on_stat_func(self, inp)
             router.send(identifier, {'action': 'stat_rep'})
 
         self._players_router = QueryRepPipe('a3c-player-master')
