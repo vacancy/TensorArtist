@@ -64,7 +64,7 @@ __envs__ = {
         }
     },
     'inference': {
-        'runner': 1,
+        'runner': 5,
         'stuck_counter': 30
     },
     'demo': {
@@ -298,31 +298,27 @@ def make_dataflow_train(env):
 
 
 def multi_thread_inference(trainer):
-    scorer = [0]
-    score_lock  = threading.Lock()
-    def runner(scorer):
+    stat = dict(score=0, lock=threading.Lock())
+    def runner(s):
         func = trainer.env.make_func()
         func.compile(trainer.env.network.outputs)
         player = make_player(is_train=False)
         def get_action(inp, func=func):
             action = func(**{'state':[[inp]]})['logits'][0].argmax()
-            print(action)
             return action
-        print(player)
         player.play_one_episode(get_action)
         print(player.stats['score'])
-        with score_lock:
-            from IPython import embed; embed()
-            scorer[0] += player.stats['score']
-    num_runner = get_env('inference.runner', 1)
+        with s['lock']:
+            s['score'] += player.stats['score'][-1]
+    num_runner = get_env('inference.runner', 5)
     threads_pool = []
     for i in range(num_runner):
-        p = threading.Thread(target=runner, args=(scorer))
+        p = threading.Thread(target=runner, args=(stat, ))
         p.start()
         threads_pool.append(p)
     for p in threads_pool:
         p.join()
-    print('avg_score', scorer[0] / float(num_runner))
+    print('avg_score', stat['score'] / float(num_runner))
 
 
 def main_train(trainer):
@@ -338,7 +334,7 @@ def main_train(trainer):
 
     from tartist.core import register_event
     def on_epoch_after(trainer):
-        if trainer.epoch > 0 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
+        if trainer.epoch % get_env('inference.test_epochs', 2) == 0:
             multi_thread_inference(trainer)
 
     register_event(trainer, 'epoch:after', on_epoch_after)
