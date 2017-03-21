@@ -64,7 +64,8 @@ __envs__ = {
         }
     },
     'demo': {
-        'customized': True
+        'customized': True,
+        'repeat': 5
     }
 }
 
@@ -306,9 +307,12 @@ def main_train(trainer):
 
 def main_demo(env, func):
     player = make_player(is_train=False)
+    repeat_time = get_env('demo.repeat', 1)
     def get_action(inp, func=func):
-        action = func([inp])['logits'][0].argmax()
+        action = func(**{'state':[[inp]]})['logits'][0].argmax()
         return action
-
-    player.play_one_episode(get_action)
-    print(player.stats['score'])
+    for i in range(repeat_time):
+        if i != 0:
+            player.restart()
+        player.play_one_episode(get_action)
+        print(i, player.stats['score'][-1])
