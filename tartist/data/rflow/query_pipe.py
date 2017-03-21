@@ -18,11 +18,17 @@ import contextlib
 import collections
 import pickle
 import functools
+# import msgpack
+# import msgpack_numpy
+# msgpack_numpy.patch()
+# dumpb = functools.partial(msgpack.dumps, use_bin_type=True)
+# loadb = msgpack.loads
 
-QueryMessage = collections.namedtuple('QueryMessage', ['identifier', 'payload'])
+import pickle
 dumpb = pickle.dumps
 loadb = pickle.loads
 
+QueryMessage = collections.namedtuple('QueryMessage', ['identifier', 'payload'])
 
 class QueryRepPipe(object):
     def __init__(self, name, send_qsize=0):
@@ -89,7 +95,7 @@ class QueryRepPipe(object):
         try:
             while True:
                 job = self._send_queue.get()
-                self._tosock.send_multipart((job.identifier, b'', dumpb(job.payload)), copy=False)
+                self._tosock.send_multipart([job.identifier, dumpb(job.payload)], copy=False)
         except zmq.ContextTerminated:
             pass
 
@@ -115,7 +121,7 @@ class QueryReqPipe(object):
         self._frsock = self._context.socket(zmq.DEALER)
         self._tosock.setsockopt(zmq.IDENTITY, self.identity)
         self._frsock.setsockopt(zmq.IDENTITY, self.identity)
-        self._tosock.set_hwm(5)
+        self._tosock.set_hwm(2)
         self._tosock.connect(self._conn_info[0])
         self._frsock.connect(self._conn_info[1])
 
@@ -133,7 +139,8 @@ class QueryReqPipe(object):
             self.finalize()
 
     def query(self, type, inp, do_recv=True):
-        self._tosock.send(dumpb((self.identity, type, inp)))
+        self._tosock.send(dumpb((self.identity, type, inp)), copy=False)
         if do_recv:
-            out = loadb(self._frsock.recv_multipart(copy=False)[1].bytes)
+            out = loadb(self._frsock.recv(copy=False).bytes)
             return out
+
