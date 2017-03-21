@@ -54,7 +54,7 @@ __envs__ = {
         'learning_rate': 0.001,
 
         'batch_size': 128,
-        'epoch_size': 100,
+        'epoch_size': 1000,
         'nr_epochs': 200,
 
         'gamma': 0.99,
@@ -64,8 +64,8 @@ __envs__ = {
         }
     },
     'inference': {
-        'runner': 5,
-        'stuck_counter': 30
+        'runner': 20,
+        'max_repeat': 30
     },
     'demo': {
         'customized': True,
@@ -153,10 +153,12 @@ def make_player(is_train=True):
     p = rl.GymRLEnviron(get_env('a3c.env_name'))
     p = rl.MapStateProxyRLEnviron(p, resize_state)
     p = rl.GymHistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
+
+    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
     if is_train:
-        p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
+        p = rl.AutoRestartProxyRLEnviron(p)
     else:
-        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('inference.stuck_counter'), 1)
+        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('inference.max_repeat'), 1)
     return p
 
 
@@ -310,7 +312,7 @@ def multi_thread_inference(trainer):
         print(player.stats['score'])
         with s['lock']:
             s['score'] += player.stats['score'][-1]
-    num_runner = get_env('inference.runner', 5)
+    num_runner = get_env('inference.runner')
     threads_pool = []
     for i in range(num_runner):
         p = threading.Thread(target=runner, args=(stat, ))
@@ -334,7 +336,7 @@ def main_train(trainer):
 
     from tartist.core import register_event
     def on_epoch_after(trainer):
-        if trainer.epoch % get_env('inference.test_epochs', 2) == 0:
+        if trainer.epoch > 0 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
             multi_thread_inference(trainer)
 
     register_event(trainer, 'epoch:after', on_epoch_after)

@@ -33,9 +33,6 @@ class LimitLengthProxyRLEnviron(ProxyRLEnvironBase):
         self._cnt += 1
         if self._cnt >= self._limit:
             is_over = True
-        if is_over:
-            self.finish()
-            self.restart()
         return r, is_over
 
     def _restart(self):

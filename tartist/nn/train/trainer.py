@@ -130,7 +130,7 @@ class TrainerBase(object):
 
                 inp = next(self._iter_train)
                 trigger_event(self, 'iter:before', self, inp)
-                out = self._run_step(next(self._iter_train))
+                out = self._run_step(inp)
                 trigger_event(self, 'iter:after', self, inp, out)
 
                 if self.runtime['iter'] % self.epoch_size == 0:
