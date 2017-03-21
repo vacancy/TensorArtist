@@ -182,7 +182,7 @@ class SimpleTrainer(TrainerBase):
                 self._fn_train.add_extra_kwoutput('summaries', summaries)
             self._fn_train.compile({'loss': self.network.loss})
             if isinstance(self._fn_train, QueuedInputFunction):
-                self._fn_train.serve(self.data_provider(self))
+                self._fn_train.serve(self.data_provider(self.env))
 
     def _run_step(self, data):
         self._compile_fn_train()

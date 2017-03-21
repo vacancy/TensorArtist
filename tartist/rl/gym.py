@@ -85,6 +85,7 @@ class GymHistoryProxyRLEnviron(ProxyRLEnvironBase):
         self._history.clear()
         self._set_current_state(self.proxy.current_state)
 
+
 class GymPreventStuckProxyRLEnviron(ProxyRLEnvironBase):
     def __init__(self, other, max_repeat, action):
         super().__init__(other)
@@ -103,3 +104,4 @@ class GymPreventStuckProxyRLEnviron(ProxyRLEnvironBase):
     def _restart(self):
         self.proxy.restart()
         self._action_list.clear()
+
