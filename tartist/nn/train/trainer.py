@@ -8,6 +8,7 @@
 
 from .env import TrainerEnv
 from ..graph.env import Env
+from ..graph.tfqueue import QueuedInputFunction
 from ...core import trigger_event
 from ...core.utils.meta import assert_instance, notnone_property
 from ...core.utils.cache import cached_property
@@ -26,6 +27,7 @@ class TrainerBase(object):
         self._runtime = dict()
         self._stop_signal = False
         self._desc = desc
+        self._need_feed = True
 
         assert_instance(self._env, Env)
 
@@ -128,9 +130,9 @@ class TrainerBase(object):
                 if self.runtime['iter'] % self.epoch_size == 1:
                     trigger_event(self, 'epoch:before', self)
 
-                inp = next(self._iter_train)
+                inp = next(self._iter_train) if self._need_feed else {}
                 trigger_event(self, 'iter:before', self, inp)
-                out = self._run_step(next(self._iter_train))
+                out = self._run_step(inp)
                 trigger_event(self, 'iter:after', self, inp, out)
 
                 if self.runtime['iter'] % self.epoch_size == 0:
@@ -166,6 +168,8 @@ class SimpleTrainer(TrainerBase):
     def initialize(self):
         super().initialize()
         self._fn_train = self.env.make_optimizable_func(self.network.loss)
+        if isinstance(self._fn_train, QueuedInputFunction):
+            self._need_feed = False
 
     @notnone_property
     def fn_train(self):
@@ -177,6 +181,8 @@ class SimpleTrainer(TrainerBase):
             if summaries is not None:
                 self._fn_train.add_extra_kwoutput('summaries', summaries)
             self._fn_train.compile({'loss': self.network.loss})
+            if isinstance(self._fn_train, QueuedInputFunction):
+                self._fn_train.serve(self.data_provider(self))
 
     def _run_step(self, data):
         self._compile_fn_train()

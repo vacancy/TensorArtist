@@ -106,6 +106,11 @@ class Function(object):
     def output_manager(self):
         return self._output_manager
 
+    @property
+    def queue_enabled(self):
+        """see tfqueue/QueuedInputFunction"""
+        return False
+
     def add_extra_output(self, out):
         assert not self.__compiled
         self._extra_outputs.append(out)

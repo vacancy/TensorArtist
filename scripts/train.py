@@ -28,6 +28,7 @@ parser.add_argument('--continue', dest='continue_flag', default=False, action='s
 parser.add_argument('--continue-from', dest='continue_from', default=-1, type=int,
                     help='Continue from the given epoch')
 parser.add_argument('--quiet', dest='quiet', default=False, action='store_true', help='Quiet run')
+parser.add_argument('--queue', dest='use_queue', default=False, action='store_true', help='Use input queues')
 args = parser.parse_args()
 
 
@@ -42,8 +43,13 @@ def main():
     if len(devices) > 1:
         env.set_slave_devices(devices[1:])
 
-    with env.as_default():
-        desc.make_network(env)
+    with env.as_default(activate_session=False):
+        if args.use_queue:
+            logger.warn('Using input queue for training is now experimental')
+            with env.use_input_queue():
+                desc.make_network(env)
+        else:
+            desc.make_network(env)
         desc.make_optimizer(env)
 
         # debug outputs
