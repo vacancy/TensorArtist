@@ -63,6 +63,10 @@ __envs__ = {
             'log_device_placement': False
         }
     },
+    'inference': {
+        'runner': 1,
+        'stuck_counter': 30
+    },
     'demo': {
         'customized': True,
         'repeat': 5
@@ -151,6 +155,8 @@ def make_player(is_train=True):
     p = rl.GymHistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
     if is_train:
         p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
+    else:
+        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('inference.stuck_counter'), 1)
     return p
 
 
