@@ -25,7 +25,7 @@ loadb = pickle.loads
 
 
 class QueryRepPipe(object):
-    def __init__(self, name):
+    def __init__(self, name, send_qsize=0):
         self._name = name
         self._conn_info = None
 
@@ -33,11 +33,11 @@ class QueryRepPipe(object):
         self._context = zmq.Context()
         self._tosock = self._context.socket(zmq.ROUTER)
         self._frsock = self._context.socket(zmq.PULL)
-        self._tosock.set_hwm(10)
-        self._frsock.set_hwm(10)
+        self._tosock.set_hwm(5)
+        self._frsock.set_hwm(5)
         self._dispatcher = CallbackManager()
 
-        self._send_queue = queue.Queue()
+        self._send_queue = queue.Queue(maxsize=send_qsize)
         self._rcv_thread = None
         self._snd_thread = None
 
@@ -58,9 +58,9 @@ class QueryRepPipe(object):
         self._conn_info.append(utils.bind_to_random_ipc(self._frsock, self._name + '-c2s-'))
         self._conn_info.append(utils.bind_to_random_ipc(self._tosock, self._name + '-s2c-'))
 
-        self._rcv_thread = threading.Thread(target=self.mainloop_recv)
+        self._rcv_thread = threading.Thread(target=self.mainloop_recv, daemon=True)
         self._rcv_thread.start()
-        self._snd_thread = threading.Thread(target=self.mainloop_send)
+        self._snd_thread = threading.Thread(target=self.mainloop_send, daemon=True)
         self._snd_thread.start()
 
     def finalize(self):
@@ -115,7 +115,7 @@ class QueryReqPipe(object):
         self._frsock = self._context.socket(zmq.DEALER)
         self._tosock.setsockopt(zmq.IDENTITY, self.identity)
         self._frsock.setsockopt(zmq.IDENTITY, self.identity)
-        self._tosock.set_hwm(2)
+        self._tosock.set_hwm(5)
         self._tosock.connect(self._conn_info[0])
         self._frsock.connect(self._conn_info[1])
 

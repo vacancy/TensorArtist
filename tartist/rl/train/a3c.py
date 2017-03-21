@@ -56,7 +56,7 @@ class A3CTrainerEnv(TrainerEnv):
             if self.on_stat_func:
                 self.on_stat_func(self, inp)
 
-        self._players_router = QueryRepPipe('a3c-player-master')
+        self._players_router = QueryRepPipe('a3c-player-master', send_qsize=128)
         self._players_router.dispatcher.register('data', on_data)
         self._players_router.dispatcher.register('stat', on_stat)
         self._predictors_queue = queue.Queue()
@@ -84,7 +84,6 @@ class A3CTrainerEnv(TrainerEnv):
             self._predictors.append(prc)
         for p in self._predictors:
             p.start()
-
 
     def finialize_all_peers(self):
         self._players_router.finalize()
