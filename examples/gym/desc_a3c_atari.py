@@ -291,6 +291,34 @@ def make_dataflow_train(env):
     return df
 
 
+def multi_thread_inference(trainer):
+    scorer = [0]
+    score_lock  = threading.Lock()
+    def runner(scorer):
+        func = trainer.env.make_func()
+        func.compile(trainer.env.network.outputs)
+        player = make_player(is_train=False)
+        def get_action(inp, func=func):
+            action = func(**{'state':[[inp]]})['logits'][0].argmax()
+            print(action)
+            return action
+        print(player)
+        player.play_one_episode(get_action)
+        print(player.stats['score'])
+        with score_lock:
+            from IPython import embed; embed()
+            scorer[0] += player.stats['score']
+    num_runner = get_env('inference.runner', 1)
+    threads_pool = []
+    for i in range(num_runner):
+        p = threading.Thread(target=runner, args=(scorer))
+        p.start()
+        threads_pool.append(p)
+    for p in threads_pool:
+        p.join()
+    print('avg_score', scorer[0] / float(num_runner))
+
+
 def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer, extra_summary_types={'async/score': 'async_scalar'})
@@ -301,6 +329,13 @@ def main_train(trainer):
 
     from tartist.plugins.trainer_enhancer import snapshot
     snapshot.enable_snapshot_saver(trainer)
+
+    from tartist.core import register_event
+    def on_epoch_after(trainer):
+        if trainer.epoch > 0 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
+            multi_thread_inference(trainer)
+
+    register_event(trainer, 'epoch:after', on_epoch_after)
 
     trainer.train()
 
