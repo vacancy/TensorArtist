@@ -62,6 +62,9 @@ __envs__ = {
         'env_flags': {
             'log_device_placement': False
         }
+    },
+    'demo': {
+        'customized': True
     }
 }
 
@@ -76,9 +79,7 @@ def make_network(env):
         env.set_slave_devices([])
 
     with env.create_network() as net:
-        input_shape = get_env('dataset.input_shape')
-        frame_history = get_env('a3c.frame_history')
-        h, w, c = input_shape[0], input_shape[1], 3 * frame_history
+        h, w, c = get_input_shape()
 
         dpc = env.create_dpcontroller()
         with dpc.activate():
@@ -112,6 +113,7 @@ def make_network(env):
         expf = O.scalar('explore_factor', 1, trainable=False)
         policy = O.softmax(policy * expf, name='policy')
 
+        net.add_output(logits, name='logits')
         net.add_output(policy, name='policy')
         net.add_output(value, name='value')
 
@@ -139,14 +141,15 @@ def make_network(env):
         env.set_slave_devices(slave_devices)
 
 
-def make_player():
+def make_player(is_train=True):
     def resize_state(s):
         return image.resize(s, get_env('dataset.input_shape'))
 
     p = rl.GymRLEnviron(get_env('a3c.env_name'))
     p = rl.MapStateProxyRLEnviron(p, resize_state)
     p = rl.GymHistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
-    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
+    if is_train:
+        p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
     return p
 
 
@@ -300,3 +303,12 @@ def main_train(trainer):
 
     trainer.train()
 
+
+def main_demo(env, func):
+    player = make_player(is_train=False)
+    def get_action(inp, func=func):
+        action = func([inp])['logits'][0].argmax()
+        return action
+
+    player.play_one_episode(get_action)
+    print(player.stats['score'])
