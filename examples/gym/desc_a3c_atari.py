@@ -42,7 +42,7 @@ __envs__ = {
         'gamma': 0.99,
         'predictor': {
             'batch_size': 16,
-            'outputs_name': ['value', 'policy']
+            'outputs_name': ['value', 'policy_explore']
         }
     },
 
@@ -112,13 +112,13 @@ def make_network(env):
         policy = O.fc('fc_policy', _, get_player_nr_actions())
         value = O.fc('fc_value', _, 1)
 
-        logits = O.softmax(policy, name='logits')
+        expf = O.scalar('explore_factor', 1, trainable=False)
+        policy_explore = O.softmax(policy * expf, name='policy_explore')
+
+        policy = O.softmax(policy, name='policy')
         value = value.remove_axis(1, name='value')
 
-        expf = O.scalar('explore_factor', 1, trainable=False)
-        policy = O.softmax(policy * expf, name='policy')
-
-        net.add_output(logits, name='logits')
+        net.add_output(policy_explore, name='policy_explore')
         net.add_output(policy, name='policy')
         net.add_output(value, name='value')
 
@@ -126,11 +126,11 @@ def make_network(env):
             action = O.placeholder('action', shape=(None, ), dtype=tf.int64)
             future_reward = O.placeholder('future_reward', shape=(None, ))
 
-            log_logits = O.log(logits + 1e-6)
-            log_pi_a_given_s = (log_logits * tf.one_hot(action, get_player_nr_actions())).sum(axis=1)
+            log_policy = O.log(policy + 1e-6)
+            log_pi_a_given_s = (log_policy * tf.one_hot(action, get_player_nr_actions())).sum(axis=1)
             advantage = future_reward - O.zero_grad(value, name='advantage')
             policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
-            xentropy_cost = (-logits * log_logits).sum(axis=1).mean(name='xentropy_cost')
+            xentropy_cost = (-policy * log_policy).sum(axis=1).mean(name='xentropy_cost')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
             # value_loss = O.truediv(value_loss, future_reward.shape[0].astype('float32'), name='value_loss')
             entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
@@ -209,7 +209,7 @@ def predictor_func(i, router, queue, func):
         out = func(state=batched_state)
         actions = []
         for i in range(batch_size):
-            policy = out['policy'][i]
+            policy = out['policy_explore'][i]
             action = random.choice(len(policy), p=policy)
             actions.append(action)
 
@@ -306,7 +306,7 @@ def multi_thread_inference(trainer):
         func.compile(trainer.env.network.outputs)
         player = make_player(is_train=False)
         def get_action(inp, func=func):
-            action = func(**{'state':[[inp]]})['logits'][0].argmax()
+            action = func(**{'state':[[inp]]})['policy'][0].argmax()
             return action
         player.play_one_episode(get_action)
         print(player.stats['score'])
@@ -348,7 +348,7 @@ def main_demo(env, func):
     player = make_player(is_train=False)
     repeat_time = get_env('demo.repeat', 1)
     def get_action(inp, func=func):
-        action = func(**{'state':[[inp]]})['logits'][0].argmax()
+        action = func(**{'state':[[inp]]})['policy'][0].argmax()
         return action
     for i in range(repeat_time):
         if i != 0:
