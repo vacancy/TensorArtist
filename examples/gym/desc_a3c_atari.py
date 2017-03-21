@@ -222,7 +222,7 @@ def on_data_func(env, player_router, identifier, inp_data):
             env.players_history[identifier] = []
         elif num == get_env('a3c.max_time') + 1:
             history, last = history[:-1], history[-1]
-            r = last.reward
+            r = last.value
             env.players_history[identifier] = [last]
         else:
             return
