@@ -23,7 +23,7 @@ _ENV_LOCK = threading.Lock()
 def get_env_lock():
     return _ENV_LOCK
 
-__all__ = ['GymRLEnviron', 'GymHistoryProxyRLEnviron']
+__all__ = ['GymRLEnviron', 'GymHistoryProxyRLEnviron', 'GymPreventStuckProxyRLEnviron']
 
 
 class GymRLEnviron(SimpleRLEnvironBase):
@@ -84,3 +84,22 @@ class GymHistoryProxyRLEnviron(ProxyRLEnvironBase):
         self.proxy.restart()
         self._history.clear()
         self._set_current_state(self.proxy.current_state)
+
+class GymPreventStuckProxyRLEnviron(ProxyRLEnvironBase):
+    def __init__(self, other, max_repeat, action):
+        super().__init__(other)
+        self._action_list = collections.deque(maxlen=max_repeat)
+        self._insert_action = action
+
+    def _action(self, action):
+        self._action_list.append(action)
+        if self._action_list.count(self._action_list[0]) == self._action_list.maxlen:
+            action = self._insert_action
+        r, is_over = self.proxy.action(action)
+        if is_over:
+            self._action_list.clear()
+        return r, is_over
+
+    def _restart(self):
+        self.proxy.restart()
+        self._action_list.clear()

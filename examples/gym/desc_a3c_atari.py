@@ -54,7 +54,7 @@ __envs__ = {
         'learning_rate': 0.001,
 
         'batch_size': 128,
-        'epoch_size': 500,
+        'epoch_size': 1000,
         'nr_epochs': 200,
 
         'gamma': 0.99,
@@ -62,6 +62,14 @@ __envs__ = {
         'env_flags': {
             'log_device_placement': False
         }
+    },
+    'inference': {
+        'runner': 20,
+        'max_repeat': 30
+    },
+    'demo': {
+        'customized': True,
+        'repeat': 5
     }
 }
 
@@ -76,9 +84,7 @@ def make_network(env):
         env.set_slave_devices([])
 
     with env.create_network() as net:
-        input_shape = get_env('dataset.input_shape')
-        frame_history = get_env('a3c.frame_history')
-        h, w, c = input_shape[0], input_shape[1], 3 * frame_history
+        h, w, c = get_input_shape()
 
         dpc = env.create_dpcontroller()
         with dpc.activate():
@@ -112,6 +118,7 @@ def make_network(env):
         expf = O.scalar('explore_factor', 1, trainable=False)
         policy = O.softmax(policy * expf, name='policy')
 
+        net.add_output(logits, name='logits')
         net.add_output(policy, name='policy')
         net.add_output(value, name='value')
 
@@ -139,14 +146,19 @@ def make_network(env):
         env.set_slave_devices(slave_devices)
 
 
-def make_player():
+def make_player(is_train=True):
     def resize_state(s):
         return image.resize(s, get_env('dataset.input_shape'))
 
     p = rl.GymRLEnviron(get_env('a3c.env_name'))
     p = rl.MapStateProxyRLEnviron(p, resize_state)
     p = rl.GymHistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
+
     p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
+    if is_train:
+        p = rl.AutoRestartProxyRLEnviron(p)
+    else:
+        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('inference.max_repeat'), 1)
     return p
 
 
@@ -185,27 +197,24 @@ def player_func(i, requester):
             state = player.current_state
 
 
-def predictor_func(i, router, predictor_queue, func):
+def predictor_func(i, router, queue, func):
     batch_size = get_env('a3c.predictor.batch_size')
-    batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
-
     while True:
+        batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
         callbacks = []
-        nr_total = 0
         for i in range(batch_size):
-            try:
-                identifier, inp, callback = predictor_queue.get_nowait()
-                batched_state[i] = inp[0]
-                callbacks.append(callback)
-                nr_total += 1
-            except queue.Empty:
-                break
-
-        out = func(state=batched_state[:nr_total])
-        for i in range(nr_total):
+            identifier, inp, callback = queue.get()
+            batched_state[i] = inp[0]
+            callbacks.append(callback)
+        out = func(state=batched_state)
+        actions = []
+        for i in range(batch_size):
             policy = out['policy'][i]
             action = random.choice(len(policy), p=policy)
-            callbacks[i](action, out['value'][i])
+            actions.append(action)
+
+        for i in range(batch_size):
+            callbacks[i](actions[i], out['value'][i])
 
 
 PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward'))
@@ -225,7 +234,7 @@ def on_data_func(env, player_router, identifier, inp_data):
             env.players_history[identifier] = []
         elif num == get_env('a3c.max_time') + 1:
             history, last = history[:-1], history[-1]
-            r = last.reward
+            r = last.value
             env.players_history[identifier] = [last]
         else:
             return
@@ -233,18 +242,21 @@ def on_data_func(env, player_router, identifier, inp_data):
         gamma = get_env('a3c.gamma')
         for i in history[::-1]:
             r = np.clip(i.reward, -1, 1) + gamma * r
-            data_queue.put_nowait({'state': i.state, 'action': i.action, 'future_reward': r})
+            try:
+                data_queue.put_nowait({'state': i.state, 'action': i.action, 'future_reward': r})
+            except queue.Full:
+                pass
 
     def callback(action, predict_value):
         player_router.send(identifier, action)
         player_history.append(PlayerHistory(state, action, predict_value, None))
 
+    predictor_queue.put((identifier, inp_data, callback))
+
     if len(player_history) > 0:
         last = player_history[-1]
         player_history[-1] = PlayerHistory(last[0], last[1], last[2], reward)
         parse_history(player_history, is_over)
-
-    predictor_queue.put((identifier, inp_data, callback))
 
 
 def on_stat_func(env, inp_data):
@@ -287,6 +299,30 @@ def make_dataflow_train(env):
     return df
 
 
+def multi_thread_inference(trainer):
+    stat = dict(score=0, lock=threading.Lock())
+    def runner(s):
+        func = trainer.env.make_func()
+        func.compile(trainer.env.network.outputs)
+        player = make_player(is_train=False)
+        def get_action(inp, func=func):
+            action = func(**{'state':[[inp]]})['logits'][0].argmax()
+            return action
+        player.play_one_episode(get_action)
+        print(player.stats['score'])
+        with s['lock']:
+            s['score'] += player.stats['score'][-1]
+    num_runner = get_env('inference.runner')
+    threads_pool = []
+    for i in range(num_runner):
+        p = threading.Thread(target=runner, args=(stat, ))
+        p.start()
+        threads_pool.append(p)
+    for p in threads_pool:
+        p.join()
+    print('avg_score', stat['score'] / float(num_runner))
+
+
 def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer, extra_summary_types={'async/score': 'async_scalar'})
@@ -298,5 +334,24 @@ def main_train(trainer):
     from tartist.plugins.trainer_enhancer import snapshot
     snapshot.enable_snapshot_saver(trainer)
 
+    from tartist.core import register_event
+    def on_epoch_after(trainer):
+        if trainer.epoch > 0 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
+            multi_thread_inference(trainer)
+
+    register_event(trainer, 'epoch:after', on_epoch_after)
+
     trainer.train()
 
+
+def main_demo(env, func):
+    player = make_player(is_train=False)
+    repeat_time = get_env('demo.repeat', 1)
+    def get_action(inp, func=func):
+        action = func(**{'state':[[inp]]})['logits'][0].argmax()
+        return action
+    for i in range(repeat_time):
+        if i != 0:
+            player.restart()
+        player.play_one_episode(get_action)
+        print(i, player.stats['score'][-1])
