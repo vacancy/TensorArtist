@@ -54,7 +54,7 @@ __envs__ = {
         'learning_rate': 0.001,
 
         'batch_size': 128,
-        'epoch_size': 100,
+        'epoch_size': 500,
         'nr_epochs': 200,
 
         'gamma': 0.99,
@@ -185,24 +185,27 @@ def player_func(i, requester):
             state = player.current_state
 
 
-def predictor_func(i, router, queue, func):
+def predictor_func(i, router, predictor_queue, func):
     batch_size = get_env('a3c.predictor.batch_size')
+    batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
+
     while True:
-        batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
         callbacks = []
+        nr_total = 0
         for i in range(batch_size):
-            identifier, inp, callback = queue.get()
-            batched_state[i] = inp[0]
-            callbacks.append(callback)
-        out = func(state=batched_state)
-        actions = []
-        for i in range(batch_size):
+            try:
+                identifier, inp, callback = predictor_queue.get_nowait()
+                batched_state[i] = inp[0]
+                callbacks.append(callback)
+                nr_total += 1
+            except queue.Empty:
+                break
+
+        out = func(state=batched_state[:nr_total])
+        for i in range(nr_total):
             policy = out['policy'][i]
             action = random.choice(len(policy), p=policy)
-            actions.append(action)
-
-        for i in range(batch_size):
-            callbacks[i](actions[i], out['value'][i])
+            callbacks[i](action, out['value'][i])
 
 
 PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward'))
@@ -230,21 +233,18 @@ def on_data_func(env, player_router, identifier, inp_data):
         gamma = get_env('a3c.gamma')
         for i in history[::-1]:
             r = np.clip(i.reward, -1, 1) + gamma * r
-            try:
-                data_queue.put_nowait({'state': i.state, 'action': i.action, 'future_reward': r})
-            except queue.Full:
-                pass
+            data_queue.put_nowait({'state': i.state, 'action': i.action, 'future_reward': r})
 
     def callback(action, predict_value):
         player_router.send(identifier, action)
         player_history.append(PlayerHistory(state, action, predict_value, None))
 
-    predictor_queue.put((identifier, inp_data, callback))
-
     if len(player_history) > 0:
         last = player_history[-1]
         player_history[-1] = PlayerHistory(last[0], last[1], last[2], reward)
         parse_history(player_history, is_over)
+
+    predictor_queue.put((identifier, inp_data, callback))
 
 
 def on_stat_func(env, inp_data):
