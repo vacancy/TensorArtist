@@ -50,14 +50,14 @@ __envs__ = {
 
         'predictor': {
             'batch_size': 16,
-            'outputs_name': ['value', 'policy']
+            'outputs_name': ['value', 'policy_explore']
         },
         'inference': {
             'nr_players': 20,
             'max_stuck_repeat': 30
         },
         'demo': {
-            'repeat': 5
+            'nr_plays': 5
         }
     },
 
@@ -122,13 +122,13 @@ def make_network(env):
         policy = O.fc('fc_policy', _, get_player_nr_actions())
         value = O.fc('fc_value', _, 1)
 
-        logits = O.softmax(policy, name='logits')
+        expf = O.scalar('explore_factor', 1, trainable=False)
+        policy_explore = O.softmax(policy * expf, name='policy_explore')
+
+        policy = O.softmax(policy, name='policy')
         value = value.remove_axis(1, name='value')
 
-        expf = O.scalar('explore_factor', 1, trainable=False)
-        policy = O.softmax(policy * expf, name='policy')
-
-        net.add_output(logits, name='logits')
+        net.add_output(policy_explore, name='policy_explore')
         net.add_output(policy, name='policy')
         net.add_output(value, name='value')
 
@@ -136,11 +136,11 @@ def make_network(env):
             action = O.placeholder('action', shape=(None, ), dtype=tf.int64)
             future_reward = O.placeholder('future_reward', shape=(None, ))
 
-            log_logits = O.log(logits + 1e-6)
-            log_pi_a_given_s = (log_logits * tf.one_hot(action, get_player_nr_actions())).sum(axis=1)
+            log_policy = O.log(policy + 1e-6)
+            log_pi_a_given_s = (log_policy * tf.one_hot(action, get_player_nr_actions())).sum(axis=1)
             advantage = future_reward - O.zero_grad(value, name='advantage')
             policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
-            xentropy_cost = (-logits * log_logits).sum(axis=1).mean(name='xentropy_cost')
+            xentropy_cost = (-policy * log_policy).sum(axis=1).mean(name='xentropy_cost')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
             # value_loss = O.truediv(value_loss, future_reward.shape[0].astype('float32'), name='value_loss')
             entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
@@ -148,7 +148,7 @@ def make_network(env):
 
             net.set_loss(loss)
 
-            for v in [policy_cost, xentropy_cost, value_loss, 
+            for v in [policy_cost, xentropy_cost, value_loss,
                       value.mean(name='predict_value'), advantage.rms(name='rms_advantage'), loss]:
                 summary.scalar(v)
 
@@ -262,11 +262,14 @@ def _predictor_func(pid, router, task_queue, func, is_inference=False):
             batched_state[i] = inp[0]
             callbacks.append(callback)
             nr_total += 1
-        
+
         out = func(state=batched_state)
         for i in range(nr_total):
-            policy = out['policy'][i]
+            policy = out['policy_explore'][i]
             if is_inference:
+                # during inference, policy should be out['policy'][i]
+                # but these two are equivalent under argmax operation
+                # and we can only compile 'policy_explore' in output
                 action = policy.argmax()
             else:
                 action = random.choice(len(policy), p=policy)
@@ -285,7 +288,7 @@ def make_a3c_configs(env):
     env.player_master.predictor_func = predictor_func
     env.player_master.on_data_func = on_data_func
     env.player_master.on_stat_func = on_stat_func
-   
+
     # currently we don't use multi-proc inference, so these settings are not used at all
     env.inference_player_master.player_func = inference_player_func
     env.inference_player_master.predictor_func = inference_predictor_func
@@ -299,7 +302,7 @@ def make_a3c_configs(env):
 def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer, extra_summary_types={
-        'async/score': 'async_scalar', 
+        'async/score': 'async_scalar',
         'async/inference/score': 'async_scalar'
     })
     summary.enable_echo_summary_scalar(trainer, summary_spec={
@@ -329,10 +332,10 @@ def main_train(trainer):
 
 def main_demo(env, func):
     player = make_player(is_train=False)
-    repeat_time = get_env('demo.repeat', 1)
+    repeat_time = get_env('a3c.demo.nr_plays', 1)
 
     def get_action(inp, func=func):
-        action = func(**{'state':[[inp]]})['logits'][0].argmax()
+        action = func(**{'state':[[inp]]})['policy'][0].argmax()
         return action
 
     for i in range(repeat_time):
