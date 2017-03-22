@@ -14,6 +14,7 @@ Credit to : https://github.com/ppwwyyxx/tensorpack/tree/master/examples/A3C-Gym"
 import time
 import queue
 import threading
+import functools
 import collections
 import numpy as np
 import tensorflow as tf
@@ -226,33 +227,11 @@ def player_func(i, requester):
             state = player.current_state
 
 
-def predictor_func(i, router, queue, func):
-    batch_size = get_env('a3c.predictor.batch_size')
-    batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
-    while True:
-        is_inference = []
-        callbacks = []
-        for i in range(batch_size):
-            identifier, inp, callback = queue.get()
-            batched_state[i] = inp[0]
-            is_inference.append(inp[1] is not None)
-            callbacks.append(callback)
-
-        out = func(state=batched_state)
-        for i in range(batch_size):
-            policy = out['policy'][i]
-            if is_inference[i]:
-                action = policy.argmax()
-            else:
-                action = random.choice(len(policy), p=policy)
-            callbacks[i](action, out['value'][i])
-
-
 def inference_player_func(i, requester):
     player = make_player(is_train=False)
 
     def get_action(o):
-        action = requester.query('data', (o, None, None))
+        action = requester.query('data', (o, ))
         return action
 
     with requester.activate():
@@ -261,15 +240,53 @@ def inference_player_func(i, requester):
         requester.query('stat', {'async/inference/score': score}, do_recv=False)
 
 
-from common_a3c import on_data_func, on_stat_func
+def _predictor_func(i, router, task_queue, func, is_inference=False):
+    batch_size = get_env('a3c.predictor.batch_size')
+    batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
+
+    while True:
+        callbacks = []
+        nr_total = 0
+        for i in range(batch_size):
+            if i == 0:
+                identifier, inp, callback = task_queue.get()
+            else:
+                try:
+                    identifier, inp, callback = task_queue.get_nowait()
+                except queue.Empty:
+                    break
+
+            batched_state[i] = inp[0]
+            callbacks.append(callback)
+
+        out = func(state=batched_state)
+        for i in range(batch_size):
+            policy = out['policy'][i]
+            if is_inference:
+                action = policy.argmax()
+            else:
+                action = random.choice(len(policy), p=policy)
+
+            callbacks[i](action, out['value'][i])
+
+
+predictor_func = functools.partial(_predictor_func, is_inference=False)
+inference_predictor_func = functools.partial(_predictor_func, is_inference=True)
 
 
 def make_a3c_configs(env):
-    env.player_func = player_func
-    env.predictor_func = predictor_func
-    env.inference_player_func = inference_player_func
-    env.on_data_func = on_data_func
-    env.on_stat_func = on_stat_func
+    from common_a3c import on_data_func, on_stat_func, inference_on_data_func, inference_on_stat_func
+
+    env.player_master.player_func = player_func
+    env.player_master.predictor_func = predictor_func
+    env.player_master.on_data_func = on_data_func
+    env.player_master.on_stat_func = on_stat_func
+
+    env.inference_player_master.player_func = inference_player_func
+    env.inference_player_master.predictor_func = inference_predictor_func
+    env.inference_player_master.on_data_func = inference_on_data_func
+    env.inference_player_master.on_stat_func = inference_on_stat_func
+
     env.players_history = collections.defaultdict(list)
     env.players_history_lock = threading.Lock()
 
