@@ -11,6 +11,7 @@ import tensorflow as tf
 
 
 class TArtGraphKeys:
+    PLACEHOLDERS = 'placeholders'
     TART_OPERATORS = 'tart_operators'
     INFERENCE_SUMMARIES = 'inference_summaries'
     SCALAR_VARIABLES = 'scalar_variables'

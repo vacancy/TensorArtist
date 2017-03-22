@@ -12,6 +12,7 @@ import tensorflow as tf
 
 from .node import as_varnode
 from .function import Function
+from .tfqueue import InputQueueDesc, QueuedInputFunction
 from ..tfutils import clean_name
 from ...core.logger import get_logger
 from ...core.utils.defaults import defaults_manager
@@ -68,6 +69,8 @@ class Env(object):
         compute_update_batch_normalization = _on_train_flag('update_batch_normalization')
         compute_enable_dropout = _on_train_flag('enable_dropout')
 
+        input_queue_size = 50
+
     class DataParallelFlag(AttrObject):
         pass
 
@@ -75,14 +78,15 @@ class Env(object):
         TRAIN = 1
         TEST = 2
 
-    def __init__(self, phase=Phase.TEST, master_dev='/gpu:0', flags=None, dpflags=None, graph=None, session=None):
+    def __init__(self, phase=Phase.TEST, master_dev='/gpu:0', slave_devs=None, flags=None, dpflags=None,
+                 graph=None, session=None):
         self.__phase = phase
         self.__session = None
         self.__network = None
         self.__current_dpc = None
 
         self._master_device = master_dev
-        self._slave_devices = []
+        self._slave_devices = slave_devs or []
 
         self._flags = flags or type(self).SessionFlag()
         self._dpflags = dpflags or type(self).DataParallelFlag()
@@ -91,6 +95,9 @@ class Env(object):
 
         if session is not None:
             self.__session = session
+
+        self._use_input_queue = False
+        self._input_queue_desc = None
 
     @notnone_property
     def network(self):
@@ -125,15 +132,18 @@ class Env(object):
     @property
     def session(self):
         if self.__session is None:
-            config = tf.ConfigProto()
-            config.log_device_placement = self.flags.log_device_placement
-            config.allow_soft_placement = self.flags.allow_soft_placement
-            config.gpu_options.per_process_gpu_memory_fraction = self.flags.gpu_mem_fraction
-            config.gpu_options.allocator_type = self.flags.gpu_allocator_type
-            config.gpu_options.allow_growth = self.flags.gpu_allow_growth
-
-            self.__session = tf.Session(config=config)
+            self._make_session()
         return self.__session
+
+    def _make_session(self):
+        config = tf.ConfigProto()
+        config.log_device_placement = self.flags.log_device_placement
+        config.allow_soft_placement = self.flags.allow_soft_placement
+        config.gpu_options.per_process_gpu_memory_fraction = self.flags.gpu_mem_fraction
+        config.gpu_options.allocator_type = self.flags.gpu_allocator_type
+        config.gpu_options.allow_growth = self.flags.gpu_allow_growth
+
+        self.__session = tf.Session(graph=self._graph, config=config)
 
     @property
     def flags(self):
@@ -176,6 +186,22 @@ class Env(object):
     def select_device(self, devid):
         return select_device(devid, self)
 
+    @contextlib.contextmanager
+    def use_input_queue(self):
+        assert not self._use_input_queue, 'use_input_queue can only be activated once'
+        yield
+        self._use_input_queue = True
+        self._input_queue_desc = InputQueueDesc(self)
+        self._input_queue_desc.setup(self._graph)
+
+        # session will be rebuild
+        if self.__session is not None:
+            self._make_session()
+
+    @notnone_property
+    def input_queue_desc(self):
+        return self._input_queue_desc
+
     @defaults_manager.wrap_custom_as_default
     def as_default(self, *, activate_session=True):
         with self._graph.as_default():
@@ -187,13 +213,31 @@ class Env(object):
                 yield
 
     def make_func(self):
-        f = Function(self)
+        if self._use_input_queue:
+            f = QueuedInputFunction(self)
+        else:
+            f = Function(self)
         f.extend_extra_kw_modifiers(self._dpsplitters)
         return f
 
     def initialize_all_variables(self):
         sess = self.session
         sess.run(tf.variables_initializer(self._graph.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)))
+
+    def add_queue_runner(self, qr):
+        with self.graph.as_default():
+            tf.train.add_queue_runner(qr)
+
+    def initialize_all_queues(self):
+        sess = self.session
+        with self.graph.as_default():
+            tf.train.start_queue_runners(sess=sess)
+
+    def clone(self, share_graph=True, share_session=True):
+        graph = self.graph if share_graph else None
+        sess = self.session if share_session else None
+        return type(self)(self.phase, master_dev=self.master_device, slave_devs=self.slave_devices,
+                          flags=self.flags, dpflags=self.dpflags, graph=graph, session=sess)
 
     def run(self, fetches, feed_dict=None, options=None, run_metadata=None):
         return self.session.run(fetches, feed_dict=feed_dict, options=options, run_metadata=run_metadata)

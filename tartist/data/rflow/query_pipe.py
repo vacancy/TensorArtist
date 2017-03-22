@@ -18,14 +18,20 @@ import contextlib
 import collections
 import pickle
 import functools
+# import msgpack
+# import msgpack_numpy
+# msgpack_numpy.patch()
+# dumpb = functools.partial(msgpack.dumps, use_bin_type=True)
+# loadb = msgpack.loads
 
-QueryMessage = collections.namedtuple('QueryMessage', ['identifier', 'payload'])
+import pickle
 dumpb = pickle.dumps
 loadb = pickle.loads
 
+QueryMessage = collections.namedtuple('QueryMessage', ['identifier', 'payload'])
 
 class QueryRepPipe(object):
-    def __init__(self, name):
+    def __init__(self, name, send_qsize=0, mode='ipc'):
         self._name = name
         self._conn_info = None
 
@@ -37,9 +43,11 @@ class QueryRepPipe(object):
         self._frsock.set_hwm(10)
         self._dispatcher = CallbackManager()
 
-        self._send_queue = queue.Queue()
+        self._send_queue = queue.Queue(maxsize=send_qsize)
         self._rcv_thread = None
         self._snd_thread = None
+        self._mode = mode
+        assert mode in ('ipc', 'tcp')
 
     @property
     def dispatcher(self):
@@ -51,16 +59,18 @@ class QueryRepPipe(object):
 
     def initialize(self):
         self._conn_info = []
-        # port = self._frsock.bind_to_random_port('tcp://*')
-        # self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
-        # port = self._tosock.bind_to_random_port('tcp://*')
-        # self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
-        self._conn_info.append(utils.bind_to_random_ipc(self._frsock, self._name + '-c2s-'))
-        self._conn_info.append(utils.bind_to_random_ipc(self._tosock, self._name + '-s2c-'))
+        if self._mode == 'tcp':
+            port = self._frsock.bind_to_random_port('tcp://*')
+            self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
+            port = self._tosock.bind_to_random_port('tcp://*')
+            self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
+        elif self._mode == 'ipc':
+            self._conn_info.append(utils.bind_to_random_ipc(self._frsock, self._name + '-c2s-'))
+            self._conn_info.append(utils.bind_to_random_ipc(self._tosock, self._name + '-s2c-'))
 
-        self._rcv_thread = threading.Thread(target=self.mainloop_recv)
+        self._rcv_thread = threading.Thread(target=self.mainloop_recv, daemon=True)
         self._rcv_thread.start()
-        self._snd_thread = threading.Thread(target=self.mainloop_send)
+        self._snd_thread = threading.Thread(target=self.mainloop_send, daemon=True)
         self._snd_thread.start()
 
     def finalize(self):
@@ -89,7 +99,7 @@ class QueryRepPipe(object):
         try:
             while True:
                 job = self._send_queue.get()
-                self._tosock.send_multipart((job.identifier, b'', dumpb(job.payload)), copy=False)
+                self._tosock.send_multipart([job.identifier, dumpb(job.payload)], copy=False)
         except zmq.ContextTerminated:
             pass
 
@@ -133,7 +143,8 @@ class QueryReqPipe(object):
             self.finalize()
 
     def query(self, type, inp, do_recv=True):
-        self._tosock.send(dumpb((self.identity, type, inp)))
+        self._tosock.send(dumpb((self.identity, type, inp)), copy=False)
         if do_recv:
-            out = loadb(self._frsock.recv_multipart(copy=False)[1].bytes)
+            out = loadb(self._frsock.recv(copy=False).bytes)
             return out
+

@@ -21,11 +21,13 @@ def enable_inference_runner(trainer, dataflow, interval=1,
     extra_outputs = extra_outputs or {}
 
     def compile_fn_inference(trainer):
-        trainer._fn_inference = trainer.env.make_func()
+        trainer._fn_inference = func = trainer.env.make_func()
         summaries = trainer.network.get_merged_summaries(collection_key)
         if summaries is not None:
-            trainer._fn_inference.add_extra_kwoutput('summaries', summaries)
-        trainer._fn_inference.compile(extra_outputs)
+            func.add_extra_kwoutput('summaries', summaries)
+        func.compile(extra_outputs)
+        if func.queue_enabled:
+            func.disable_queue()
 
     def run_step(trainer):
         epoch = trainer.epoch

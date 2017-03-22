@@ -24,6 +24,7 @@ __all__ = ['placeholder', 'variable', 'scalar', 'constant', 'ensure_variable',
 def placeholder(name, shape=None, dtype=__default_dtype__, device=None):
     with device_context(device):
         var = as_varnode(tf.placeholder(name=name, shape=shape, dtype=dtype))
+        tf.add_to_collection(TArtGraphKeys.PLACEHOLDERS, var)
         return var
 
 

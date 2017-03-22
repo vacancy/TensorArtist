@@ -193,9 +193,10 @@ class Controller(object):
     def _main(self):
         wait = 0
         while True:
-            socks = dict(self._poller.poll(wait))
-            if self._stop_event.is_set():
+            if self._stop_event.wait(wait / 1000):
                 break
+
+            socks = dict(self._poller.poll(0))
 
             nr_done = 0
             nr_done += self._main_do_control_recv(socks)
