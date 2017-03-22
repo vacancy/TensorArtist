@@ -310,7 +310,7 @@ def main_train(trainer):
     from common_a3c import main_inference_play
 
     def on_epoch_after(trainer):
-        if trainer.epoch > 0 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
+        if trainer.epoch > -1 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
             main_inference_play(trainer)
 
     # this one should run before monitor
