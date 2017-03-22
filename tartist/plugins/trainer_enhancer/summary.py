@@ -75,7 +75,7 @@ class SummaryHistoryManager(object):
         if meth == 'avg':
             return sum(values) / (len(values) + 1e-4)
         elif meth == 'max':
-            return max(*values)
+            return max(values)
         elif meth == 'sum':
             return sum(values)
 
