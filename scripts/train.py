@@ -10,6 +10,7 @@ from tartist.core import get_env, get_logger
 from tartist.core.utils.cli import load_desc, parse_devices
 from tartist.nn import Env, train
 
+import os
 import argparse
 import tensorflow as tf
 
@@ -34,6 +35,11 @@ args = parser.parse_args()
 
 def main():
     desc = load_desc(args.desc)
+
+    if get_env('dir.root'):
+        from tartist.core.logger import set_output_file
+        set_output_file(os.path.join(get_env('dir.root'), 'train.log'))
+
     devices = parse_devices(args.devices)
     assert len(devices) > 0, 'Must provide at least one devices'
 
