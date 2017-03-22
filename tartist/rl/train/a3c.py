@@ -126,7 +126,7 @@ class A3CTrainerEnv(TrainerEnv):
         self._player_master.start(nr_players, daemon=True)
         self._inference_player_master.initialize()
 
-    def finialize_all_peers(self):
+    def finalize_all_peers(self):
         self.player_master.finalize()
         self.inference_player_master.finalize()
 
