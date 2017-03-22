@@ -31,7 +31,7 @@ loadb = pickle.loads
 QueryMessage = collections.namedtuple('QueryMessage', ['identifier', 'payload'])
 
 class QueryRepPipe(object):
-    def __init__(self, name, send_qsize=0):
+    def __init__(self, name, send_qsize=0, mode='ipc'):
         self._name = name
         self._conn_info = None
 
@@ -46,6 +46,8 @@ class QueryRepPipe(object):
         self._send_queue = queue.Queue(maxsize=send_qsize)
         self._rcv_thread = None
         self._snd_thread = None
+        self._mode = mode
+        assert mode in ('ipc', 'tcp')
 
     @property
     def dispatcher(self):
@@ -57,12 +59,14 @@ class QueryRepPipe(object):
 
     def initialize(self):
         self._conn_info = []
-        # port = self._frsock.bind_to_random_port('tcp://*')
-        # self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
-        # port = self._tosock.bind_to_random_port('tcp://*')
-        # self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
-        self._conn_info.append(utils.bind_to_random_ipc(self._frsock, self._name + '-c2s-'))
-        self._conn_info.append(utils.bind_to_random_ipc(self._tosock, self._name + '-s2c-'))
+        if self._mode == 'tcp':
+            port = self._frsock.bind_to_random_port('tcp://*')
+            self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
+            port = self._tosock.bind_to_random_port('tcp://*')
+            self._conn_info.append('tcp://{}:{}'.format(utils.get_addr(), port))
+        elif self._mode == 'ipc':
+            self._conn_info.append(utils.bind_to_random_ipc(self._frsock, self._name + '-c2s-'))
+            self._conn_info.append(utils.bind_to_random_ipc(self._tosock, self._name + '-s2c-'))
 
         self._rcv_thread = threading.Thread(target=self.mainloop_recv, daemon=True)
         self._rcv_thread.start()

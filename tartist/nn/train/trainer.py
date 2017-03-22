@@ -175,6 +175,7 @@ class SimpleTrainer(TrainerBase):
     def fn_train(self):
         return self._fn_train
 
+
     def _compile_fn_train(self):
         if not self._fn_train.compiled:
             summaries = self.network.merged_summaries

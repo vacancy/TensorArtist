@@ -84,7 +84,7 @@ def pull_pyobj(sock, flag=zmq.NOBLOCK):
 
 
 def bind_to_random_ipc(sock, name):
-    name = name + uid()[:8]
+    name = name + uuid.uuid4().hex[:8]
     conn = 'ipc:///tmp/{}'.format(name)
     sock.bind(conn)
     return conn

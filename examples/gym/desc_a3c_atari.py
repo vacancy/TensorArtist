@@ -40,17 +40,21 @@ __envs__ = {
         'env_name': 'Breakout-v0',
         'frame_history': 4,
         'limit_length': 40000,
-        'max_time': 5,
+
+        # gamma and acc_step in future_reward
+        'gamma': 0.99,
+        'acc_step': 5,
+
         'nr_players': 50,
         'nr_predictors': 2,
-        'gamma': 0.99,
+
         'predictor': {
             'batch_size': 16,
             'outputs_name': ['value', 'policy']
         },
         'inference': {
             'nr_players': 20,
-            'max_repeat': 30
+            'max_stuck_repeat': 30
         },
         'demo': {
             'repeat': 5
@@ -164,7 +168,7 @@ def make_player(is_train=True):
     if is_train:
         p = rl.AutoRestartProxyRLEnviron(p)
     else:
-        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('inference.max_repeat'), 1)
+        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('inference.max_stuck_repeat'), 1)
     return p
 
 
@@ -208,7 +212,7 @@ def get_input_shape():
     return h, w, c
 
 
-def player_func(i, requester):
+def player_func(pid, requester):
     player = make_player()
     player.restart()
     state = player.current_state
@@ -216,7 +220,6 @@ def player_func(i, requester):
     is_over = False
     with requester.activate():
         while True:
-            # must have an action field
             action = requester.query('data', (state, reward, is_over))
             reward, is_over = player.action(action)
 
@@ -227,7 +230,7 @@ def player_func(i, requester):
             state = player.current_state
 
 
-def inference_player_func(i, requester):
+def inference_player_func(pid, requester):
     player = make_player(is_train=False)
 
     def get_action(o):
@@ -240,7 +243,7 @@ def inference_player_func(i, requester):
         requester.query('stat', {'async/inference/score': score}, do_recv=False)
 
 
-def _predictor_func(i, router, task_queue, func, is_inference=False):
+def _predictor_func(pid, router, task_queue, func, is_inference=False):
     batch_size = get_env('a3c.predictor.batch_size')
     batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
 
@@ -259,7 +262,7 @@ def _predictor_func(i, router, task_queue, func, is_inference=False):
             batched_state[i] = inp[0]
             callbacks.append(callback)
             nr_total += 1
-
+        
         out = func(state=batched_state)
         for i in range(nr_total):
             policy = out['policy'][i]
@@ -294,7 +297,10 @@ def make_a3c_configs(env):
 
 def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary
-    summary.enable_summary_history(trainer, extra_summary_types={'async/score': 'async_scalar'})
+    summary.enable_summary_history(trainer, extra_summary_types={
+        'async/score': 'async_scalar', 
+        'async/inference/score': 'async_scalar'
+    })
     summary.enable_echo_summary_scalar(trainer, summary_spec={
         'async/score': ['avg', 'max'],
         'async/inference/score': ['avg', 'max']
@@ -310,8 +316,8 @@ def main_train(trainer):
     from common_a3c import main_inference_play
 
     def on_epoch_after(trainer):
-        if trainer.epoch > -1 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
-            main_inference_play(trainer)
+        if trainer.epoch > 0 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
+            main_inference_play(trainer, epoch=trainer.epoch)
 
     # this one should run before monitor
     register_event(trainer, 'epoch:after', on_epoch_after, priority=5)

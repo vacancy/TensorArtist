@@ -36,7 +36,7 @@ def on_data_func(env, identifier, inp_data):
         if is_over:
             r = 0
             env.players_history[identifier] = []
-        elif num == get_env('a3c.max_time') + 1:
+        elif num == get_env('a3c.acc_step') + 1:
             history, last = history[:-1], history[-1]
             r = last.value
             env.players_history[identifier] = [last]
@@ -80,6 +80,8 @@ def on_stat_func(env, identifier, inp_data):
 inference_on_stat_func = on_stat_func
 
 
-def main_inference_play(trainer):
+def main_inference_play(trainer, epoch):
     nr_players = get_env('a3c.inference.nr_players')
-    trainer.env.inference_player_master.start(nr_players, daemon=False)
+    name = 'a3c-inference-player-epoch-{}'.format(epoch)
+    trainer.env.inference_player_master.start(nr_players, name=name, daemon=False)
+

@@ -59,10 +59,11 @@ class A3CMaster(object):
         for p in self._predictors:
             p.start()
 
-    def start(self, nr_players, daemon=True):
+    def start(self, nr_players, name=None, daemon=True):
+        name = name or self.name
         self._players = []
         for i in range(nr_players):
-            req = QueryReqPipe(self.name + ('-%d' % i), self.router.conn_info)
+            req = QueryReqPipe(name + ('-%d' % i), self.router.conn_info)
             prc = EnvBox(target=self.player_func, args=(i, req), daemon=daemon)
             self._players.append(prc)
         for p in self._players:
@@ -158,3 +159,4 @@ class A3CTrainer(SimpleTrainer):
     def finalize(self):
         self.env.finalize_all_peers()
         super().finalize()
+
