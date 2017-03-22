@@ -50,10 +50,15 @@ class RLEnvironBase(object):
 
     def play_one_episode(self, func):
         self.restart()
+        cnt = 0
         while True:
+            cnt += 1
             state = self.current_state
             action = func(state)
             r, is_over = self.action(action)
+            if cnt % 10 == 0:
+                import os
+                print(os.getpid(), cnt)
             if is_over:
                 return self.finish()
 
