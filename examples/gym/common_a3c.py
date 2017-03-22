@@ -46,7 +46,10 @@ def on_data_func(env, player_router, identifier, inp_data):
         gamma = get_env('a3c.gamma')
         for i in history[::-1]:
             r = np.clip(i.reward, -1, 1) + gamma * r
-            data_queue.put({'state': i.state, 'action': i.action, 'future_reward': r})
+            try:
+                data_queue.put_nowait({'state': i.state, 'action': i.action, 'future_reward': r})
+            except queue.Full:
+                pass
 
     def callback(action, predict_value):
         player_router.send(identifier, action)

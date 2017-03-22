@@ -86,6 +86,7 @@ class SummaryHistoryManager(object):
             if top_k is None:
                 top_k = len(values)
             values = values[-top_k:]
+            return self._do_average(values, meth)
         elif type == 'async_scalar':
             with summary_async_lock:
                 values = self._summaries.get(key, [])
@@ -94,8 +95,8 @@ class SummaryHistoryManager(object):
                 self._summaries_last_query[key] = len(values)
 
                 if len(values):
-                    return sum(values) / (len(values) + 1e-4)
-            return 'N/A'
+                    return self._do_average(values, meth)
+                return 'N/A'
 
 
 def put_summary_history(trainer, summaries):

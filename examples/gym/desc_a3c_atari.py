@@ -242,7 +242,7 @@ def predictor_func(i, router, queue, func):
         for i in range(batch_size):
             policy = out['policy'][i]
             if is_inference[i]:
-                action = action.argmax()
+                action = policy.argmax()
             else:
                 action = random.choice(len(policy), p=policy)
             callbacks[i](action, out['value'][i])
@@ -295,7 +295,8 @@ def main_train(trainer):
         if trainer.epoch > 0 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
             main_inference_play(trainer)
 
-    register_event(trainer, 'epoch:after', on_epoch_after)
+    # this one should run before monitor
+    register_event(trainer, 'epoch:after', on_epoch_after, priority=5)
 
     trainer.train()
 
@@ -313,3 +314,4 @@ def main_demo(env, func):
             player.restart()
         player.play_one_episode(get_action)
         print(i, player.stats['score'][-1])
+
