@@ -92,11 +92,16 @@ class SummaryHistoryManager(object):
                 values = self._summaries.get(key, [])
                 last_query = self._summaries_last_query.get(key, 0)
                 values = values[last_query:]
-                self._summaries_last_query[key] = len(values)
 
                 if len(values):
                     return self._do_average(values, meth)
                 return 'N/A'
+
+    def update_last_query(self, key):
+        type = self.get_type(key)
+        values = self._summaries.get(key, [])
+        assert type.startswith('async_'), (type, key)
+        self._summaries_last_query[key] = len(values)
 
 
 def put_summary_history(trainer, summaries):
@@ -175,6 +180,7 @@ def enable_echo_summary_scalar(trainer, summary_spec=None):
             for meth in spec:
                 avg = mgr.average(k, meth=meth)
                 log_strs.append('  {}/{} = {}'.format(k, meth, avg))
+            mgr.update_last_query(k)
 
         if len(log_strs) > 1:
             logger.info('\n'.join(log_strs))
