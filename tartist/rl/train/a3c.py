@@ -100,8 +100,7 @@ class A3CTrainerEnv(TrainerEnv):
     def data_queue(self):
         return self._data_queue
 
-    def initialize_all_peers(self):
-        nr_players = get_env('a3c.nr_players')
+    def initialize_a3c(self):
         nr_predictors = get_env('a3c.nr_predictors')
 
         # making net funcs
@@ -118,12 +117,16 @@ class A3CTrainerEnv(TrainerEnv):
         self._inference_player_master = A3CMaster(self, 'a3c-inference-player', nr_predictors)
         self._data_queue = queue.Queue(get_env('trainer.batch_size') * get_env('a3c.data_queue_length_factor', 16))
 
+    def initialize_all_peers(self):
+        nr_players = get_env('a3c.nr_players')
+
         self._player_master.initialize()
         self._player_master.start(nr_players, daemon=True)
         self._inference_player_master.initialize()
 
     def finialize_all_peers(self):
         self.player_master.finalize()
+        self.inference_player_master.finalize()
 
     def _make_predictor_net_func(self, i, dev):
         def prefix_adder(feed_dict):
@@ -148,5 +151,10 @@ class A3CTrainer(SimpleTrainer):
         super().initialize()
         self.env.network_maker = self.desc.make_network
         self.env.owner_trainer = self
+        self.env.initialize_a3c()
         self.desc.make_a3c_configs(self.env)
         self.env.initialize_all_peers()
+
+    def finalize(self):
+        self.env.finalize_all_peers()
+        super().finalize()

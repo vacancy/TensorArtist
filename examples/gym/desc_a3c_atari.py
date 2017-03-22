@@ -258,9 +258,10 @@ def _predictor_func(i, router, task_queue, func, is_inference=False):
 
             batched_state[i] = inp[0]
             callbacks.append(callback)
+            nr_total += 1
 
         out = func(state=batched_state)
-        for i in range(batch_size):
+        for i in range(nr_total):
             policy = out['policy'][i]
             if is_inference:
                 action = policy.argmax()
