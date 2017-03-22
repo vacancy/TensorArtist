@@ -39,8 +39,8 @@ class QueryRepPipe(object):
         self._context = zmq.Context()
         self._tosock = self._context.socket(zmq.ROUTER)
         self._frsock = self._context.socket(zmq.PULL)
-        self._tosock.set_hwm(5)
-        self._frsock.set_hwm(5)
+        self._tosock.set_hwm(10)
+        self._frsock.set_hwm(10)
         self._dispatcher = CallbackManager()
 
         self._send_queue = queue.Queue(maxsize=send_qsize)

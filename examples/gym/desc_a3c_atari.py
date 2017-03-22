@@ -251,7 +251,7 @@ def _predictor_func(pid, router, task_queue, func, is_inference=False):
         callbacks = []
         nr_total = 0
         for i in range(batch_size):
-            if i == 0:
+            if i == 0 or not is_inference:
                 identifier, inp, callback = task_queue.get()
             else:
                 try:

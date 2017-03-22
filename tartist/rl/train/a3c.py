@@ -122,6 +122,7 @@ class A3CTrainerEnv(TrainerEnv):
         nr_players = get_env('a3c.nr_players')
 
         self._player_master.initialize()
+        self.initialize_all_variables()
         self._player_master.start(nr_players, daemon=True)
         self._inference_player_master.initialize()
 
@@ -139,10 +140,11 @@ class A3CTrainerEnv(TrainerEnv):
         with new_env.as_default():
             with tf.name_scope('predictor/{}'.format(i)), reuse_context(True):
                 self.network_maker(new_env)
-            new_env.initialize_all_variables()
             outs = {k: new_env.network.outputs[k] for k in outputs_name}
             f = new_env.make_func()
             f.extend_extra_kw_modifiers([prefix_adder])
+            if f.queue_enabled:
+                f.disable_queue()
             f.compile(outputs=outs)
         return f
 
