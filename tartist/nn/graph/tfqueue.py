@@ -64,7 +64,6 @@ class QueuedInputFunction(Function):
             return self._output_manager.format(outputs)
         else:
             kwargs.setdefault(self._input_queue_desc.queue_cond.name, False)
-            print(args)
             super().__call__(*args, output_raw=output_raw, **kwargs)
 
 

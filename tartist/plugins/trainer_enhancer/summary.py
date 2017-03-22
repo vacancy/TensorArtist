@@ -70,14 +70,22 @@ class SummaryHistoryManager(object):
             assert old_value == value, 'summary type mismatched'
         self._summaries_type[key] = value
 
-    def average(self, key, top_k=None):
+    def _do_average(self, values, meth):
+        assert meth in ['avg', 'max', 'sum']
+        if meth == 'avg':
+            return sum(values) / (len(values) + 1e-4)
+        elif meth == 'max':
+            return max(*values)
+        elif meth == 'sum':
+            return sum(values)
+
+    def average(self, key, top_k=None, meth='avg'):
         type = self.get_type(key)
         if type == 'scalar':
             values = self._summaries.get(key, [])
             if top_k is None:
                 top_k = len(values)
             values = values[-top_k:]
-            return sum(values) / (len(values) + 1e-4)
         elif type == 'async_scalar':
             with summary_async_lock:
                 values = self._summaries.get(key, [])
@@ -143,20 +151,29 @@ def enable_summary_history(trainer, extra_summary_types=None):
     register_event(trainer, 'iter:after', summary_history_on_iter_after)
 
 
-def enable_echo_summary_scalar(trainer):
+def enable_echo_summary_scalar(trainer, summary_spec=None):
+    if summary_spec is None:
+        summary_spec = {}
+
     def summary_history_scalar_on_epoch_after(trainer):
         mgr = trainer.runtime['summary_histories']
 
         log_strs = ['Summaries: epoch = {}'.format(trainer.epoch)]
         for k in sorted(mgr.get_all_summaries('scalar')):
-            if not k.startswith('inference'): # do hack for inference
-                avg = mgr.average(k, trainer.epoch_size)
-            else:
-                avg = mgr.average(k, trainer.runtime['inference_epoch_size'])
-            log_strs.append('  {} = {}'.format(k, avg))
+            spec = summary_spec.get(k, ['avg'])
+
+            for meth in spec:
+                if not k.startswith('inference'): # do hack for inference
+                    avg = mgr.average(k, trainer.epoch_size, meth=meth)
+                else:
+                    avg = mgr.average(k, trainer.runtime['inference_epoch_size'], meth=meth)
+                log_strs.append('  {}/{} = {}'.format(k, meth, avg))
+
         for k in sorted(mgr.get_all_summaries('async_scalar')):
-            avg = mgr.average(k)
-            log_strs.append('  {} = {}'.format(k, avg))
+            spec = summary_spec.get(k, ['avg'])
+            for meth in spec:
+                avg = mgr.average(k, meth=meth)
+                log_strs.append('  {}/{} = {}'.format(k, meth, avg))
 
         if len(log_strs) > 1:
             logger.info('\n'.join(log_strs))

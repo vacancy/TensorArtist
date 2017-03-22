@@ -175,7 +175,7 @@ class Function(object):
             outputs = self(*inputs, output_raw=output_raw)
         return outputs
 
-    def map(self, iterable, event_spec=None):
+    def map(self, iterable):
         all_outputs = []
         for inputs in iterable:
             outputs = self.call_args(inputs, output_raw=True)

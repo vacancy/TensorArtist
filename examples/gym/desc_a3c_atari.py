@@ -8,6 +8,9 @@
 #
 # This file is part of TensorArtist
 
+"""This reproduction of A3C is based on ppwwyyxx's reproduction in his TensorPack
+Credit to : https://github.com/ppwwyyxx/tensorpack/tree/master/examples/A3C-Gym"""
+
 import time
 import queue
 import threading
@@ -15,12 +18,12 @@ import collections
 import numpy as np
 import tensorflow as tf
 
-from tartist.core import get_env, get_logger
+from tartist.core import get_env, get_logger, EnvBox
 from tartist.core.utils.cache import cached_result
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.data import flow
-from tartist.nn import opr as O, optimizer, summary, train
-from tartist.nn.train.gan import GANGraphKeys
+from tartist.data.rflow import QueryReqPipe
+from tartist.nn import opr as O, optimizer, summary
 from tartist import rl, random, image
 
 
@@ -43,6 +46,13 @@ __envs__ = {
         'predictor': {
             'batch_size': 16,
             'outputs_name': ['value', 'policy']
+        },
+        'inference': {
+            'nr_players': 20,
+            'max_repeat': 30
+        },
+        'demo': {
+            'repeat': 5
         }
     },
 
@@ -63,13 +73,8 @@ __envs__ = {
             'log_device_placement': False
         }
     },
-    'inference': {
-        'runner': 20,
-        'max_repeat': 30
-    },
     'demo': {
         'customized': True,
-        'repeat': 5
     }
 }
 
@@ -162,6 +167,30 @@ def make_player(is_train=True):
     return p
 
 
+def make_optimizer(env):
+    lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
+
+    wrapper = optimizer.OptimizerWrapper()
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, epsilon=1e-3))
+    wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
+        ('*/b', 2.0),
+    ]))
+    wrapper.append_grad_modifier(optimizer.grad_modifier.GlobalGradClipByAvgNorm(0.1))
+    env.set_optimizer(wrapper)
+
+
+def make_dataflow_train(env):
+    batch_size = get_env('trainer.batch_size')
+
+    df = flow.QueueDataFlow(env.data_queue)
+    df = flow.BatchDataFlow(df, batch_size, sample_dict={
+        'state': np.empty((batch_size, ) + get_input_shape(), dtype='float32'),
+        'action': np.empty((batch_size, ), dtype='int32'),
+        'future_reward': np.empty((batch_size, ), dtype='float32')
+    })
+    return df
+
+
 @cached_result
 def get_player_nr_actions():
     p = make_player()
@@ -189,144 +218,69 @@ def player_func(i, requester):
             # must have an action field
             action = requester.query('data', (state, reward, is_over))
             reward, is_over = player.action(action)
-            
+
             if len(player.stats['score']) > 0:
                 score = player.stats['score'][-1]
-                requester.query('stat', (score, ), do_recv=False)
+                requester.query('stat', {'async/score': score}, do_recv=False)
                 player.clear_stats()
             state = player.current_state
 
 
 def predictor_func(i, router, queue, func):
     batch_size = get_env('a3c.predictor.batch_size')
+    batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
     while True:
-        batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
+        is_inference = []
         callbacks = []
         for i in range(batch_size):
             identifier, inp, callback = queue.get()
             batched_state[i] = inp[0]
+            is_inference.append(inp[1] is not None)
             callbacks.append(callback)
+
         out = func(state=batched_state)
-        actions = []
         for i in range(batch_size):
             policy = out['policy'][i]
-            action = random.choice(len(policy), p=policy)
-            actions.append(action)
-
-        for i in range(batch_size):
-            callbacks[i](actions[i], out['value'][i])
-
-
-PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward'))
+            if is_inference[i]:
+                action = action.argmax()
+            else:
+                action = random.choice(len(policy), p=policy)
+            callbacks[i](action, out['value'][i])
 
 
-def on_data_func(env, player_router, identifier, inp_data):
-    predictor_queue = env.predictors_queue
-    data_queue = env.data_queue
-    player_history = env.players_history[identifier]
+def inference_player_func(i, requester):
+    player = make_player(is_train=False)
 
-    state, reward, is_over = inp_data
+    def get_action(o):
+        action = requester.query('data', (o, None, None))
+        return action
 
-    def parse_history(history, is_over):
-        num = len(history)
-        if is_over:
-            r = 0
-            env.players_history[identifier] = []
-        elif num == get_env('a3c.max_time') + 1:
-            history, last = history[:-1], history[-1]
-            r = last.value
-            env.players_history[identifier] = [last]
-        else:
-            return
-
-        gamma = get_env('a3c.gamma')
-        for i in history[::-1]:
-            r = np.clip(i.reward, -1, 1) + gamma * r
-            try:
-                data_queue.put_nowait({'state': i.state, 'action': i.action, 'future_reward': r})
-            except queue.Full:
-                pass
-
-    def callback(action, predict_value):
-        player_router.send(identifier, action)
-        player_history.append(PlayerHistory(state, action, predict_value, None))
-
-    predictor_queue.put((identifier, inp_data, callback))
-
-    if len(player_history) > 0:
-        last = player_history[-1]
-        player_history[-1] = PlayerHistory(last[0], last[1], last[2], reward)
-        parse_history(player_history, is_over)
+    with requester.activate():
+        player.play_one_episode(get_action)
+        score = player.stats['score'][-1]
+        requester.query('stat', {'async/inference/score': score}, do_recv=False)
 
 
-def on_stat_func(env, inp_data):
-    if env.owner_trainer is not None:
-        mgr = env.owner_trainer.runtime.get('summary_histories', None)
-        if mgr is not None:
-            mgr.put_async_scalar('async/score', inp_data[0])
+from common_a3c import on_data_func, on_stat_func
 
 
 def make_a3c_configs(env):
     env.player_func = player_func
     env.predictor_func = predictor_func
+    env.inference_player_func = inference_player_func
     env.on_data_func = on_data_func
     env.on_stat_func = on_stat_func
     env.players_history = collections.defaultdict(list)
     env.players_history_lock = threading.Lock()
 
 
-def make_optimizer(env):
-    lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
-
-    wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, epsilon=1e-3))
-    wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
-        ('*/b', 2.0),
-    ]))
-    wrapper.append_grad_modifier(optimizer.grad_modifier.GlobalGradClipByAvgNorm(0.1))
-    env.set_optimizer(wrapper)
-
-
-def make_dataflow_train(env):
-    batch_size = get_env('trainer.batch_size')
-
-    df = flow.QueueDataFlow(env.data_queue)
-    df = flow.BatchDataFlow(df, batch_size, sample_dict={
-        'state': np.empty((batch_size, ) + get_input_shape(), dtype='float32'),
-        'action': np.empty((batch_size, ), dtype='int32'),
-        'future_reward': np.empty((batch_size, ), dtype='float32')
-    })
-    return df
-
-
-def multi_thread_inference(trainer):
-    stat = dict(score=0, lock=threading.Lock())
-    def runner(s):
-        func = trainer.env.make_func()
-        func.compile(trainer.env.network.outputs)
-        player = make_player(is_train=False)
-        def get_action(inp, func=func):
-            action = func(**{'state':[[inp]]})['logits'][0].argmax()
-            return action
-        player.play_one_episode(get_action)
-        print(player.stats['score'])
-        with s['lock']:
-            s['score'] += player.stats['score'][-1]
-    num_runner = get_env('inference.runner')
-    threads_pool = []
-    for i in range(num_runner):
-        p = threading.Thread(target=runner, args=(stat, ))
-        p.start()
-        threads_pool.append(p)
-    for p in threads_pool:
-        p.join()
-    print('avg_score', stat['score'] / float(num_runner))
-
-
 def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer, extra_summary_types={'async/score': 'async_scalar'})
-    summary.enable_echo_summary_scalar(trainer)
+    summary.enable_echo_summary_scalar(trainer, summary_spec={
+        'async/score': ['avg', 'max'],
+        'async/inference/score': ['avg', 'max']
+    })
 
     from tartist.plugins.trainer_enhancer import progress
     progress.enable_epoch_progress(trainer)
@@ -335,9 +289,11 @@ def main_train(trainer):
     snapshot.enable_snapshot_saver(trainer)
 
     from tartist.core import register_event
+    from common_a3c import main_inference_play
+
     def on_epoch_after(trainer):
         if trainer.epoch > 0 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
-            multi_thread_inference(trainer)
+            main_inference_play(trainer)
 
     register_event(trainer, 'epoch:after', on_epoch_after)
 
@@ -347,9 +303,11 @@ def main_train(trainer):
 def main_demo(env, func):
     player = make_player(is_train=False)
     repeat_time = get_env('demo.repeat', 1)
+
     def get_action(inp, func=func):
         action = func(**{'state':[[inp]]})['logits'][0].argmax()
         return action
+
     for i in range(repeat_time):
         if i != 0:
             player.restart()
