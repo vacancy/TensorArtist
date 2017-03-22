@@ -85,3 +85,28 @@ def main_inference_play(trainer, epoch):
     name = 'a3c-inference-player-epoch-{}'.format(epoch)
     trainer.env.inference_player_master.start(nr_players, name=name, daemon=False)
 
+
+def main_inference_play_multithread(trainer, make_player):
+    def runner():
+        func = trainer.env.make_func()
+        func.compile(trainer.env.network.outputs)
+        player = make_player(is_train=False)
+
+        def get_action(inp, func=func):
+            action = func(state=inp[np.newaxis])['policy'][0].argmax()
+            return action
+
+        player.play_one_episode(get_action)
+        score = player.stats['score'][-1]
+
+        mgr = trainer.runtime.get('summary_histories', None)
+        if mgr is not None:
+            mgr.put_async_scalar('async/inference/score', score)
+
+    nr_players = get_env('a3c.inference.nr_players')
+    pool = [threading.Thread(target=runner) for _ in range(nr_players)]
+    for p in pool:
+        p.start()
+    for p in pool:
+        p.join()
+

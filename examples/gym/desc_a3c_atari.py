@@ -168,7 +168,7 @@ def make_player(is_train=True):
     if is_train:
         p = rl.AutoRestartProxyRLEnviron(p)
     else:
-        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('inference.max_stuck_repeat'), 1)
+        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('a3c.inference.max_stuck_repeat'), 1)
     return p
 
 
@@ -285,7 +285,8 @@ def make_a3c_configs(env):
     env.player_master.predictor_func = predictor_func
     env.player_master.on_data_func = on_data_func
     env.player_master.on_stat_func = on_stat_func
-
+   
+    # currently we don't use multi-proc inference, so these settings are not used at all
     env.inference_player_master.player_func = inference_player_func
     env.inference_player_master.predictor_func = inference_predictor_func
     env.inference_player_master.on_data_func = inference_on_data_func
@@ -313,11 +314,12 @@ def main_train(trainer):
     snapshot.enable_snapshot_saver(trainer)
 
     from tartist.core import register_event
-    from common_a3c import main_inference_play
+    from common_a3c import main_inference_play_multithread
 
     def on_epoch_after(trainer):
-        if trainer.epoch > 0 and trainer.epoch % get_env('inference.test_epochs', 2) == 0:
-            main_inference_play(trainer, epoch=trainer.epoch)
+        if trainer.epoch > 0 and trainer.epoch % 2 == 0:
+            # main_inference_play(trainer, epoch=trainer.epoch)
+            main_inference_play_multithread(trainer, make_player = make_player)
 
     # this one should run before monitor
     register_event(trainer, 'epoch:after', on_epoch_after, priority=5)
