@@ -34,7 +34,6 @@ logger = get_logger(__file__)
 __envs__ = {
     'dir': {
         'root': get_dump_directory(__file__),
-        'data': get_data_directory('WellKnown/mnist')
     },
 
     'a3c': {
