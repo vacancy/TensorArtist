@@ -22,7 +22,7 @@ logger = get_logger(__file__)
 __all__ = [
     'device_context', 
     'get_2dshape', 'get_4dshape', 
-    'wrap_varnode_func', 'wrap_named_op', 'wrap_named_class_func',
+    'wrap_varnode_func', 'wrap_simple_named_op', 'wrap_named_op', 'wrap_named_class_func',
     'unique_opr_name', 'StaticDynamicDim', 'lazy_O'
 ]
 
@@ -42,6 +42,26 @@ def wrap_varnode_func(func):
             return tuple(map(as_varnode, outputs))
         return as_varnode(outputs)
     return new_func
+
+
+def wrap_simple_named_op(*args, use_scope=True, default_name=None):
+    # do instant-binding
+    def wrapper(func, default_name=default_name):
+        if default_name is None:
+            sig = inspect.signature(func)
+            default_name = sig.parameters['name'].default
+
+        @functools.wraps(func)
+        def new_func(*args, name=default_name, **kwargs):
+            if use_scope:
+                with tf.name_scope(name):
+                    return func(*args, name=name, **kwargs)
+            else:
+                return func(*args, name=name, **kwargs)
+        return new_func
+    if len(args) == 1 and callable(args[0]):
+        return wrapper(args[0])
+    return wrapper
 
 
 def wrap_named_op(*args, use_scope=True):

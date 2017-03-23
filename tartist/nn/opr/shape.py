@@ -8,20 +8,21 @@
 
 
 from ._defaults import __default_dtype__, __default_nonlin__
-from .helper import as_varnode, wrap_varnode_func
+from .helper import as_varnode, wrap_varnode_func, wrap_simple_named_op
 import tensorflow as tf
 import numpy as np
 
 __all__ = [
     'canonize_sym_shape',
     'flatten', 'flatten2', 
-    'reshape', 'dimshuffle', 'broadcast', 'tile', 
-    'add_axis', 'remove_axis',
+    'reshape', 'dimshuffle', 'transpose', 'broadcast', 'tile',
+    'add_axis', 'expand_dim', 'remove_axis', 'sqeeze',
     'split'
 ]
 
 
-def canonize_sym_shape(shape):
+@wrap_simple_named_op
+def canonize_sym_shape(shape, name='canonize_shape'):
     if type(shape) in (tuple, list) and type(shape[0]) in (tuple, list):
         shape = shape[0] 
 
@@ -30,11 +31,13 @@ def canonize_sym_shape(shape):
     return tf.stack(shape)
 
 
+@wrap_simple_named_op
 @wrap_varnode_func
 def flatten(inpvar, name='flatten'):
     return tf.reshape(inpvar, [-1])
 
 
+@wrap_simple_named_op
 @wrap_varnode_func
 def flatten2(inpvar, name='flatten2'):
     inpvar = as_varnode(inpvar)
@@ -45,44 +48,50 @@ def flatten2(inpvar, name='flatten2'):
     return tf.reshape(inpvar, tf.stack([tf.shape(inpvar)[0], -1]))
 
 
+@wrap_simple_named_op
 @wrap_varnode_func
-def reshape(inpvar, tshape, name=None):
-    return tf.reshape(inpvar, canonize_sym_shape(tshape), name=name)
+def reshape(inpvar, tshape, name='reshape'):
+    return tf.reshape(inpvar, canonize_sym_shape(tshape), name='out')
+
+
+@wrap_simple_named_op
+@wrap_varnode_func
+def dimshuffle(inpvar, perm, name='dimshuffle'):
+    return tf.transpose(inpvar, canonize_sym_shape(perm), name='out')
+
+transpose = dimshuffle
 
 
 @wrap_varnode_func
-def dimshuffle(inpvar, perm, name=None):
-    return tf.transpose(inpvar, canonize_sym_shape(perm), name=name)
-
-
-@wrap_varnode_func
-def add_axis(inpvar, axis, name=None):
+def add_axis(inpvar, axis, name='add_axis'):
     return tf.expand_dims(inpvar, axis=axis, name=name)
 
+expand_dim = add_axis
+
 
 @wrap_varnode_func
-def remove_axis(inpvar, axis, name=None):
+def remove_axis(inpvar, axis, name='remove_axis'):
     return tf.squeeze(inpvar, axis=axis, name=name)
 
+sqeeze = remove_axis
 
+
+@wrap_simple_named_op
 @wrap_varnode_func
-def sqeeze(inpvar, axis=None, name=None):
-    return tf.squeeze(inpvar, axis=axis, name=name)
-
-
-@wrap_varnode_func
-def tile(inpvar, multiples, name=None):
+def tile(inpvar, multiples, name='tile'):
     return tf.tile(inpvar, canonize_sym_shape(multiples), name=name)
 
 
+@wrap_simple_named_op
 @wrap_varnode_func
-def broadcast(inpvar, tshape, name=None):
+def broadcast(inpvar, tshape, name='broadcast'):
     sshape = tf.shape(inpvar)
     tshape = canonize_sym_shape(tshape)
     multiples = tshape // sshape 
-    return tf.tile(inpvar, multiples, name=name)
+    return tf.tile(inpvar, multiples, name='out')
 
 
 @wrap_varnode_func
 def split(value, num_or_size_splits, axis=0, num=None, name='split'):
     return tf.split(value, num_or_size_splits, axis=axis, num=num, name=name)
+

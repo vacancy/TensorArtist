@@ -32,7 +32,8 @@ def grad(ys, xs, grad_ys=None, name='gradients'):
 @wrap_named_op
 @wrap_varnode_func
 def raw_l2_loss(name, pred, label):
-    return 0.5 * sqr(pred - label)
+    loss = 0.5 * sqr(pred - label)
+    return tf.identity(loss, name='out')
 
 
 @wrap_named_op
@@ -44,7 +45,8 @@ def raw_cross_entropy(name, pred, label, is_onehot=False):
 @wrap_named_op
 @wrap_varnode_func
 def raw_cross_entropy_prob(name, pred, label, eps=1e-4):
-    return -label * log(pred + eps) - (1. - label) * log(1. - pred + eps)
+    loss = -label * log(pred + eps) - (1. - label) * log(1. - pred + eps)
+    return tf.identity(loss, name='out')
 
 
 @wrap_named_op

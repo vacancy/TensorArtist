@@ -6,8 +6,8 @@
 # 
 # This file is part of TensorArtist
 
-from .helper import wrap_varnode_func
-from .tensor import stack
+from .helper import wrap_varnode_func, wrap_simple_named_op
+from .helper import lazy_O as O
 from ..graph.node import as_varnode, __valid_tensor_types__
 import tensorflow as tf
 import functools
@@ -36,8 +36,9 @@ def get_vi_2dshape(shape):
     return v, v
 
 
+@wrap_simple_named_op
 @wrap_varnode_func
-def _crop(inpvar, shape, method='center'):
+def _crop(inpvar, shape, method='center', name='crop'):
     assert method in ('center', 'leftup')
     assert inpvar.partial_shape is None or len(inpvar.static_shape) == 4
 
@@ -53,8 +54,9 @@ crop_center = functools.partial(_crop, method='center')
 crop_lu = functools.partial(_crop, method='leftup')
 
 
+@wrap_simple_named_op
 @wrap_varnode_func
-def _pad(inpvar, shape, method='center', mode='CONSTANT'):
+def _pad(inpvar, shape, method='center', mode='CONSTANT', name='pad'):
     assert method in ('center', 'rightbottom')
     assert inpvar.static_shape is not None and len(inpvar.static_shape) == 4
 
@@ -66,7 +68,7 @@ def _pad(inpvar, shape, method='center', mode='CONSTANT'):
     x1 = shape[1] - w - x0
 
     new_shape = [inpvar.static_shape[0], None, None, inpvar.static_shape[3]]
-    out = tf.pad(inpvar, stack([[0, 0], stack([x0, x1]), stack([y0, y1]), [0, 0]]), mode=mode)
+    out = tf.pad(inpvar, O.stack([[0, 0], O.stack([x0, x1]), O.stack([y0, y1]), [0, 0]]), mode=mode)
     out.set_shape(new_shape)
     return out
 
@@ -75,8 +77,9 @@ pad_center = functools.partial(_pad, method='center')
 pad_rb = functools.partial(_pad, method='rightbottom')
 
 
+@wrap_simple_named_op
 @wrap_varnode_func
-def pad_rb_multiple_of(inpvar, multiple, val=0):
+def pad_rb_multiple_of(inpvar, multiple, val=0, name='pad_rb_multiple_of'):
     assert inpvar.static_shape is None or len(inpvar.static_shape) == 4
 
     multiple = get_vi_2dshape(multiple)
@@ -108,13 +111,15 @@ def pad_rb_multiple_of(inpvar, multiple, val=0):
 #     return opr.outputs[0]
 
 
+@wrap_simple_named_op
 @wrap_varnode_func
-def img_inverse(inpvar):
+def img_inverse(inpvar, name='img_inverse'):
     return 255 -inpvar
 
 
+@wrap_simple_named_op
 @wrap_varnode_func
-def img_flip(inpvar, axis=2):
+def img_flip(inpvar, axis=2, name='img_flip'):
     assert inpvar.static_shape is None or len(inpvar.static_shape) == 4
     assert axis in (1, 2)
     if axis == 1:
