@@ -43,11 +43,10 @@ class VariableOp(OprNode):
         return self
 
 
-@wrap_named_op(use_scope=False)
 @wrap_varnode_func
 def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, device=None, trainable=True,
              collections=None):
-    opr_name = unique_opr_name(name) 
+    opr_name = unique_opr_name(name)
 
     with device_context(device):
         if isinstance(value_or_initializer, (np.ndarray, float, int)):
@@ -55,14 +54,21 @@ def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, de
                 dtype = dtype or tf.float32
             elif type(value_or_initializer) is int:
                 dtype = dtype or tf.int32
-            var = tf.Variable(initial_value=value_or_initializer, trainable=trainable, name=name, dtype=dtype,
-                              collections=collections)
+
+            var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=value_or_initializer,
+                                  trainable=trainable, collections=collections)
         else:
             assert_notnone(shape, name='shape')
             var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=value_or_initializer,
                                   trainable=trainable, collections=collections)
         var = as_varnode(var)
-        return VariableOp(opr_name, var, get_default_env()).outputs[0]
+
+        if tf.get_variable_scope().reuse:
+            return var
+
+        op = VariableOp(opr_name, var, get_default_env())
+        tf.add_to_collection(TArtGraphKeys.TART_OPERATORS, op)
+        return var
 
 
 def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False,
@@ -70,7 +76,7 @@ def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False,
 
     collections = extend_collection_list(collections, TArtGraphKeys.SCALAR_VARIABLES, tf.GraphKeys.GLOBAL_VARIABLES)
     value = float(value)
-    var = variable(name, value, shape=0, dtype=dtype, device=device, trainable=trainable, collections=collections)
+    var = variable(name, value, shape=None, dtype=dtype, device=device, trainable=trainable, collections=collections)
     if summary:
         from .. import summary
         summary.scalar(name, var)

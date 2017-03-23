@@ -31,12 +31,12 @@ def canonize_sym_shape(shape):
 
 
 @wrap_varnode_func
-def flatten(inpvar):
+def flatten(inpvar, name='flatten'):
     return tf.reshape(inpvar, [-1])
 
 
 @wrap_varnode_func
-def flatten2(inpvar):
+def flatten2(inpvar, name='flatten2'):
     inpvar = as_varnode(inpvar)
     shape = inpvar.static_shape[1:]
 

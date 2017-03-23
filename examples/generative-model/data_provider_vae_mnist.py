@@ -54,7 +54,7 @@ def make_dataflow_inference(env):
 
 
 def make_dataflow_demo(env):
-    reconstruct = get_env('demo.reconstruct', False)
+    reconstruct = get_env('demo.is_reconstruct', False)
     if reconstruct:
         ensure_load()
 
@@ -73,7 +73,7 @@ def make_dataflow_demo(env):
 
 
 def demo(feed_dict, result, extra_info):
-    reconstruct = get_env('demo.reconstruct', False)
+    reconstruct = get_env('demo.is_reconstruct', False)
     if reconstruct:
         img = feed_dict['img'][0, :, :, 0]
         omg = result['output'][0, :, :, 0]
@@ -86,3 +86,4 @@ def demo(feed_dict, result, extra_info):
     img = image.resize_minmax(img, 256)
 
     image.imshow('demo', img)
+

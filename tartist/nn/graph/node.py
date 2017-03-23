@@ -232,6 +232,10 @@ class VarNode(VarNodeOpDecl):
             return None
         return tuple(ss.as_list())
 
+    @static_shape.setter
+    def static_shape(self, new_shape):
+        self.__impl.set_shape(new_shape)
+
     @property
     def ndims(self):
         return self.__impl.get_shape().ndims
@@ -305,10 +309,11 @@ def infer_dtype_from_const(v):
         if dtype == 'float64':
             dtype = 'float32'
         return dtype
-    if isinstance(v, np.ndarray):
-        return canonize(v.dtype.name)
-    if isinstance(v, int) or (isinstance(v, (tuple, list)) and isinstance(v[0], int)):
+    if isinstance(v, int):
         return 'int32'
+    if isinstance(v, np.ndarray) or isinstance(v, (tuple, list)):
+        v = np.array(v)
+        return canonize(v.dtype.name)
     return 'float32'
 
 

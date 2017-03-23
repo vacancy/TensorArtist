@@ -11,6 +11,7 @@ from .arith import *
 from .cnn import *
 from .helper import *
 from .imgproc import *
+from .linalg import *
 from .loss import *
 from .netsrc import *
 from .nonlin import *

@@ -10,10 +10,11 @@
 from .helper import as_varnode, wrap_varnode_func
 import tensorflow as tf
 
-__all__ = ['concat', 'stack', 'cond_take', 'one_hot',
-        'SliceOprImplHelper', 'SliceSetterOprImplHelper',
-        'NormalSlice', 'NormalSliceSetter',
-        'AdvancedSlice', 'AdvancedSliceSetter']
+__all__ = [
+    'concat', 'stack', 'cond_take', 'one_hot',
+    'SliceOprImplHelper', 'SliceSetterOprImplHelper',
+    'NormalSlice', 'NormalSliceSetter',
+    'AdvancedSlice', 'AdvancedSliceSetter']
 
 
 @wrap_varnode_func
