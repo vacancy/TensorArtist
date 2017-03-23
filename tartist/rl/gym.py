@@ -29,24 +29,22 @@ __all__ = ['GymRLEnviron', 'GymHistoryProxyRLEnviron', 'GymPreventStuckProxyRLEn
 
 
 class GymRLEnviron(SimpleRLEnvironBase):
-    def __init__(self, name, vis=False, dump_dir=None):
+    def __init__(self, name, dump_dir=None):
         super().__init__()
 
         with get_env_lock():
             self._gym = gym.make(name)
 
         if dump_dir:
-            if dump_dir == '' or os.path.isdir(dump_dir):
-                continue
-            try:
-                os.makedirs(dump_dir)
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise e
+            if dump_dir != '' and not os.path.isdir(dump_dir):
+                try:
+                    os.makedirs(dump_dir)
+                except OSError as e:
+                    if e.errno != errno.EEXIST:
+                        raise e
 
-            self._gym = gym.wrappers.Monitor(self._gym, dumpdir)
+            self._gym = gym.wrappers.Monitor(self._gym, dump_dir)
 
-        self._vis = vis
         self._reward_history = []
 
     def _get_action_space(self):
@@ -58,9 +56,6 @@ class GymRLEnviron(SimpleRLEnvironBase):
         o, r, is_over, info = self._gym.step(action)
         self._reward_history.append(r)
         self._set_current_state(o)
-        if self._vis:
-            self._gym.render()
-            time.sleep(0.1)
         return r, is_over
 
     def _restart(self):

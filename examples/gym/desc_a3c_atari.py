@@ -18,6 +18,7 @@ import functools
 import collections
 import numpy as np
 import tensorflow as tf
+import os
 
 from tartist.core import get_env, get_logger, EnvBox
 from tartist.core.utils.cache import cached_result
@@ -79,7 +80,7 @@ __envs__ = {
         }
     },
     'demo': {
-        'customized': True,
+        'customized': True
     }
 }
 
@@ -156,11 +157,11 @@ def make_network(env):
         env.set_slave_devices(slave_devices)
 
 
-def make_player(is_train=True):
+def make_player(is_train=True, dump_dir=None):
     def resize_state(s):
         return image.resize(s, get_env('dataset.input_shape'))
 
-    p = rl.GymRLEnviron(get_env('a3c.env_name'))
+    p = rl.GymRLEnviron(get_env('a3c.env_name'), dump_dir=dump_dir)
     p = rl.MapStateProxyRLEnviron(p, resize_state)
     p = rl.GymHistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
 
@@ -331,7 +332,9 @@ def main_train(trainer):
 
 
 def main_demo(env, func):
-    player = make_player(is_train=False)
+    dump_dir = get_env('dir.demo', os.path.join(get_env('dir.root'), 'demo'))
+    logger.info('demo dump dir: {}'.format(dump_dir))
+    player = make_player(is_train=False, dump_dir=dump_dir)
     repeat_time = get_env('a3c.demo.nr_plays', 1)
 
     def get_action(inp, func=func):
@@ -339,8 +342,7 @@ def main_demo(env, func):
         return action
 
     for i in range(repeat_time):
-        if i != 0:
-            player.restart()
         player.play_one_episode(get_action)
-        print(i, player.stats['score'][-1])
+        logger.info('#{} play score={}'.format(i, player.stats['score'][-1]))
+
 
