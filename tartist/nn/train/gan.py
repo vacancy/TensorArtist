@@ -102,7 +102,7 @@ class GANTrainer(TrainerBase):
             summary.scalar('g_loss', self.env.g_loss, collections=[GANGraphKeys.GENERATOR_SUMMARIES])
             summary.scalar('d_loss', self.env.d_loss, collections=[GANGraphKeys.DISCRIMINATOR_SUMMARIES])
         self._g_func, self._d_func = self.env.make_optimizable_func()
-        assert not self._g_func.queue_enabled and self._d_func.queue_enabled
+        assert not self._g_func.queue_enabled and not self._d_func.queue_enabled
 
     @notnone_property
     def g_func(self):
