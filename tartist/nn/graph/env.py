@@ -489,4 +489,8 @@ if True:
         pass
     _default_net = _default_env.network
     defaults_manager.set_default(Network, _default_net)
+    _default_graph = _default_env.graph
 
+    # this is a hack to add the default graph to the top of the graph stack inside tensorflow
+    from tensorflow.python.framework import ops
+    ops._default_graph_stack.stack.append(_default_graph)

@@ -7,17 +7,19 @@
 # This file is part of TensorArtist
 
 
-from .helper import as_varnode, wrap_varnode_func
+from .helper import as_varnode, wrap_varnode_func, wrap_simple_named_op
 import tensorflow as tf
 
-__all__ = ['concat', 'stack', 'cond_take', 'one_hot',
-        'SliceOprImplHelper', 'SliceSetterOprImplHelper',
-        'NormalSlice', 'NormalSliceSetter',
-        'AdvancedSlice', 'AdvancedSliceSetter']
+__all__ = [
+    'concat', 'stack', 'cond_take', 'one_hot',
+    'SliceOprImplHelper', 'SliceSetterOprImplHelper',
+    'NormalSlice', 'NormalSliceSetter',
+    'AdvancedSlice', 'AdvancedSliceSetter']
 
 
+@wrap_simple_named_op
 @wrap_varnode_func
-def concat(inpvars, axis, name=None):
+def concat(inpvars, axis, name='concat'):
     # hack for scalar concat
     for i in inpvars:
         if as_varnode(i).ndims == 0:
@@ -27,17 +29,17 @@ def concat(inpvars, axis, name=None):
 
 
 @wrap_varnode_func
-def stack(inpvars, axis=0, name=None):
+def stack(inpvars, axis=0, name='stack'):
     return tf.stack(inpvars, axis=axis, name=name)
 
 
 @wrap_varnode_func
-def cond_take(tensor, mask, name=None):
+def cond_take(tensor, mask, name='cond_take'):
     return tf.boolean_mask(tensor, mask, name=name)
 
 
 @wrap_varnode_func
-def one_hot(indices, depth, on_value=None, off_value=None, axis=None, dtype=None, name=None):
+def one_hot(indices, depth, on_value=None, off_value=None, axis=None, dtype=None, name='one_hot'):
     return tf.one_hot(indices, depth, on_value=on_value, off_value=off_value, axis=axis, dtype=dtype, name=name)
 
 
@@ -100,4 +102,3 @@ class AdvancedSliceSetter(SliceSetterOprImplHelper):
         raise NotImplementedError()
         # slices = _get_advanced_index(slices)
         # return as_varnode(tf.scatter_nd_update(self._owner, slices, value, use_locking=use_locking))
-

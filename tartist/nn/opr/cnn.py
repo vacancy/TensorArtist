@@ -7,10 +7,8 @@
 # This file is part of TensorArtist
 
 from ._defaults import __default_dtype__, __default_nonlin__
-from ._migrate import zeros, ones
 from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op, StaticDynamicDim
-from .shape import flatten2, remove_axis, canonize_sym_shape
-from .netsrc import variable, ensure_variable
+from .helper import lazy_O as O
 from ..graph.env import Env, get_default_env
 
 import tensorflow as tf
@@ -37,7 +35,7 @@ def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
     W_shape = kernel + (cin, cout)
     if W is None:
         W = tf.contrib.layers.xavier_initializer_conv2d()
-    W = ensure_variable('W', W, shape=W_shape, dtype=param_dtype)
+    W = O.ensure_variable('W', W, shape=W_shape, dtype=param_dtype)
 
     if use_bias:
         if bias_is_shared_in_channel:
@@ -48,7 +46,7 @@ def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
 
         if b is None:
             b = tf.constant_initializer()
-        b = ensure_variable('b', b, shape=b_shape, dtype=param_dtype)
+        b = O.ensure_variable('b', b, shape=b_shape, dtype=param_dtype)
 
     _ = inpvar
     _ = tf.nn.conv2d(_, W, strides=stride, padding=padding, name='conv')
@@ -86,7 +84,7 @@ avg_pooling2d = functools.partial(pooling2d, method='AVG')
 def fc(name, inpvar, nr_output_channels,
         use_bias=True, nonlin=__default_nonlin__,
         W=None, b=None, param_dtype=__default_dtype__):
-    inpvar = flatten2(inpvar)
+    inpvar = O.flatten2(inpvar)
 
     assert inpvar.static_shape[1] is not None
     W_shape = (inpvar.static_shape[1], nr_output_channels)
@@ -94,11 +92,11 @@ def fc(name, inpvar, nr_output_channels,
 
     if W is None:
         W = tf.contrib.layers.xavier_initializer_conv2d()
-    W = ensure_variable('W', W, shape=W_shape, dtype=param_dtype)
+    W = O.ensure_variable('W', W, shape=W_shape, dtype=param_dtype)
     if use_bias:
         if b is None:
             b = tf.constant_initializer()
-        b = ensure_variable('b', b, shape=b_shape, dtype=param_dtype)
+        b = O.ensure_variable('b', b, shape=b_shape, dtype=param_dtype)
 
     out = tf.nn.xw_plus_b(inpvar, W, b, name='xwpb') if use_bias else tf.matmul(inpvar, W, name='matmul')
     out = nonlin(out, name='nonlin')
@@ -133,13 +131,13 @@ def batch_norm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dty
         inpvar = inpvar.reshape(-1, 1, 1, nr_channels)
 
     if use_affine:
-        beta = variable('beta', tf.constant_initializer(), shape=[nr_channels], dtype=param_dtype)
-        gamma = variable('gamma', tf.constant_initializer(1.0), shape=[nr_channels], dtype=param_dtype)
+        beta = O.variable('beta', tf.constant_initializer(), shape=[nr_channels], dtype=param_dtype)
+        gamma = O.variable('gamma', tf.constant_initializer(1.0), shape=[nr_channels], dtype=param_dtype)
     else:
-        beta = zeros([nr_channels], name='beta')
-        gamma = ones([nr_channels], name='gamma')
-    moving_mean = variable('mean/ema', tf.constant_initializer(), shape=[nr_channels], trainable=False)
-    moving_var = variable('variance/ema', tf.constant_initializer(), shape=[nr_channels], trainable=False)
+        beta = O.zeros([nr_channels], name='beta')
+        gamma = O.ones([nr_channels], name='gamma')
+    moving_mean = O.variable('mean/ema', tf.constant_initializer(), shape=[nr_channels], trainable=False)
+    moving_var = O.variable('variance/ema', tf.constant_initializer(), shape=[nr_channels], trainable=False)
 
     env = get_default_env()
     if env.flags.compute_update_batch_normalization(name):
@@ -148,7 +146,7 @@ def batch_norm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dty
         xn = tf.nn.batch_normalization(inpvar, moving_mean, moving_var, beta, gamma, variance_epsilon=epsilon, name='bn')
 
     if len(shape) == 2:
-        xn = remove_axis(xn, [1, 2])
+        xn = O.remove_axis(xn, [1, 2])
 
     if env.flags.compute_update_batch_normalization(name) and env.current_dpc.is_master_device:
         update_mean_op = assign_moving_average(moving_mean.impl, batch_mean, decay, zero_debias=False, name='mean_ema_op')
@@ -179,13 +177,13 @@ def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
     sd_h = StaticDynamicDim(in_shape[1], inpvar.shape[1]) * stride2[0]
     sd_w = StaticDynamicDim(in_shape[2], inpvar.shape[2]) * stride2[1]
     out_shape_static = [in_shape[0], sd_h.static, sd_w.static, nr_output_channels]
-    out_shape_dynamic = canonize_sym_shape([inpvar.shape[0], sd_h.dynamic, sd_w.dynamic, nr_output_channels])
+    out_shape_dynamic = O.canonize_sym_shape([inpvar.shape[0], sd_h.dynamic, sd_w.dynamic, nr_output_channels])
 
     W_shape = kernel + (nr_output_channels, nr_input_channels)
 
     if W is None:
         W = tf.contrib.layers.xavier_initializer_conv2d()
-    W = ensure_variable('W', W, shape=W_shape, dtype=param_dtype)
+    W = O.ensure_variable('W', W, shape=W_shape, dtype=param_dtype)
     if use_bias:
         if bias_is_shared_in_channel:
             b_shape = (nr_output_channels, )
@@ -195,7 +193,7 @@ def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
 
         if b is None:
             b = tf.constant_initializer()
-        b = ensure_variable('b', b, shape=b_shape, dtype=param_dtype)
+        b = O.ensure_variable('b', b, shape=b_shape, dtype=param_dtype)
 
     _ = inpvar
     _ = tf.nn.conv2d_transpose(_, W, out_shape_dynamic, stride4, padding=padding, data_format='NHWC', name='conv')

@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : nart_opr.py
+# File   : neural_stype_opr.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 2/27/17

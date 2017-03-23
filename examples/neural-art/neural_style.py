@@ -14,7 +14,7 @@ from tartist.core.utils.cli import parse_devices
 from tartist.nn import Env
 from tartist.nn import opr as O, optimizer
 from tartist.nn.train import TrainerEnv
-import nart_opr
+import neural_style_opr
 
 import argparse
 import collections
@@ -114,10 +114,10 @@ def main():
         outputs = net.outputs
         loss_content = 0.
         for i in get_env('neural_style.content_layers'):
-            loss_content += i[1] * nart_opr.get_content_loss(res_img[i[0]], outputs[i[0]])
+            loss_content += i[1] * neural_style_opr.get_content_loss(res_img[i[0]], outputs[i[0]])
         loss_style = 0.
         for i in get_env('neural_style.style_layers'):
-            loss_style += i[1] * nart_opr.get_style_loss(res_smg[i[0]], outputs[i[0]])
+            loss_style += i[1] * neural_style_opr.get_style_loss(res_smg[i[0]], outputs[i[0]])
         loss = loss_content + loss_style * get_env('neural_style.style_strenth')
         net.set_loss(loss)
 
