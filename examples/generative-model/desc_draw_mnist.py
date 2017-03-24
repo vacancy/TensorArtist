@@ -83,7 +83,7 @@ def make_network(env):
                 for step in range(nr_glimpse):
                     reuse = (step != 0)
                     if is_reconstruct or env.phase is env.Phase.TRAIN:
-                        img_hat = draw_opr.image_diff(img, canvas)
+                        img_hat = draw_opr.image_diff(img, canvas)  # eq. 3
 
                         with tf.variable_scope('read', reuse=reuse):
                             read_param = O.fc('fc_param', enc_h, 5)
@@ -91,9 +91,9 @@ def make_network(env):
                         with tf.name_scope('read_step{}'.format(step)):
                             cx, cy, delta, var, gamma = draw_opr.split_att_params(h, w, att_dim, read_param)
                             read_inp = O.concat([img, img_hat], axis=3)  # of shape: batch_size x h x w x (2c)
-                            read_out = draw_opr.att_read(att_dim, read_inp, cx, cy, delta, var)
+                            read_out = draw_opr.att_read(att_dim, read_inp, cx, cy, delta, var)  # eq. 4
                             enc_inp = O.concat([gamma * read_out.flatten2(), dec_h], axis=1)
-                        enc_h, enc_state = encode(enc_inp, enc_state, reuse)
+                        enc_h, enc_state = encode(enc_inp, enc_state, reuse)  # eq. 5
 
                         with tf.variable_scope('sample', reuse=reuse):
                             _ = enc_h
@@ -104,7 +104,7 @@ def make_network(env):
                             sample_var = O.exp(sample_log_var)
                             sample_std = O.sqrt(sample_var)
                             sample_epsilon = O.random_normal([batch_size, code_length])
-                            z = sample_mu + sample_std * sample_epsilon
+                            z = sample_mu + sample_std * sample_epsilon  # eq. 6
 
                         # accumulate for losses
                         all_sqr_mus += sample_mu ** 2.
@@ -115,14 +115,14 @@ def make_network(env):
 
                     # z = O.callback_injector(z)
 
-                    dec_h, dec_state = decode(z, dec_state, reuse)
+                    dec_h, dec_state = decode(z, dec_state, reuse)  # eq. 7
                     with tf.variable_scope('write', reuse=reuse):
                         write_param = O.fc('fc_param', dec_h, 5)
                         write_in = O.fc('fc', dec_h, (att_dim * att_dim * c)).reshape(-1, att_dim, att_dim, c)
 
                     with tf.name_scope('write_step{}'.format(step)):
                         cx, cy, delta, var, gamma = draw_opr.split_att_params(h, w, att_dim, write_param)
-                        write_out = draw_opr.att_write(h, w, write_in, cx, cy, delta, var)
+                        write_out = draw_opr.att_write(h, w, write_in, cx, cy, delta, var)  # eq. 8
 
                     canvas += write_out
 
