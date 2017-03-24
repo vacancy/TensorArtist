@@ -73,6 +73,16 @@ def make_dataflow_demo(env):
 
 
 def demo(feed_dict, result, extra_info):
+    mode = get_env('demo.mode', 'vae')
+    assert mode in ('vae', 'draw')
+
+    if mode == 'vae':
+        demo_vae(feed_dict, result, extra_info)
+    elif mode == 'draw':
+        demo_draw(feed_dict, result, extra_info)
+
+
+def demo_vae(feed_dict, result, extra_info):
     reconstruct = get_env('demo.is_reconstruct', False)
     if reconstruct:
         img = feed_dict['img'][0, :, :, 0]
@@ -86,4 +96,30 @@ def demo(feed_dict, result, extra_info):
     img = image.resize_minmax(img, 256)
 
     image.imshow('demo', img)
+
+
+def demo_draw(feed_dict, result, extra_info):
+    reconstruct = get_env('demo.is_reconstruct', False)
+    grid_desc = get_env('demo.draw.grid_desc')
+
+    all_outputs = []
+    for i in range(1000):
+        name = 'canvas_step{}'.format(i)
+        if name in result:
+            all_outputs.append(result[name][0, :, :, 0])
+
+    final = image.image_grid(all_outputs, grid_desc)
+    final = (final * 255).astype('uint8')
+
+    if reconstruct:
+        img = feed_dict['img'][0, :, :, 0]
+        h = final.shape[0]
+        w = int(img.shape[1] * h / img.shape[0])
+        img = (img * 255).astype('uint8')
+        img = image.resize(img, (h, w))
+        final = np.hstack((img, final))
+
+    final = image.resize_minmax(final, 480, 720)
+
+    image.imshow('demo', final)
 

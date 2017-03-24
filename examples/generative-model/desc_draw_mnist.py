@@ -32,7 +32,11 @@ __envs__ = {
         'epoch_size': 40
     },
     'demo': {
-        'is_reconstruct': True
+        'is_reconstruct': False,
+        'mode': 'draw',
+        'draw': {
+            'grid_desc': ('4v', '4h')
+        }
     }
 }
 
@@ -45,19 +49,23 @@ def make_network(env):
         code_length = 128
 
         is_reconstruct = get_env('demo.is_reconstruct', False)
+        is_train = env.phase is env.Phase.TRAIN
 
         dpc = env.create_dpcontroller()
         with dpc.activate():
             def inputs():
-                img = O.placeholder('img', shape=(None, h, w, c))
-                return [img]
+                if is_train:
+                    img = O.placeholder('img', shape=(None, h, w, c))
+                    return [img]
+                return []
 
-            def forward(img):
+            def forward(img=None):
                 encoder = tf.contrib.rnn.BasicLSTMCell(256)
                 decoder = tf.contrib.rnn.BasicLSTMCell(256)
-                canvas = O.zeros_like(img)
 
-                batch_size = img.shape[0]
+                batch_size = img.shape[0] if is_train else 1
+
+                canvas = O.zeros(shape=(batch_size, h, w, c), dtype='float32')
                 enc_state = encoder.zero_state(batch_size, dtype='float32')
                 dec_state = decoder.zero_state(batch_size, dtype='float32')
                 enc_h, dec_h = enc_state[1], dec_state[1]
@@ -72,9 +80,9 @@ def make_network(env):
 
                 all_sqr_mus, all_vars, all_log_vars = 0., 0., 0.
 
-                if is_reconstruct or env.phase is env.Phase.TRAIN:
-                    for step in range(nr_glimpse):
-                        reuse = (step != 0)
+                for step in range(nr_glimpse):
+                    reuse = (step != 0)
+                    if is_reconstruct or env.phase is env.Phase.TRAIN:
                         img_hat = draw_opr.image_diff(img, canvas)
 
                         with tf.variable_scope('read', reuse=reuse):
@@ -98,25 +106,30 @@ def make_network(env):
                             sample_epsilon = O.random_normal([batch_size, code_length])
                             z = sample_mu + sample_std * sample_epsilon
 
-                        # z = O.callback_injector(z)
-
                         # accumulate for losses
                         all_sqr_mus += sample_mu ** 2.
                         all_vars += sample_var
                         all_log_vars += sample_log_var
+                    else:
+                        z = O.random_normal([1, code_length])
 
-                        dec_h, dec_state = decode(z, dec_state, reuse)
-                        with tf.variable_scope('write', reuse=reuse):
-                            write_param = O.fc('fc_param', dec_h, 5)
-                            write_in = O.fc('fc', dec_h, (att_dim * att_dim * c)).reshape(-1, att_dim, att_dim, c)
+                    # z = O.callback_injector(z)
 
-                        with tf.name_scope('write_step{}'.format(step)):
-                            cx, cy, delta, var, gamma = draw_opr.split_att_params(h, w, att_dim, write_param)
-                            write_out = draw_opr.att_write(h, w, write_in, cx, cy, delta, var)
+                    dec_h, dec_state = decode(z, dec_state, reuse)
+                    with tf.variable_scope('write', reuse=reuse):
+                        write_param = O.fc('fc_param', dec_h, 5)
+                        write_in = O.fc('fc', dec_h, (att_dim * att_dim * c)).reshape(-1, att_dim, att_dim, c)
 
-                        canvas += write_out
+                    with tf.name_scope('write_step{}'.format(step)):
+                        cx, cy, delta, var, gamma = draw_opr.split_att_params(h, w, att_dim, write_param)
+                        write_out = draw_opr.att_write(h, w, write_in, cx, cy, delta, var)
 
-                    canvas = O.sigmoid(canvas)
+                    canvas += write_out
+
+                    if env.phase is env.Phase.TEST:
+                        dpc.add_output(O.sigmoid(canvas), name='canvas_step{}'.format(step))
+
+                canvas = O.sigmoid(canvas)
 
                 if env.phase is env.Phase.TRAIN:
                     with tf.variable_scope('loss'):

@@ -73,14 +73,8 @@ def main_demo_infogan(env, func):
         res = func(**data)
         all_outputs.append(res['output'][0, :, :, 0])
 
-    grid = get_env('demo.infogan.grid', (10, None))
-    if grid[1] is None:
-        grid = (grid[0], len(all_outputs) // grid[0])
-    all_rows = []
-    for i in range(grid[0]):
-        cur_row = all_outputs[i*grid[1]:(i+1)*grid[1]]
-        all_rows.append(np.hstack(cur_row))
-    final = np.vstack(all_rows)
+    grid_desc = get_env('demo.infogan.grid_desc')
+    final = image.image_grid(all_outputs, grid_desc)
     final = (final * 255).astype('uint8')
     image.imwrite('infogan.png', final)
 

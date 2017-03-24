@@ -44,7 +44,10 @@ __envs__ = {
 
     'demo': {
         'customized': True,
-        'mode': 'infogan'
+        'mode': 'infogan',
+        'infogan': {
+            'grid_desc': ('5h', '2v', '5h', '5v')
+        }
     }
 }
 
