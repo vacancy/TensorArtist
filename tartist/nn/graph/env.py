@@ -14,7 +14,7 @@ from .node import as_varnode
 from .function import Function
 from .tfqueue import InputQueueDesc, QueuedInputFunction
 from ..tfutils import clean_name
-from ...core.logger import get_logger
+from ...core.logger import get_logger 
 from ...core.utils.defaults import defaults_manager
 from ...core.utils.context import EmptyContext
 from ...core.utils.meta import assert_notnone, notnone_property, AttrObject
@@ -271,8 +271,15 @@ class Env(object):
         random_str = 'mrm_msh'
         name = self.graph.unique_name(random_str, mark_as_used=False)
         if len(name) > len(random_str):
-            return name[-(len(random_str) + 1)]
+            return name[:-(len(random_str) + 1)]
         return ''
+
+    def get_pure_unique_name(self, scope_name):
+        prefix = self.get_name_scope()
+        scope_name = self.graph.unique_name(scope_name, mark_as_used=False)
+        if len(prefix) == 0:
+            return scope_name
+        return scope_name[len(prefix)+1:]
 
 get_default_env = defaults_manager.gen_get_default(Env)
 
@@ -293,8 +300,9 @@ class DataParallelController(object):
         self._nr_towers = 1
         self._current_tower = 0
 
-        self._name_scope_prefix = name_scope_prefix
+        self._name_scope_prefix = owner_env.get_pure_unique_name(name_scope_prefix)
         self._real_name_scope_prefix = owner_env.get_name_scope(name_scope_prefix)
+        self._tower_prefixes = []
 
     @property
     def owner_env(self):
@@ -340,7 +348,8 @@ class DataParallelController(object):
             self._outputs = dict()
             self._current_tower = i
 
-            name_prefix = '{}/{}'.format(self._name_scope_prefix, i)
+            name_prefix = self.owner_env.get_pure_unique_name('{}/{}'.format(self._name_scope_prefix, i))
+            self._tower_prefixes.append(name_prefix)
             with tf.name_scope(name_prefix), select_device(i, self.owner_env), reuse_context(i != 0):
                 inputs = self._input_maker()
 
@@ -348,7 +357,7 @@ class DataParallelController(object):
                     for v in inputs:
                         vname = v.name
                         assert vname.startswith(self._real_name_scope_prefix) and vname.endswith(':0'), vname
-                        self._input_names.append(vname[len(self._real_name_scope_prefix) + 3:-2])
+                        self._input_names.append(vname[len(self.owner_env.get_name_scope())+1:-2])
 
                 self._forward_func(*inputs)
 
@@ -386,9 +395,10 @@ class DataParallelController(object):
                     pass  # directly use
                 else:
                     value = nd_split_n(value, self._nr_towers)
-
-                pattern = self._name_scope_prefix + '/{}/' + name
-                kwargs.update({pattern.format(i): value[i] for i in range(self._nr_towers)})
+                
+                for i in range(self._nr_towers):
+                    subname = self._tower_prefixes[i] + '/' + name
+                    kwargs[subname] = value[i]
 
     @property
     def current_tower(self):

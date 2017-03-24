@@ -144,6 +144,7 @@ def make_network(env):
         net.add_output(x, name='feature_predict')
 
         if env.phase is env.Phase.TRAIN:
+            
             dpc = env.create_dpcontroller()
             with dpc.activate():
                 def inputs():
@@ -151,14 +152,15 @@ def make_network(env):
                     return [next_single_state]
 
                 def forward(y):
-                    past_frames = tf.split(input_state, get_env('a3c.frame_history'), axis=3)[1:]
-                    y = tf.concat([tf.concat(past_frames, 3), y], 3)
+                    #past_frames = tf.split(input_state, get_env('a3c.frame_history'), axis=3)[1:]
+                    #y = tf.concat([tf.concat(past_frames, 3), y], 3)
+                    O.concat([past_frames[:, :, :, 3:], y], axis=3)
                     with tf.variable_scope('shared_extractor', reuse=True):
                         feature_y = get_feature(y)
                     dpc.add_output(feature_y, name='feature_y')
 
                 dpc.set_input_maker(inputs).set_forward_func(forward)
-
+            
             y = dpc.outputs['feature_y']
 
             action = O.placeholder('action', shape=(None, ), dtype=tf.int64)
@@ -183,7 +185,6 @@ def make_network(env):
 
     if is_train:
         env.set_slave_devices(slave_devices)
-
 
 def make_player(is_train=True, dump_dir=None):
     def resize_state(s):
@@ -221,7 +222,7 @@ def make_dataflow_train(env):
         'state': np.empty((batch_size, ) + get_input_shape(), dtype='float32'),
         'action': np.empty((batch_size, ), dtype='int32'),
         'future_reward': np.empty((batch_size, ), dtype='float32'),
-        'next_single_state': np.empty((batch_size, ) + get_input_shape(), dtype='float32')
+        'next_single_state': np.empty((batch_size, ) + (84, 84, 3), dtype='float32')
     })
     return df
 
