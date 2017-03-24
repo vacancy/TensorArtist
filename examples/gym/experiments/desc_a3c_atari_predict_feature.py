@@ -129,8 +129,11 @@ def make_network(env):
         policy = O.fc('fc_policy', x, get_player_nr_actions())
         value = O.fc('fc_value', x, 1)
         with tf.variable_scope('predictor'):
-            x = O.fc('fc1', x, 256, nonlin=O.relu)
-            x = O.fc('fc2', x, 512)
+            _ = x
+            _ = O.fc('fc1', x, 256, nonlin=O.relu)
+            _ = O.fc('fc2', _, 512)
+        net.add_output(x, name='feature_current')
+        net.add_output(_, name='feature_predict')
 
         expf = O.scalar('explore_factor', 1, trainable=False)
         policy_explore = O.softmax(policy * expf, name='policy_explore')
@@ -141,7 +144,6 @@ def make_network(env):
         net.add_output(policy_explore, name='policy_explore')
         net.add_output(policy, name='policy')
         net.add_output(value, name='value')
-        net.add_output(x, name='feature_predict')
 
         if env.phase is env.Phase.TRAIN:
             
@@ -406,11 +408,28 @@ def main_demo(env, func):
     repeat_time = get_env('a3c.demo.nr_plays', 1)
 
     def get_action(inp, func=func):
-        action = func(**{'state':[[inp]]})['policy'][0].argmax()
-        return action
+        out = func(**{'state':[[inp]]})
+        action = out['policy'][0].argmax()
+        cur_feature = out['feature_current'][0]
+        next_feature = out['feature_predict'][0]
+        return action, cur_feature, next_feature
+
+    def play_one_episode(player, func):
+        count = 0
+        player.restart()
+        while True:
+            state = player.current_state
+            action, cur_feature, next_feature = func(state)
+            r, is_over = player.action(action)
+            count += 1
+            if count % 10 == 0:
+                from IPython import embed; embed()
+            if is_over:
+                return player.finish()
+            last_predict_feature = next_feature
 
     for i in range(repeat_time):
-        player.play_one_episode(get_action)
+        play_one_episode(player, get_action)
         logger.info('#{} play score={}'.format(i, player.stats['score'][-1]))
 
 
