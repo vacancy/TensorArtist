@@ -41,7 +41,7 @@ def make_network(env):
     with env.create_network() as net:
         h, w, c = 28, 28, 1
         nr_glimpse = 5
-        att_dim = 14
+        att_dim = 5
         code_length = 128
 
         is_reconstruct = get_env('demo.is_reconstruct', False)
@@ -98,7 +98,7 @@ def make_network(env):
                             sample_epsilon = O.random_normal([batch_size, code_length])
                             z = sample_mu + sample_std * sample_epsilon
 
-                        z = O.callback_injector(z)
+                        # z = O.callback_injector(z)
 
                         # accumulate for losses
                         all_sqr_mus += sample_mu ** 2.
@@ -120,11 +120,12 @@ def make_network(env):
 
                 if env.phase is env.Phase.TRAIN:
                     with tf.variable_scope('loss'):
-                        content_loss = O.raw_cross_entropy_prob('raw_content', img.flatten2(), canvas.flatten2())
+                        img, canvas = img.flatten2(), canvas.flatten2()
+                        content_loss = O.raw_cross_entropy_prob('raw_content', canvas, img)
                         content_loss = content_loss.sum(axis=1).mean(name='content')
                         # distrib_loss = 0.5 * (O.sqr(mu) + O.sqr(std) - 2. * O.log(std + 1e-8) - 1.0).sum(axis=1)
                         distrib_loss = -0.5 * (float(nr_glimpse) + all_log_vars - all_sqr_mus - all_vars).sum(axis=1)
-                        distrib_loss = distrib_loss.mean(name='distrib') / float(nr_glimpse)
+                        distrib_loss = distrib_loss.mean(name='distrib')
 
                         summary.scalar('content_loss', content_loss)
                         summary.scalar('distrib_loss', distrib_loss)
@@ -144,7 +145,7 @@ def make_network(env):
 
 def make_optimizer(env):
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('trainer.learning_rate')))
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('trainer.learning_rate'), beta1=0.75, beta2=0.5))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))
@@ -168,7 +169,7 @@ def main_train(trainer):
     from tartist.plugins.trainer_enhancer import snapshot
     snapshot.enable_snapshot_saver(trainer)
 
-    from tartist.plugins.trainer_enhancer import inference
-    inference.enable_inference_runner(trainer, make_dataflow_inference)
+    # from tartist.plugins.trainer_enhancer import inference
+    # inference.enable_inference_runner(trainer, make_dataflow_inference)
 
     trainer.train()

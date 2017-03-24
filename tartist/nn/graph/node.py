@@ -132,67 +132,67 @@ class VarNodeOpDecl(object):
     def __iter__(self):
         raise ValueError('iterating over {} is not allowed'.format(type(self).__name__))
 
-    def astype(self, dtype, name=None):
+    def astype(self, dtype, name='astype'):
         return as_varnode(tf.cast(self, dtype, name=name))
 
-    def reshape(self, *tshape, name=None):
+    def reshape(self, *tshape, name='reshape'):
         if len(tshape) == 1:
             tshape, = tshape
         from ..opr.shape import reshape
         return as_varnode(reshape(self, tshape=tshape, name=name))
 
-    def broadcast(self, *tshape, name=None):
+    def broadcast(self, *tshape, name='broadcast'):
         if len(tshape) == 1:
             tshape, = tshape
         from ..opr.shape import broadcast
         return as_varnode(broadcast(self, tshape=tshape, name=name))
 
-    def dimshuffle(self, *pattern, name=None):
+    def dimshuffle(self, *pattern, name='dimshuffle'):
         from ..opr.shape import dimshuffle 
         return as_varnode(dimshuffle(self, perm=pattern, name=name))
 
-    def add_axis(self, axis, name=None):
+    def add_axis(self, axis, name='add_axis'):
         from ..opr.shape import add_axis 
         return as_varnode(add_axis(self, axis=axis, name=name))
 
-    def remove_axis(self, axis, name=None):
+    def remove_axis(self, axis, name='remove_axis'):
         from ..opr.shape import remove_axis 
         return as_varnode(remove_axis(self, axis=axis, name=name))
 
-    def sum(self, axis=None, keepdims=False, name=None):
+    def sum(self, axis=None, keepdims=False, name='reduce_sum'):
         return as_varnode(tf.reduce_sum(self, axis=axis, keep_dims=keepdims, name=name))
 
-    def mean(self, axis=None, keepdims=False, name=None):
+    def mean(self, axis=None, keepdims=False, name='reduce_mean'):
         return as_varnode(tf.reduce_mean(self, axis=axis, keep_dims=keepdims, name=name))
 
-    def max(self, axis=None, keepdims=False, name=None):
+    def max(self, axis=None, keepdims=False, name='reduce_max'):
         return as_varnode(tf.reduce_max(self, axis=axis, keep_dims=keepdims, name=name))
 
-    def min(self, axis=None, keepdims=False, name=None):
+    def min(self, axis=None, keepdims=False, name='reduce_min'):
         return as_varnode(tf.reduce_min(self, axis=axis, keep_dims=keepdims, name=name))
 
-    def argmax(self, axis=None, name=None):
+    def argmax(self, axis=None, name='argmax'):
         return as_varnode(tf.argmax(self, axis=axis, name=name))
 
-    def argmin(self, axis=None, name=None):
+    def argmin(self, axis=None, name='argmin'):
         return as_varnode(tf.argmin(self, axis=axis, name=name))
 
-    def prod(self, axis=None, keepdims=False, name=None):
+    def prod(self, axis=None, keepdims=False, name='reduce_prod'):
         return as_varnode(tf.reduce_prod(self, axis=axis, keep_dims=keepdims, name=name))
 
-    def std(self, name=None):
+    def std(self, name='std'):
         from ..opr.arith import std
         return std(self, name=name)
 
-    def rms(self, name=None):
+    def rms(self, name='rms'):
         from ..opr.arith import rms
         return rms(self, name=name)
 
-    def flatten(self, name=None):
+    def flatten(self, name='flatten'):
         from ..opr.shape import flatten
         return flatten(self, name=name)
 
-    def flatten2(self, name=None):
+    def flatten2(self, name='flatten2'):
         from ..opr.shape import flatten2
         return flatten2(self, name=name)
 
@@ -242,7 +242,7 @@ class VarNode(VarNodeOpDecl):
 
     @property
     def shape(self):
-        return tf.shape(self.__impl)
+        return as_varnode(tf.shape(self.__impl))
 
     @property
     def dtype(self):

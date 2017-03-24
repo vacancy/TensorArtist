@@ -45,7 +45,8 @@ def flatten2(inpvar, name='flatten2'):
 
     if None not in shape:
         return tf.reshape(inpvar, [-1, np.prod(shape)])
-    return tf.reshape(inpvar, tf.stack([tf.shape(inpvar)[0], -1]))
+    out = tf.reshape(inpvar, tf.stack([tf.shape(inpvar)[0], -1]))
+    return tf.identity(out, name='out')
 
 
 @wrap_simple_named_op
