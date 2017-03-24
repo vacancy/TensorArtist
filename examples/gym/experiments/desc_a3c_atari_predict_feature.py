@@ -173,7 +173,9 @@ def make_network(env):
             # value_loss = O.truediv(value_loss, future_reward.shape[0].astype('float32'), name='value_loss')
             predict_loss = O.raw_l2_loss('raw_predict_loss', x, y).sum(axis=1).mean(name='predict_feature_loss')
             entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
-            loss = tf.add_n([-policy_cost, -xentropy_cost * entropy_beta, value_loss, predict_loss], name='loss')
+            predict_beta = O.scalar('predict_beta', 0.01, trainable=False)
+            loss = tf.add_n([-policy_cost, -xentropy_cost * entropy_beta, 
+                value_loss, predict_loss * predict_beta], name='loss')
 
             net.set_loss(loss)
 
