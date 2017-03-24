@@ -8,6 +8,7 @@
 
 from tartist import image
 from tartist.core import get_env
+from tartist.core.utils.thirdparty import get_tqdm_defaults
 from tartist.data import flow 
 from tartist.data.datasets.mnist import load_mnist
 from tartist.nn import train
@@ -68,7 +69,7 @@ def main_demo_infogan(env, func):
     df = flow.DictOfArrayDataFlow(df)
 
     all_outputs = []
-    for data in tqdm.tqdm(df, total=len(df)):
+    for data in tqdm.tqdm(df, total=len(df), **get_tqdm_defaults()):
         res = func(**data)
         all_outputs.append(res['output'][0, :, :, 0])
 

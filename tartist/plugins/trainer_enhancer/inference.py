@@ -9,6 +9,7 @@
 
 from .summary import put_summary_history
 from tartist.core import register_event
+from tartist.core.utils.thirdparty import get_tqdm_defaults
 from tartist.nn import TArtGraphKeys
 import tensorflow as tf
 import tqdm as tqdm
@@ -48,7 +49,7 @@ def enable_inference_runner(trainer, dataflow, interval=1,
         except:
             pass
 
-        df = tqdm.tqdm(df, total=expect_count, leave=False, desc='running inference')
+        df = tqdm.tqdm(df, total=expect_count, leave=False, desc='running inference', **get_tqdm_defaults())
         count = 0
         for data in df:
             count += 1
