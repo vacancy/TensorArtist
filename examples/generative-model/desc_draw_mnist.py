@@ -6,6 +6,17 @@
 # 
 # This file is part of TensorArtist
 
+"""
+Implementation of paper: Deep Recurrent Attentive Writer (DRAW) network architecture introduced by
+K. Gregor, I. Danihelka, A. Graves and D. Wierstra. The original paper can be found at:
+http://arxiv.org/pdf/1502.04623
+
+Reference implementations on GitHub:
+
+1. https://github.com/jbornschein/draw
+2. https://github.com/ikostrikov/TensorFlow-VAE-GAN-DRAW
+"""
+
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
@@ -85,8 +96,9 @@ def make_network(env):
                     if is_reconstruct or env.phase is env.Phase.TRAIN:
                         img_hat = draw_opr.image_diff(img, canvas)  # eq. 3
 
+                        # Note: here the input should be dec_h
                         with tf.variable_scope('read', reuse=reuse):
-                            read_param = O.fc('fc_param', enc_h, 5)
+                            read_param = O.fc('fc_param', dec_h, 5)
 
                         with tf.name_scope('read_step{}'.format(step)):
                             cx, cy, delta, var, gamma = draw_opr.split_att_params(h, w, att_dim, read_param)
