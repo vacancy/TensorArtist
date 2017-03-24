@@ -76,7 +76,7 @@ def make_network(env):
 
                 batch_size = img.shape[0] if is_train else 1
 
-                canvas = O.zeros(shape=(batch_size, h, w, c), dtype='float32')
+                canvas = O.zeros(shape=O.canonize_sym_shape([batch_size, h, w, c]), dtype='float32')
                 enc_state = encoder.zero_state(batch_size, dtype='float32')
                 dec_state = decoder.zero_state(batch_size, dtype='float32')
                 enc_h, dec_h = enc_state[1], dec_state[1]
