@@ -1,14 +1,14 @@
 # -*- coding:utf8 -*-
-# File   : desc_a3c_atari.py
+# File   : desc_a3c_predict_atari.py
 # Author : Jiayuan Mao
 #          Honghua Dong
 # Email  : maojiayuan@gmail.com
 #          dhh19951@gmail,com
-# Date   : 3/18/17
+# Date   : 3/23/17
 #
 # This file is part of TensorArtist
 
-"""This reproduction of A3C is based on ppwwyyxx's reproduction in his TensorPack
+"""The reproduction of A3C(desc_a3c_atari) part is based on ppwwyyxx's reproduction in his TensorPack
 Credit to : https://github.com/ppwwyyxx/tensorpack/tree/master/examples/A3C-Gym"""
 
 import time
@@ -96,31 +96,41 @@ def make_network(env):
     with env.create_network() as net:
         h, w, c = get_input_shape()
 
+        def get_feature(x):
+            _ = x / 255.0
+            with O.argscope(O.conv2d, nonlin=O.relu):
+                _ = O.conv2d('conv0', _, 32, 5)
+                _ = O.max_pooling2d('pool0', _, 2)
+                _ = O.conv2d('conv1', _, 32, 5)
+                _ = O.max_pooling2d('pool1', _, 2)
+                _ = O.conv2d('conv2', _, 64, 4)
+                _ = O.max_pooling2d('pool2', _, 2)
+                _ = O.conv2d('conv3', _, 64, 3)
+                _ = O.fc('fc0', _, 512, nonlin=O.p_relu)
+
+            return _
+
         dpc = env.create_dpcontroller()
         with dpc.activate():
             def inputs():
                 state = O.placeholder('state', shape=(None, h, w, c))
                 return [state]
 
-            def forward(x):
-                _ = x / 255.0
-                with O.argscope(O.conv2d, nonlin=O.relu):
-                    _ = O.conv2d('conv0', _, 32, 5)
-                    _ = O.max_pooling2d('pool0', _, 2)
-                    _ = O.conv2d('conv1', _, 32, 5)
-                    _ = O.max_pooling2d('pool1', _, 2)
-                    _ = O.conv2d('conv2', _, 64, 4)
-                    _ = O.max_pooling2d('pool2', _, 2)
-                    _ = O.conv2d('conv3', _, 64, 3)
-
-                dpc.add_output(_, name='feature')
+            def forward(state):
+                with tf.variable_scope('shared_extractor'):
+                    feature_x = get_feature(state)
+                dpc.add_output(state, name='state')
+                dpc.add_output(feature_x, name='feature_x')
 
             dpc.set_input_maker(inputs).set_forward_func(forward)
 
-        _ = dpc.outputs['feature']
-        _ = O.fc('fc0', _, 512, nonlin=O.p_relu)
-        policy = O.fc('fc_policy', _, get_player_nr_actions())
-        value = O.fc('fc_value', _, 1)
+        input_state = dpc.outputs['state']
+        x = dpc.outputs['feature_x']
+        policy = O.fc('fc_policy', x, get_player_nr_actions())
+        value = O.fc('fc_value', x, 1)
+        with tf.variable_scope('predictor'):
+            x = O.fc('fc1', x, 256, nonlin=O.relu)
+            x = O.fc('fc2', x, 512)
 
         expf = O.scalar('explore_factor', 1, trainable=False)
         policy_explore = O.softmax(policy * expf, name='policy_explore')
@@ -131,8 +141,26 @@ def make_network(env):
         net.add_output(policy_explore, name='policy_explore')
         net.add_output(policy, name='policy')
         net.add_output(value, name='value')
+        net.add_output(x, name='feature_predict')
 
         if env.phase is env.Phase.TRAIN:
+            
+            dpc = env.create_dpcontroller()
+            with dpc.activate():
+                def inputs():
+                    next_single_state = O.placeholder('next_single_state', shape=(None, h, w, 3))
+                    return [next_single_state]
+
+                def forward(y):
+                    y = O.concat([input_state[:, :, :, 3:], y], axis=3)
+                    with tf.variable_scope('shared_extractor', reuse=True):
+                        feature_y = get_feature(y)
+                    dpc.add_output(feature_y, name='feature_y')
+
+                dpc.set_input_maker(inputs).set_forward_func(forward)
+            
+            y = dpc.outputs['feature_y']
+
             action = O.placeholder('action', shape=(None, ), dtype=tf.int64)
             future_reward = O.placeholder('future_reward', shape=(None, ))
 
@@ -143,18 +171,18 @@ def make_network(env):
             xentropy_cost = (-policy * log_policy).sum(axis=1).mean(name='xentropy_cost')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
             # value_loss = O.truediv(value_loss, future_reward.shape[0].astype('float32'), name='value_loss')
+            predict_loss = O.raw_l2_loss('raw_predict_loss', x, y).sum(axis=1).mean(name='predict_feature_loss')
             entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
-            loss = tf.add_n([-policy_cost, -xentropy_cost * entropy_beta, value_loss], name='loss')
+            loss = tf.add_n([-policy_cost, -xentropy_cost * entropy_beta, value_loss, predict_loss], name='loss')
 
             net.set_loss(loss)
 
-            for v in [policy_cost, xentropy_cost, value_loss,
+            for v in [policy_cost, xentropy_cost, value_loss, predict_loss, 
                       value.mean(name='predict_value'), advantage.rms(name='rms_advantage'), loss]:
                 summary.scalar(v)
 
     if is_train:
         env.set_slave_devices(slave_devices)
-
 
 def make_player(is_train=True, dump_dir=None):
     def resize_state(s):
@@ -188,10 +216,12 @@ def make_dataflow_train(env):
     batch_size = get_env('trainer.batch_size')
 
     df = flow.QueueDataFlow(env.data_queue)
+    shape = get_input_shape()
     df = flow.BatchDataFlow(df, batch_size, sample_dict={
-        'state': np.empty((batch_size, ) + get_input_shape(), dtype='float32'),
+        'state': np.empty((batch_size, ) + shape, dtype='float32'),
         'action': np.empty((batch_size, ), dtype='int32'),
-        'future_reward': np.empty((batch_size, ), dtype='float32')
+        'future_reward': np.empty((batch_size, ), dtype='float32'),
+        'next_single_state': np.empty((batch_size, ) + shape[:2] + (3, ), dtype='float32')
     })
     return df
 
@@ -280,9 +310,46 @@ def _predictor_func(pid, router, task_queue, func, is_inference=False):
 predictor_func = functools.partial(_predictor_func, is_inference=False)
 inference_predictor_func = functools.partial(_predictor_func, is_inference=True)
 
+from common_a3c import PlayerHistory
+def on_data_func(env, identifier, inp_data):
+    router, task_queue = env.player_master.router, env.player_master.queue
+    data_queue = env.data_queue
+    player_history = env.players_history[identifier]
+
+    state, reward, is_over = inp_data
+
+    def parse_history(history, next_single_state, is_over):
+        num = len(history)
+        if is_over:
+            r = 0
+            env.players_history[identifier] = []
+        elif num == get_env('a3c.acc_step') + 1:
+            history, last = history[:-1], history[-1]
+            r = last.value
+            env.players_history[identifier] = [last]
+        else:
+            return
+
+        gamma = get_env('a3c.gamma')
+        for i in history[::-1]:
+            r = np.clip(i.reward, -1, 1) + gamma * r
+            data_queue.put({'state': i.state, 'action': i.action, 'future_reward': r, 'next_single_state': next_single_state})
+            next_single_state = i.state[:, :, -3:]
+
+    def callback(action, predict_value):
+        router.send(identifier, action)
+        player_history.append(PlayerHistory(state, action, predict_value, None))
+
+    task_queue.put((identifier, inp_data, callback))
+
+    if len(player_history) > 0:
+        last = player_history[-1]
+        player_history[-1] = PlayerHistory(last[0], last[1], last[2], reward)
+        parse_history(player_history, state[:, :, -3:], is_over)
+
 
 def make_a3c_configs(env):
-    from common_a3c import on_data_func, on_stat_func, inference_on_data_func, inference_on_stat_func
+    from common_a3c import on_stat_func, inference_on_data_func, inference_on_stat_func
 
     env.player_master.player_func = player_func
     env.player_master.predictor_func = predictor_func

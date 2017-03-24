@@ -10,6 +10,8 @@ from .base import SimpleRLEnvironBase, DiscreteActionSpace, ProxyRLEnvironBase
 import threading
 import numpy as np
 import collections
+import os
+import errno
 
 try:
     import gym
@@ -33,8 +35,15 @@ class GymRLEnviron(SimpleRLEnvironBase):
         with get_env_lock():
             self._gym = gym.make(name)
 
-        # TODO(MJY): support monitor
-        assert dump_dir is None
+        if dump_dir:
+            if dump_dir != '' and not os.path.isdir(dump_dir):
+                try:
+                    os.makedirs(dump_dir)
+                except OSError as e:
+                    if e.errno != errno.EEXIST:
+                        raise e
+
+            self._gym = gym.wrappers.Monitor(self._gym, dump_dir)
 
         self._reward_history = []
 

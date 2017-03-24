@@ -20,7 +20,7 @@ __all__ = ['p_relu', 'leaky_relu', 'bn_relu', 'bn_nonlin']
 @wrap_varnode_func
 def p_relu(x, init=0.001, name='p_relu'):
     alpha = O.scalar('alpha', init)
-    x = ((1 + alpha) * x + (1 - alpha) * abs(x))
+    x = ((1. + alpha) * x + (1. - alpha) * abs(x))
     return O.mul(x, 0.5, name='out')
 
 
