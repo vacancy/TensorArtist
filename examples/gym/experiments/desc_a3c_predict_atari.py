@@ -152,9 +152,7 @@ def make_network(env):
                     return [next_single_state]
 
                 def forward(y):
-                    #past_frames = tf.split(input_state, get_env('a3c.frame_history'), axis=3)[1:]
-                    #y = tf.concat([tf.concat(past_frames, 3), y], 3)
-                    O.concat([past_frames[:, :, :, 3:], y], axis=3)
+                    y = O.concat([input_state[:, :, :, 3:], y], axis=3)
                     with tf.variable_scope('shared_extractor', reuse=True):
                         feature_y = get_feature(y)
                     dpc.add_output(feature_y, name='feature_y')
@@ -218,11 +216,12 @@ def make_dataflow_train(env):
     batch_size = get_env('trainer.batch_size')
 
     df = flow.QueueDataFlow(env.data_queue)
+    shape = get_input_shape()
     df = flow.BatchDataFlow(df, batch_size, sample_dict={
-        'state': np.empty((batch_size, ) + get_input_shape(), dtype='float32'),
+        'state': np.empty((batch_size, ) + shape, dtype='float32'),
         'action': np.empty((batch_size, ), dtype='int32'),
         'future_reward': np.empty((batch_size, ), dtype='float32'),
-        'next_single_state': np.empty((batch_size, ) + (84, 84, 3), dtype='float32')
+        'next_single_state': np.empty((batch_size, ) + shape[:2] + (3, ), dtype='float32')
     })
     return df
 
