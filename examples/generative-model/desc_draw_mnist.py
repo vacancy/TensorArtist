@@ -24,7 +24,7 @@ __envs__ = {
         'learning_rate': 0.001,
 
         'batch_size': 100,
-        'epoch_size': 50,
+        'epoch_size': 500,
         'nr_epochs': 100,
     },
     'inference': {
@@ -40,7 +40,7 @@ __envs__ = {
 def make_network(env):
     with env.create_network() as net:
         h, w, c = 28, 28, 1
-        nr_glimpse = 5
+        nr_glimpse = 16
         att_dim = 5
         code_length = 128
 
