@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 from .base import SimpleRLEnvironBase, DiscreteActionSpace, ProxyRLEnvironBase
+from ..core import io
 import threading
 import numpy as np
 import collections
@@ -36,13 +37,7 @@ class GymRLEnviron(SimpleRLEnvironBase):
             self._gym = gym.make(name)
 
         if dump_dir:
-            if dump_dir != '' and not os.path.isdir(dump_dir):
-                try:
-                    os.makedirs(dump_dir)
-                except OSError as e:
-                    if e.errno != errno.EEXIST:
-                        raise e
-
+            io.mkdir(dump_dir)
             self._gym = gym.wrappers.Monitor(self._gym, dump_dir)
 
         self._reward_history = []
