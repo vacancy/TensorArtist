@@ -25,7 +25,7 @@ class A3CMaster(object):
     def __init__(self, env, name, nr_predictors):
         self.name = name
         self.env = env
-        self.router = QueryRepPipe(name + '-master', send_qsize=128)
+        self.router = QueryRepPipe(name + '-master', send_qsize=12, mode='tcp')
         self.queue = queue.Queue()
 
         self.on_data_func = None
