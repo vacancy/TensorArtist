@@ -51,29 +51,33 @@ def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, de
     collections = extend_collection_list(collections, TArtGraphKeys.TART_VARIABLES)
 
     if tf.get_variable_scope().reuse:
-        return get_default_env().find_in_collection_by_name(collection, name)
+        var = tf.get_variable(name)
+        name = var.name
+        tavar = get_default_env().find_in_collection_by_name(TArtGraphKeys.TART_VARIABLES, name)
+        if tavar is not None:
+            return tavar
+    else:
+        with device_context(device):
+            if isinstance(value_or_initializer, (np.ndarray, float, int)):
+                if type(value_or_initializer) is float:
+                    dtype = dtype or tf.float32
+                elif type(value_or_initializer) is int:
+                    dtype = dtype or tf.int32
+    
+                var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=value_or_initializer,
+                                      trainable=trainable, collections=None)
+            else:
+                assert_notnone(shape, name='shape')
+                var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=value_or_initializer,
+                                      trainable=trainable, collections=None)
+            var = as_varnode(var)
 
-    with device_context(device):
-        if isinstance(value_or_initializer, (np.ndarray, float, int)):
-            if type(value_or_initializer) is float:
-                dtype = dtype or tf.float32
-            elif type(value_or_initializer) is int:
-                dtype = dtype or tf.int32
+    op = VariableOp(opr_name, var, get_default_env())
+    var = op.outputs[0]
 
-            var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=value_or_initializer,
-                                  trainable=trainable, collections=None)
-        else:
-            assert_notnone(shape, name='shape')
-            var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=value_or_initializer,
-                                  trainable=trainable, collections=None)
-        var = as_varnode(var)
-
-        op = VariableOp(opr_name, var, get_default_env())
-        var = op.outputs[0]
-
-        tf.add_to_collection(TArtGraphKeys.TART_OPERATORS, op)
-        tf.get_default_graph().add_to_collections(collections, var)
-        return var
+    tf.add_to_collection(TArtGraphKeys.TART_OPERATORS, op)
+    tf.get_default_graph().add_to_collections(collections, var)
+    return var
 
 
 def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False,
