@@ -46,7 +46,12 @@ class VariableOp(OprNode):
 @wrap_varnode_func
 def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, device=None, trainable=True,
              collections=None):
+
     opr_name = unique_opr_name(name)
+    collections = extend_collection_list(collections, TArtGraphKeys.TART_VARIABLES)
+
+    if tf.get_variable_scope().reuse:
+        return get_default_env().find_in_collection_by_name(collection, name)
 
     with device_context(device):
         if isinstance(value_or_initializer, (np.ndarray, float, int)):
@@ -56,25 +61,25 @@ def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, de
                 dtype = dtype or tf.int32
 
             var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=value_or_initializer,
-                                  trainable=trainable, collections=collections)
+                                  trainable=trainable, collections=None)
         else:
             assert_notnone(shape, name='shape')
             var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=value_or_initializer,
-                                  trainable=trainable, collections=collections)
+                                  trainable=trainable, collections=None)
         var = as_varnode(var)
 
-        if tf.get_variable_scope().reuse:
-            return var
-
         op = VariableOp(opr_name, var, get_default_env())
+        var = op.outputs[0]
+
         tf.add_to_collection(TArtGraphKeys.TART_OPERATORS, op)
+        tf.get_default_graph().add_to_collections(collections, var)
         return var
 
 
 def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False,
            collections=None, summary=False):
 
-    collections = extend_collection_list(collections, TArtGraphKeys.SCALAR_VARIABLES, tf.GraphKeys.GLOBAL_VARIABLES)
+    collections = extend_collection_list(collections, TArtGraphKeys.SCALAR_VARIABLES)
     value = float(value)
     var = variable(name, value, shape=None, dtype=dtype, device=device, trainable=trainable, collections=collections)
     if summary:
@@ -83,22 +88,22 @@ def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False,
     return var
 
 
-def get_scalar(name, env=None, collection=TArtGraphKeys.SCALAR_VARIABLES):
+def get_variable(name, env=None, collection=TArtGraphKeys.TART_VARIABLES):
     env = env or get_default_env()
     sym = env.find_in_collection_by_name(collection, name)
     return sym.taop
 
 
+def get_scalar(name, env=None, collection=TArtGraphKeys.SCALAR_VARIABLES):
+    return get_variable(name, env=env, collection=collection)
+
+
 def get_scalar_value(name, env=None, collection=TArtGraphKeys.SCALAR_VARIABLES):
-    env = env or get_default_env()
-    sym = env.find_in_collection_by_name(collection, name)
-    return sym.taop.get_value()
+    return get_scalar(name, env=env, collection=collection).get_value()
 
 
 def set_scalar_value(name, value, env=None, collection=TArtGraphKeys.SCALAR_VARIABLES):
-    env = env or get_default_env()
-    sym = env.find_in_collection_by_name(collection, name)
-    return sym.taop.set_value(value)
+    return get_scalar(name, env=env, collection=collection).set_value(value)
 
 
 @wrap_varnode_func
@@ -111,3 +116,4 @@ def ensure_variable(name, value_or_intializer, *args, **kwargs):
     if not isinstance(value_or_intializer, __valid_tensor_types__):
         return variable(name, value_or_intializer, *args, **kwargs)
     return value_or_intializer
+
