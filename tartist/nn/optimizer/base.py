@@ -18,10 +18,10 @@ __all__ = ['make_optimizer_variable', 'get_optimizer_variable,'
 
 
 def make_optimizer_variable(name, value, prefix='',
-                            collections=TArtGraphKeys.OPTIMIZER_VARIABLES):
+                            collections=TArtGraphKeys.OPTIMIZER_VARIABLES, summary=True):
 
     name = prefix + name
-    return O.scalar(name, value, collections=collections, trainable=False)
+    return O.scalar(name, value, collections=collections, trainable=False, summary=summary)
 
 
 def get_optimizer_variable(name, prefix='', env=None, collection=TArtGraphKeys.OPTIMIZER_VARIABLES):

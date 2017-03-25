@@ -8,6 +8,7 @@
 
 from .common import fsize_format
 from ..utils.cli import maybe_mkdir
+from ...core.utils.thirdparty import get_tqdm_defaults
 from ..logger import get_logger
 
 import os
@@ -42,7 +43,7 @@ def download(url, dir, filename=None):
             last_b[0] = b
         return inner
     try:
-        with tqdm.tqdm(unit='B', unit_scale=True, miniters=1, desc=filename) as t:
+        with tqdm.tqdm(unit='B', unit_scale=True, miniters=1, desc=filename, **get_tqdm_defaults()) as t:
             fpath, _ = urllib.request.urlretrieve(url, fpath, reporthook=hook(t))
         statinfo = os.stat(fpath)
         size = statinfo.st_size

@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 from tartist.core import register_event
+from tartist.core.utils.thirdparty import get_tqdm_defaults
 import tqdm
 
 
@@ -16,7 +17,8 @@ def enable_epoch_progress(trainer):
     def epoch_progress_on_iter_after(trainer, inp, out):
         nonlocal pbar
         if pbar is None:
-            pbar = tqdm.tqdm(total=trainer.epoch_size, leave=False, initial=trainer.iter % trainer.epoch_size)
+            pbar = tqdm.tqdm(total=trainer.epoch_size, leave=False, initial=trainer.iter % trainer.epoch_size,
+                             **get_tqdm_defaults())
 
         desc = 'Iter={}'.format(trainer.iter)
         if 'error' in trainer.runtime:

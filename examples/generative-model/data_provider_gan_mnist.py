@@ -8,6 +8,7 @@
 
 from tartist import image
 from tartist.core import get_env
+from tartist.core.utils.thirdparty import get_tqdm_defaults
 from tartist.data import flow 
 from tartist.data.datasets.mnist import load_mnist
 from tartist.nn import train
@@ -68,18 +69,12 @@ def main_demo_infogan(env, func):
     df = flow.DictOfArrayDataFlow(df)
 
     all_outputs = []
-    for data in tqdm.tqdm(df, total=len(df)):
+    for data in tqdm.tqdm(df, total=len(df), **get_tqdm_defaults()):
         res = func(**data)
         all_outputs.append(res['output'][0, :, :, 0])
 
-    grid = get_env('demo.infogan.grid', (10, None))
-    if grid[1] is None:
-        grid = (grid[0], len(all_outputs) // grid[0])
-    all_rows = []
-    for i in range(grid[0]):
-        cur_row = all_outputs[i*grid[1]:(i+1)*grid[1]]
-        all_rows.append(np.hstack(cur_row))
-    final = np.vstack(all_rows)
+    grid_desc = get_env('demo.infogan.grid_desc')
+    final = image.image_grid(all_outputs, grid_desc)
     final = (final * 255).astype('uint8')
     image.imwrite('infogan.png', final)
 

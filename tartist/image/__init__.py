@@ -8,4 +8,5 @@
 
 
 from .imgproc import *
+from .visualize import *
 from . import aug, rect

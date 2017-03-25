@@ -91,7 +91,7 @@ def fc(name, inpvar, nr_output_channels,
     b_shape = (nr_output_channels, )
 
     if W is None:
-        W = tf.contrib.layers.xavier_initializer_conv2d()
+        W = tf.contrib.layers.xavier_initializer()
     W = O.ensure_variable('W', W, shape=W_shape, dtype=param_dtype)
     if use_bias:
         if b is None:

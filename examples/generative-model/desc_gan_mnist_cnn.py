@@ -24,12 +24,10 @@ __envs__ = {
         'root': get_dump_directory(__file__),
         'data': get_data_directory('WellKnown/mnist')
     },
-
     'dataset': {
         'nr_classes': 10,
         'input_shape': 28,
     },
-
     'trainer': {
         'learning_rate': 2e-4,
 

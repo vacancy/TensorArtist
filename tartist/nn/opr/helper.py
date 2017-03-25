@@ -53,6 +53,8 @@ def wrap_simple_named_op(*args, use_scope=True, default_name=None):
 
         @functools.wraps(func)
         def new_func(*args, name=default_name, **kwargs):
+            if name is None:
+                name = default_name
             if use_scope:
                 with tf.name_scope(name):
                     return func(*args, name=name, **kwargs)
