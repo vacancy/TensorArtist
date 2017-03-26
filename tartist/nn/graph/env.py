@@ -33,6 +33,7 @@ __all__ = [
 def select_device(devid, env):
     """
     use tf.device to change the current device, it will use the #devid device in env
+
     :param devid: device id in env.all_devices, should be int
     :param env: the env
     :return: a tf.device context
@@ -45,6 +46,7 @@ def select_device(devid, env):
 def reuse_context(activate=True):
     """
     enable variable reuse context, without any name
+
     :param activate: whether use or not, this is useful when you have some conditional parameters to enable
     parameter reuse
     :return: if active, return a reuse variable scope, otherwise an empty context
@@ -75,6 +77,22 @@ def _on_train_flag(attr_name):
 
 
 class Env(object):
+    """
+    Env is a environment to perform network construction, this is actually similar to a Graph object
+    in tensorflow.
+    Each Env object actually contains one tf.Graph, and also a default tf.Session on that graph.
+
+    One important reason to use Env is to perform data-parallel, and also hold some information for network
+    construction (like env.phase). You can use env.set_master_device and env.set_slave_devices to set the device
+    used by this env. It will then be used for data-parallel maker.
+
+    Besides data-parallel controller, a nn.Network object is associated with each Env, representing the network.
+
+    One important notice is that, this Env object has nothing to do with the core get_env, set_env series methods.
+    Although they share the same naming, that one is used for environ variables holding (similar to environ in OS),
+    but this one is used for NN construction.
+    """
+
     class SessionFlag(AttrObject):
         """Env flags"""
 
@@ -117,19 +135,7 @@ class Env(object):
     def __init__(self, phase=Phase.TEST, master_dev='/gpu:0', slave_devs=None, flags=None, dpflags=None,
                  graph=None, session=None):
         """
-        Env is a environment to perform network construction, this is actually similar to a Graph object
-        in tensorflow.
-        Each Env object actually contains one tf.Graph, and also a default tf.Session on that graph.
 
-        One important reason to use Env is to perform data-parallel, and also hold some information for network
-        construction (like env.phase). You can use env.set_master_device and env.set_slave_devices to set the device
-        used by this env. It will then be used for data-parallel maker.
-
-        Besides data-parallel controller, a nn.Network object is associated with each Env, representing the network.
-
-        One important notice is that, this Env object has nothing to do with the core get_env, set_env series methods.
-        Although they share the same naming, that one is used for environ variables holding (similar to environ in OS),
-        but this one is used for NN construction.
         :param phase: The phase, either TRAIN or TEST.
         :param master_dev: The master device, e.g. "/gpu:0".
         :param slave_devs: The slave devices, should be a list/tuple.
@@ -258,12 +264,11 @@ class Env(object):
     @contextlib.contextmanager
     def use_input_queue(self):
         """Return a context manager to enable input queue. the context manager should be activated during the network
-        construction, like:
+        construction, like::
 
-        ```
             with env.as_default(), env.use_input_queue():
                 make_network(env)
-        ```
+
         """
         assert not self._use_input_queue, 'use_input_queue can only be activated once'
         yield
@@ -318,6 +323,7 @@ class Env(object):
     def clone(self, share_graph=True, share_session=True):
         """
         Clone this graph.
+
         :param share_graph: Whether the new env will share the graph with this.
         :param share_session: Whether the new env will share the session with this.
         """
@@ -337,6 +343,7 @@ class Env(object):
     def find_var_by_name(self, name):
         """
         Find tensor (accurately, varnode) by name. The suffix ":0" can be automatically inferred.
+
         :param name: The name to the var, ":0" suffix can be ignored
         :return The varnode with given name.
         """
@@ -349,6 +356,7 @@ class Env(object):
         """
         Find a op/tensor by name in a collection.
         In tensor case, the suffix ":0" can be automatically inferred
+
         :param collection_or_key: A collection (a list) or a string as the key to the collection.
         :param name: The name to the op/tensor you want to find.
         :return: The collection element with the given name.
@@ -387,12 +395,10 @@ get_default_env = defaults_manager.gen_get_default(Env)
 
 
 class DataParallelController(object):
-    def __init__(self, owner_env, name_scope_prefix='tower'):
-        """
-        A data parallel controller letting you perform automatically data-parallel during network construction.
-        To do so, you need to make two functions: make_input, and forward. A typical usage is:
+    """
+    A data parallel controller letting you perform automatically data-parallel during network construction.
+    To do so, you need to make two functions: make_input, and forward. A typical usage is::
 
-        ```
         dpc = DataParallelController(env)
         with dpc.active():
             def make_input():
@@ -407,18 +413,21 @@ class DataParallelController(object):
         # ... then you can get the reduced output by:
 
         dpc.outputs['output']
-        ```
 
-        Technically, the dpc will make n (n is the number of devices you set in env) different towers, when constructing
-        the i-th tower (residing on i-th device), it will call once input_maker, and call once forward_func by passing
-        the input tensors returned by input_maker to the forward_func.
+    Technically, the dpc will make n (n is the number of devices you set in env) different towers, when constructing
+    the i-th tower (residing on i-th device), it will call once input_maker, and call once forward_func by passing
+    the input tensors returned by input_maker to the forward_func.
 
-        In forward function, you should call dpc.add_output to state that the specific output will be outputed (and then
-        reduced to the master device). Note that you can point the reduction method for each output by using the
-        parameter reduce_method when you call dpc.add_output.
+    In forward function, you should call dpc.add_output to state that the specific output will be outputed (and then
+    reduced to the master device). Note that you can point the reduction method for each output by using the
+    parameter reduce_method when you call dpc.add_output.
 
-        Then, after the activate context, it will collect all towers' outputs, and reduce them to the first device (
-        tower 0, i.e. the tower for master_device), and provide access to then by dpc.outputs[name]
+    Then, after the activate context, it will collect all towers' outputs, and reduce them to the first device (
+    tower 0, i.e. the tower for master_device), and provide access to then by dpc.outputs[name]
+    """
+
+    def __init__(self, owner_env, name_scope_prefix='tower'):
+        """
 
         :param owner_env: The owner env.
         :param name_scope_prefix: The name scope prefix: like "tower", it will result in multiple towers naming
@@ -464,6 +473,7 @@ class DataParallelController(object):
     def add_output(self, symbol, name=None, reduce_method='concat'):
         """
         Add an output to dpc.
+
         :param symbol: The tensor you want to output.
         :param name: The name to the tensor, if None, will use symbol.name.
         :param reduce_method: Either 'concat' or 'sum', used for reducing.
@@ -561,10 +571,12 @@ class DataParallelController(object):
 
 
 class Network(object):
+    """
+    A network is a data structure to hold a neural network's structure, like outputs and loss.
+    At the same time, it also provide some utility functions related to graph structure.
+    """
     def __init__(self, owner_env):
         """
-        A network is a data structure to hold a neural network's structure, like outputs and loss.
-        At the same time, it also provide some utility functions related to graph structure.
         :param owner_env: The owner env.
         """
         self.__owner_env = owner_env
@@ -611,6 +623,7 @@ class Network(object):
         A utility function to add all outputs in a data-parallel controller's outputs to the networks' output dict.
         Note that if you given the loss_name parameter, the output named with that name will be treated as the loss
         for the network (thus calling net.set_loss).
+
         :param dpc: A data parallel controller.
         :param loss_name: The loss name.
         :return: self

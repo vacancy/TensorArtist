@@ -12,8 +12,9 @@ from tartist.nn import opr as O
 
 def image_diff(origin, canvas_logits):
     """
-    get the difference between original image and the canvas,
+    Get the difference between original image and the canvas,
     note that the canvas is given without sigmoid activation (we will do it inside)
+
     :param origin: original image: batch_size, h, w, c
     :param canvas_logits: canvas logits: batch_size, h, w, c
     :return: the difference: origin - sigmoid(logits)
@@ -24,7 +25,8 @@ def image_diff(origin, canvas_logits):
 
 def filterbank(img_h, img_w, att_dim, center_x, center_y, delta, var):
     """
-    get the filterbank matrix
+    Get the filterbank matrix.
+
     :param img_h: image height
     :param img_w: image width
     :param att_dim: attention dim, the attention window is att_dim x att_dim
@@ -57,7 +59,8 @@ def filterbank(img_h, img_w, att_dim, center_x, center_y, delta, var):
 
 def split_att_params(img_h, img_w, att_dim, value):
     """
-    split attention params
+    Split attention params.
+
     :param img_h: image height
     :param img_w: image width
     :param att_dim: attention dim, the attention window is att_dim x att_dim
@@ -77,7 +80,8 @@ def split_att_params(img_h, img_w, att_dim, value):
 
 def apply_filterbank(inpvar, fx, fy, dir):
     """
-    apply the filter bank, if dir is i2w, then inp var is treated as image, otherwise it is treated as window
+    Apply the filter bank, if dir is i2w, then inp var is treated as image, otherwise it is treated as window.
+
     :param inpvar: image: batch_size x h x w x channel
     :param fx: filter_x: batch_size x att_dim x w
     :param fy: filter_y: batch_size x att_dim x h
@@ -108,7 +112,8 @@ def apply_filterbank(inpvar, fx, fy, dir):
 
 def att_read(att_dim, image, center_x, center_y, delta, var):
     """
-    perform attention reading given center, delta and variance
+    Perform attention reading given center, delta and variance.
+
     :param att_dim: attention dim, the attention window is att_dim x att_dim
     :param image: image: batch_size x h x w x c
     :param center_x: attention center (x-axis): batch_size x 1
@@ -125,7 +130,8 @@ def att_read(att_dim, image, center_x, center_y, delta, var):
 
 def att_write(img_h, img_w, window, center_x, center_y, delta, var):
     """
-    perform attention writing given center, delta, and variance
+    Perform attention writing given center, delta, and variance.
+
     :param img_h: image height
     :param img_w: image width
     :param window: window to write: batch_size x att_dim x att_dim x c
