@@ -8,7 +8,7 @@
 #
 # This file is part of TensorArtist
 
-"""This reproduction of A3C is based on ppwwyyxx's reproduction in his TensorPack
+"""This reproduction of A3C is based on ppwwyyxx's reproduction in his TensorPack framework.
 Credit to : https://github.com/ppwwyyxx/tensorpack/tree/master/examples/A3C-Gym"""
 
 import time
