@@ -20,7 +20,7 @@ from .rng import *
 from .shape import *
 from .tensor import *
 
-from ._migrate import *
+from .migrate import *
 from .helper import argscope
 
 from . import distrib

@@ -8,8 +8,8 @@
 
 import tensorflow as tf
 
-from ._migrate import log, sqr
-from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op
+from .helper import wrap_varnode_func, wrap_named_op
+from .helper import lazy_O as O
 
 __all__ = [
     'grad',
@@ -32,7 +32,7 @@ def grad(ys, xs, grad_ys=None, name='gradients'):
 @wrap_named_op
 @wrap_varnode_func
 def raw_l2_loss(name, pred, label):
-    loss = 0.5 * sqr(pred - label)
+    loss = 0.5 * O.sqr(pred - label)
     return tf.identity(loss, name='out')
 
 
@@ -45,7 +45,7 @@ def raw_cross_entropy(name, pred, label, is_onehot=False):
 @wrap_named_op
 @wrap_varnode_func
 def raw_cross_entropy_prob(name, pred, label, eps=1e-4):
-    loss = -label * log(pred + eps) - (1. - label) * log(1. - pred + eps)
+    loss = -label * O.log(pred + eps) - (1. - label) * O.log(1. - pred + eps)
     return tf.identity(loss, name='out')
 
 

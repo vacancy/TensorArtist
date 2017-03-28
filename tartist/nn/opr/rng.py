@@ -9,7 +9,7 @@
 import tensorflow as tf
 from tensorflow.python.ops import random_ops
 
-from ._migrate import migrate_opr
+from .migrate import migrate_opr
 from .helper import wrap_varnode_func
 from .shape import canonize_sym_shape
 import functools
