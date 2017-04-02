@@ -97,25 +97,28 @@ def make_dataflow_inference(env):
 
 
 def make_dataflow_demo(env):
+
+    def split_data(state, next_state):
+        return dict(state=state[np.newaxis].astype('float32')), dict(next_state=next_state)
+
     h, w, c = get_input_shape()
-    df = MyDataFlow(make_player(), output_next=False)
-    df = flow.BatchDataFlow(df, 1, sample_dict={
-        'state': np.empty(shape=(1, h, w, c), dtype='float32')
-    })
+    df = MyDataFlow(make_player(), output_next=True)
+    df = flow.tools.ssmap(split_data, df)
     return df
 
 
 def demo(feed_dict, result, extra_info):
     n = get_env('gym.frame_history')
     states = feed_dict['state'][0]
+    next_state = extra_info['next_state']
     assert(len(states.shape) == 3)
     states = tuple(np.split(states, n, axis=2))
     pred = result['output'][0]
-    img = np.hstack(states + (pred,))
+    img = np.hstack(states + (next_state, pred))
     img = img[:, : ,::-1]
 
     img = img * 255
     img = img.astype('uint8')
-    img = image.resize_minmax(img, 256, 256 * 5)
+    img = image.resize_minmax(img, 256, 256 * (n + 2))
 
     image.imshow('demo', img)
