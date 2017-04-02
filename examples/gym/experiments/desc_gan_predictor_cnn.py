@@ -64,12 +64,27 @@ def make_network(env):
                 else:
                     return [state]
 
+            def feature(x):
+                _ = x
+                with O.argscope(O.conv2d, nonlin=O.relu):
+                    _ = O.conv2d('conv0', _, 32, 5)
+                    _ = O.max_pooling2d('pool0', _, 2)
+                    _ = O.conv2d('conv1', _, 32, 5)
+                    _ = O.max_pooling2d('pool1', _, 2)
+                    _ = O.conv2d('conv2', _, 64, 4)
+                    _ = O.max_pooling2d('pool2', _, 2)
+                    _ = O.conv2d('conv3', _, 64, 3)
+                    _ = O.fc('fc0', _, 512, nonlin=O.p_relu)
+                return _
+
+
             def generator(state, z):
                 w_init = tf.truncated_normal_initializer(stddev=0.02)
                 with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.fc, W=w_init):
 
-                    _ = z
+                    _ = feature(state)
+                    _ = O.concat([_, z], axis=1)
                     _ = O.fc('fc1', _, 1024, nonlin=O.bn_relu)
                     _ = O.fc('fc2', _, 128 * 7 * 7, nonlin=O.bn_relu)
                     _ = O.reshape(_, [-1, 7, 7, 128])
@@ -85,7 +100,7 @@ def make_network(env):
                      O.argscope(O.fc, W=w_init),\
                      O.argscope(O.leaky_relu, alpha=0.2):
 
-                    _ = pred #84, 84, 3
+                    _ = O.concat([state, pred], axis=3) #84, 84, 15
                     _ = O.conv2d('conv1', _, 32, nonlin=O.leaky_relu)
                     _ = O.conv2d('conv2', _, 64, nonlin=O.bn_nonlin)
                     _ = O.leaky_relu(_)
