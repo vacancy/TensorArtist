@@ -97,6 +97,7 @@ def make_dataflow_inference(env):
 
 
 def make_dataflow_demo(env):
+    h, w, c = get_input_shape()
     df = MyDataFlow(make_player(), output_next=False)
     df = flow.BatchDataFlow(df, 1, sample_dict={
         'state': np.empty(shape=(1, h, w, c), dtype='float32')
@@ -107,14 +108,14 @@ def make_dataflow_demo(env):
 def demo(feed_dict, result, extra_info):
     n = get_env('gym.frame_history')
     states = feed_dict['state'][0]
-    assert(len(states.shape()) == 3)
-    states = np.split(states, n, axis=2)
+    assert(len(states.shape) == 3)
+    states = tuple(np.split(states, n, axis=2))
     pred = result['output'][0]
-    img = np.hstack((states + pred))
-    print(img.shape())
+    img = np.hstack(states + (pred,))
+    img = img[:, : ,::-1]
 
     img = img * 255
     img = img.astype('uint8')
-    img = image.resize_minmax(img, 256)
+    img = image.resize_minmax(img, 256, 256 * 5)
 
     image.imshow('demo', img)
