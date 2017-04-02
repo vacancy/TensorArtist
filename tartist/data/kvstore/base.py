@@ -29,6 +29,9 @@ class KVStoreBase(object):
     def transaction(self, *args, **kwargs):
         return self._transaction(*args, **kwargs)
 
+    def keys(self):
+        return self._keys()
+
     def _get(self, key, default):
         raise NotImplementedError()
 
@@ -37,6 +40,9 @@ class KVStoreBase(object):
 
     def _transaction(self, *args, **kwargs):
         raise NotImplementedError()
+
+    def _keys(self):
+        assert False, 'KVStore does not support keys access'
 
 
 class MemKVStore(KVStoreBase):
@@ -55,3 +61,7 @@ class MemKVStore(KVStoreBase):
 
     def _transaction(self, *args, **kwargs):
         return EmptyContext()
+    
+    def _keys(self):
+        return self._store.keys()
+
