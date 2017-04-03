@@ -114,10 +114,11 @@ def demo(feed_dict, result, extra_info):
     assert(len(states.shape) == 3)
     states = tuple(np.split(states, n, axis=2))
     pred = result['output'][0]
+    pred = np.minimum(np.maximum(pred, 0), 255)
+    #pred = pred * 255.0
     img = np.hstack(states + (next_state, pred))
     img = img[:, : ,::-1]
 
-    img = img * 255
     img = img.astype('uint8')
     img = image.resize_minmax(img, 256, 256 * (n + 2))
 
