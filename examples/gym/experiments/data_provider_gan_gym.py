@@ -65,9 +65,9 @@ class MyDataFlow(flow.SimpleDataFlowBase):
                 counter += 1
             else:
                 if self.output_next:
-                    yield {'state': state, 'next_state': next_state[:, :, -3:]}
+                    yield {'state': state, 'action': action, 'next_state': next_state[:, :, -3:]}
                 else:
-                    yield {'state': state}
+                    yield {'state': state, 'action': action}
             state = next_state
 
 
@@ -77,13 +77,15 @@ def make_dataflow_train(env):
 
     df_g = MyDataFlow(make_player(), output_next=False)
     df_g = flow.BatchDataFlow(df_g, batch_size, sample_dict={
-        'state': np.empty(shape=(batch_size, h, w, c), dtype='float32')
+        'state': np.empty(shape=(batch_size, h, w, c), dtype='float32'),
+        'action': np.empty(shape=(batch_size, ), dtype='int64')
     })
 
     df_d = MyDataFlow(make_player(), output_next=True)
     df_d = flow.BatchDataFlow(df_d, batch_size, sample_dict={
         'state': np.empty(shape=(batch_size, h, w, c), dtype='float32'),
-        'next_state': np.empty(shape=(batch_size, h, w, 3), dtype='float32'),
+        'action': np.empty(shape=(batch_size, ), dtype='int64'),
+        'next_state': np.empty(shape=(batch_size, h, w, 3), dtype='float32')
     })
     df = train.gan.GANDataFlow(df_g, df_d, get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
 
@@ -98,8 +100,8 @@ def make_dataflow_inference(env):
 
 def make_dataflow_demo(env):
 
-    def split_data(state, next_state):
-        return dict(state=state[np.newaxis].astype('float32')), dict(next_state=next_state)
+    def split_data(state, action, next_state):
+        return dict(state=state[np.newaxis].astype('float32'), action=np.array(action)[np.newaxis].astype('int64')), dict(next_state=next_state)
 
     h, w, c = get_input_shape()
     df = MyDataFlow(make_player(), output_next=True)
@@ -115,11 +117,12 @@ def demo(feed_dict, result, extra_info):
     states = tuple(np.split(states, n, axis=2))
     pred = result['output'][0]
     pred = np.minimum(np.maximum(pred, 0), 255)
+    diff = states[-1] - pred
     #pred = pred * 255.0
-    img = np.hstack(states + (next_state, pred))
+    img = np.hstack(states + (next_state, pred, diff))
     img = img[:, : ,::-1]
 
     img = img.astype('uint8')
-    img = image.resize_minmax(img, 256, 256 * (n + 2))
+    img = image.resize_minmax(img, 256, 256 * (n + 3))
 
     image.imshow('demo', img)
