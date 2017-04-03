@@ -25,7 +25,7 @@ __envs__ = {
         'root': get_dump_directory(__file__)
     },
     'gym': {
-        'env_name': 'Breakout-v0',
+        'env_name': 'Freeway-v0',
         'input_shape': (210, 160),
         'frame_history': 4,
         'limit_length': 40000
@@ -33,8 +33,8 @@ __envs__ = {
     'trainer': {
         'learning_rate': 0.0001,
 
-        'batch_size': 64,
-        'epoch_size': 1000,
+        'batch_size': 32,
+        'epoch_size': 200,
         'nr_epochs': 200,
 
         'env_flags': {
@@ -42,7 +42,7 @@ __envs__ = {
         }
     },
     'inference': {
-        'batch_size': 64,
+        'batch_size': 32,
         'epoch_size': 50
     }
 }
@@ -71,7 +71,7 @@ def make_network(env):
                 return [state]
 
             def forward(state):
-                _ = state
+                _ = state / 255.0
                 _ = O.conv2d('conv1', pad(_, 0, 1), 64, 8, stride=2, padding='VALID', nonlin=O.relu)
                 _ = O.conv2d('conv2', pad(_, 1, 1), 128, 6, stride=2, padding='VALID', nonlin=O.relu)
                 _ = O.conv2d('conv3', pad(_, 1, 1), 128, 6, stride=2, padding='VALID', nonlin=O.relu)
@@ -102,6 +102,7 @@ def make_network(env):
 
         if env.phase is env.Phase.TRAIN:
             label = O.placeholder('next_state', shape=(None, h, w, 3))
+            label = label / 255.0
             loss = O.raw_l2_loss('l2_loss', _, label).mean(name='loss')
             net.set_loss(loss)
 
