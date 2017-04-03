@@ -54,7 +54,10 @@ def make_network(env):
         with dpc.activate():
             def inputs():
                 img = O.placeholder('img', shape=(None, h, w, c))
-                return [img]
+                if env.phase is env.Phase.TRAIN:
+                    return [img]
+                else:
+                    return []
 
             def generator(z):
                 w_init = tf.truncated_normal_initializer(stddev=0.02)
@@ -85,7 +88,7 @@ def make_network(env):
                     _ = O.fc('fct', _, 1)
                 return _
 
-            def forward(x):
+            def forward(x=None):
                 g_batch_size = get_env('trainer.batch_size') if env.phase is env.Phase.TRAIN else 1
                 z = O.random_normal([g_batch_size, z_dim])
 
@@ -100,17 +103,13 @@ def make_network(env):
                 if env.phase is env.Phase.TRAIN:
                     with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=True):
                         logits_real = discriminator(x)
+
                     d_loss = (logits_fake - logits_real).mean()
-                    g_loss = logits_fake.mean()
+                    g_loss = -logits_fake.mean()
                     dpc.add_output(d_loss, name='d_loss', reduce_method='sum')
                     dpc.add_output(g_loss, name='g_loss', reduce_method='sum')
 
             dpc.set_input_maker(inputs).set_forward_func(forward)
-
-        # if env.phase is env.Phase.TRAIN:
-        #     for acc in ['d_accuracy', 'd_acc_real', 'd_acc_fake']:
-        #         summary.scalar(acc, dpc.outputs[acc], collections=[GANGraphKeys.DISCRIMINATOR_SUMMARIES])
-        #     summary.scalar('g_accuracy', dpc.outputs['g_accuracy'], collections=[GANGraphKeys.GENERATOR_SUMMARIES])
 
         net.add_all_dpc_outputs(dpc)
 
@@ -127,15 +126,23 @@ def make_optimizer(env):
     env.set_d_optimizer(wrapper)
 
 
-def clip_param(trainer, inp, out):
+def enable_clip_param(trainer):
     # apply clip on params of discriminator
     limit = get_env('trainer.clip_limit', 0.01)
+    ops = []
     with trainer.env.as_default():
         sess = trainer.env.session
         var_list = tf.trainable_variables()
         for v in var_list:
             if v.name.startswith(GANGraphKeys.DISCRIMINATOR_VARIABLES + '/'):
-                sess.run(v.assign(tf.clip_by_value(v, -limit, limit)))
+                ops.append(v.assign(tf.clip_by_value(v, -limit, limit)))
+    op = tf.group(*ops)
+    
+    def do_clip_params(trainer, inp, out):
+        trainer.env.session.run(op)
+    
+    from tartist.core import register_event
+    register_event(trainer, 'iter:after', do_clip_params)
 
 
 from data_provider_gan_mnist import *
@@ -152,8 +159,7 @@ def main_train(trainer):
     from tartist.plugins.trainer_enhancer import snapshot
     snapshot.enable_snapshot_saver(trainer)
 
-    from tartist.core import register_event
-    register_event(trainer, 'iter:after', clip_param)
+    enable_clip_param(trainer)
 
     trainer.train()
 
