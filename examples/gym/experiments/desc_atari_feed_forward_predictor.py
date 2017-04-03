@@ -33,8 +33,8 @@ __envs__ = {
     'trainer': {
         'learning_rate': 0.0001,
 
-        'batch_size': 4,
-        'epoch_size': 500,
+        'batch_size': 64,
+        'epoch_size': 1000,
         'nr_epochs': 200,
 
         'env_flags': {
@@ -42,8 +42,8 @@ __envs__ = {
         }
     },
     'inference': {
-        'batch_size': 30,
-        'epoch_size': 40
+        'batch_size': 64,
+        'epoch_size': 50
     }
 }
 
@@ -91,12 +91,14 @@ def make_network(env):
         _ = O.fc('fc-dec2', _, 2048)
 
         #decode
-        _ = O.fc('fc-dec1', _, 11246, nonlin=O.relu)
+        _ = O.fc('fc-dec1', _, 11264, nonlin=O.relu)
         _ = _.reshape(-1, 11, 8, 128)
         _ = O.deconv2d('deconv4', _, 128, 4, stride=2, padding='VALID', nonlin=O.relu)
         _ = crop(O.deconv2d('deconv3', _, 128, 6, stride=2, padding='VALID', nonlin=O.relu), 1, 1)
         _ = crop(O.deconv2d('deconv2', _, 128, 6, stride=2, padding='VALID', nonlin=O.relu), 1, 1)
         _ = crop(O.deconv2d('deconv1', _, 3, 8, stride=2, padding='VALID'), 0, 1)
+
+        net.add_output(_, 'output')
 
         if env.phase is env.Phase.TRAIN:
             label = O.placeholder('next_state', shape=(None, h, w, 3))
@@ -110,7 +112,7 @@ def make_optimizer(env):
     lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
 
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, beta1=0.5, epsilon=1e-3))
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))
@@ -127,6 +129,9 @@ def main_train(trainer):
 
     from tartist.plugins.trainer_enhancer import snapshot
     snapshot.enable_snapshot_saver(trainer)
+
+    from tartist.plugins.trainer_enhancer import inference
+    inference.enable_inference_runner(trainer, make_dataflow_inference)
 
     trainer.train()
 
