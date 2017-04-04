@@ -58,11 +58,12 @@ def make_network(env):
         with dpc.activate():
             def inputs():
                 state = O.placeholder('state', shape=(None, h, w, c))
+                action = O.placeholder('action', shape=(None, ), dtype=tf.int64)
                 if env.phase is env.Phase.TRAIN:
                     state_real = O.placeholder('next_state', shape=(None, h, w, 3))
-                    return [state, state_real]
+                    return [state, action, state_real]
                 else:
-                    return [state]
+                    return [state, action]
 
             def feature(x):
                 _ = x
@@ -78,23 +79,24 @@ def make_network(env):
                 return _
 
 
-            def generator(state, z):
+            def generator(state, action, z):
                 w_init = tf.truncated_normal_initializer(stddev=0.02)
                 with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.fc, W=w_init):
 
+                    a = O.one_hot(action, get_player_nr_actions())
                     _ = feature(state)
-                    _ = O.concat([_, z], axis=1)
+                    _ = O.concat([a, _, z], axis=1)
                     _ = O.fc('fc1', _, 1024, nonlin=O.bn_relu)
                     _ = O.fc('fc2', _, 128 * 7 * 7, nonlin=O.bn_relu)
                     _ = O.reshape(_, [-1, 7, 7, 128])
                     _ = O.deconv2d('deconv1', _, 64, kernel=5, stride=3, nonlin=O.bn_relu)
                     _ = O.deconv2d('deconv2', _, 32, nonlin=O.bn_relu)
                     _ = O.deconv2d('deconv3', _, 3)
-                    _ = O.sigmoid(_, name='out')
+                    #_ = O.tanh(_, name='out')
                 return _
 
-            def discriminator(state, pred):
+            def discriminator(state, action, pred):
                 w_init = tf.truncated_normal_initializer(stddev=0.02)
                 with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.fc, W=w_init),\
@@ -108,26 +110,32 @@ def make_network(env):
                     _ = O.leaky_relu(_)
                     _ = O.fc('fc1', _, 1024, nonlin=O.bn_nonlin)
                     _ = O.leaky_relu(_)
+                    a = O.one_hot(action, get_player_nr_actions())
+                    _ = O.concat([_, a], axis=1)
+                    _ = O.fc('fca', _, 128, nonlin=O.bn_nonlin)
+                    _ = O.leaky_relu(_)
                     _ = O.fc('fct', _, 1)
+
                 return _
 
-            def forward(state, state_real=None):
+            def forward(state, action, state_real=None):
                 g_batch_size = get_env('trainer.batch_size') if env.phase is env.Phase.TRAIN else 1
                 z = O.random_normal([g_batch_size, z_dim])
 
                 with tf.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
-                    state_pred = generator(state, z)
+                    state_pred = generator(state, action, z)
+                state_pred = O.min(O.max(state_pred, 0), 255)
                 # tf.summary.image('generated-samples', state_pred, max_outputs=30)
 
                 with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES):
-                    logits_fake = discriminator(state, state_pred)
+                    logits_fake = discriminator(state, action, state_pred)
                     score_fake = O.sigmoid(logits_fake)
                 dpc.add_output(state_pred, name='output')
                 dpc.add_output(score_fake, name='score')
 
                 if env.phase is env.Phase.TRAIN:
                     with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=True):
-                        logits_real = discriminator(state, state_real)
+                        logits_real = discriminator(state, action, state_real)
                         score_real = O.sigmoid(logits_real)
                     # build loss
                     with tf.variable_scope('loss'):

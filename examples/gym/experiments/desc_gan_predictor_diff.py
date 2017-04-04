@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : desc_gan_predictor_cnn.py
+# File   : desc_gan_predictor_diff.py
 # Author : Jiayuan Mao
 #          Honghua Dong
 # Email  : maojiayuan@gmail.com
