@@ -9,6 +9,7 @@
 from .base import *
 from .batch import *
 from .collections import *
+from .kv import *
 from .remote import *
 from .rng import *
 from . import tools
