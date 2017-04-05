@@ -72,31 +72,35 @@ def make_network(env):
 
             def forward(state):
                 _ = state / 255.0
-                _ = O.conv2d('conv1', pad(_, 0, 1), 64, 8, stride=2, padding='VALID', nonlin=O.relu)
-                _ = O.conv2d('conv2', pad(_, 1, 1), 128, 6, stride=2, padding='VALID', nonlin=O.relu)
-                _ = O.conv2d('conv3', pad(_, 1, 1), 128, 6, stride=2, padding='VALID', nonlin=O.relu)
-                _ = O.conv2d('conv4', _, 128, 4, stride=2, padding='VALID', nonlin=O.relu)
+                with O.argscope(O.conv2d, stride=2, padding='VALID', nonlin=O.relu):
+                    _ = O.conv2d('conv1', pad(_, 0, 1), 64, 8)
+                    _ = O.conv2d('conv2', pad(_, 1, 1), 128, 6)
+                    _ = O.conv2d('conv3', pad(_, 1, 1), 128, 6)
+                    _ = O.conv2d('conv4', _, 128, 4)
                 dpc.add_output(_, name='feature')
 
             dpc.set_input_maker(inputs).set_forward_func(forward)
 
         _ = dpc.outputs['feature']
+        
         _ = O.fc('fc-enc1', _, 2048, nonlin=O.relu)
         
         #transfer
-        _ = O.fc('fc-enc2', _, 2048)
+        _ = O.fc('fc-enc2', _, 2048, W=tf.random_uniform_initializer(-1.0, 1.0))
         action = O.placeholder('action', shape=(None, ), dtype=tf.int64)
         action = O.one_hot(action, get_player_nr_actions())
-        _ = _ * O.fc('fc-act', action, 2048)
+        _ = _ * O.fc('fc-act', action, 2048, W=tf.random_uniform_initializer(-0.1, 0.1))
         _ = O.fc('fc-dec2', _, 2048)
 
         #decode
         _ = O.fc('fc-dec1', _, 11264, nonlin=O.relu)
+
         _ = _.reshape(-1, 11, 8, 128)
-        _ = O.deconv2d('deconv4', _, 128, 4, stride=2, padding='VALID', nonlin=O.relu)
-        _ = crop(O.deconv2d('deconv3', _, 128, 6, stride=2, padding='VALID', nonlin=O.relu), 1, 1)
-        _ = crop(O.deconv2d('deconv2', _, 128, 6, stride=2, padding='VALID', nonlin=O.relu), 1, 1)
-        _ = crop(O.deconv2d('deconv1', _, 3, 8, stride=2, padding='VALID'), 0, 1)
+        with O.argscope(O.deconv2d, stride=2, padding='VALID', nonlin=O.relu):
+            _ = O.deconv2d('deconv4', _, 128, 4)
+            _ = crop(O.deconv2d('deconv3', _, 128, 6), 1, 1)
+            _ = crop(O.deconv2d('deconv2', _, 128, 6), 1, 1)
+            _ = crop(O.deconv2d('deconv1', _, 3, 8, nonlin=O.identity), 0, 1)
 
         net.add_output(_, 'output')
 

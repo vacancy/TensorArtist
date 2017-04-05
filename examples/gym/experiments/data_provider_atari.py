@@ -18,6 +18,7 @@ from tartist.nn import train
 from tartist import rl, random
 import numpy as np
 import tqdm
+from collections import deque
 
 
 def make_player():
@@ -49,22 +50,26 @@ def get_input_shape():
 
 
 class MyDataFlow(flow.SimpleDataFlowBase):
-    def __init__(self, player):
-        self.player = player
-        self.player.restart()
+    def __init__(self, player, memory=10000):
+        self._player = player
+        self._player.restart()
+        self._history = deque(maxlen=memory_size)
+        #fill history
+        self._player.action(1)
+        for i in range(memory_size):
+            self._history.append(self._get_data())
+
+    def _get_data(self):
+        state = self._player._get_current_state()
+        action = random.choice(get_player_nr_actions())
+        self._player.action(action)
+        next_state = self._player._get_current_state()[:, :, -3:]
+        return {'state': state, 'action': action, 'next_state': next_state}
 
     def _gen(self):
-        state = None
-        counter = 0
         while True:
-            action = random.choice(get_player_nr_actions())
-            self.player.action(action)
-            next_state = self.player._get_current_state()
-            if counter < get_env('gym.frame_history'):
-                counter += 1
-            else:
-                yield {'state': state, 'action': action, 'next_state': next_state[:, :, -3:]}
-            state = next_state
+            self._history.append(self._get_data())
+            yield random.choice(self._history)
 
 
 def make_dataflow_train(env):
