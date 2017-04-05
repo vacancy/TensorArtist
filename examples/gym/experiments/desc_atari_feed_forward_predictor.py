@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : desc_gan_predictor_cnn.py
+# File   : desc_atari_feed_forward_predictor.py
 # Author : Jiayuan Mao
 #          Honghua Dong
 # Email  : maojiayuan@gmail.com
@@ -25,7 +25,7 @@ __envs__ = {
         'root': get_dump_directory(__file__)
     },
     'gym': {
-        'env_name': 'Freeway-v0',
+        'env_name': 'Breakout-v0',
         'input_shape': (210, 160),
         'frame_history': 4,
         'limit_length': 40000
@@ -34,7 +34,7 @@ __envs__ = {
         'learning_rate': 0.0001,
 
         'batch_size': 32,
-        'epoch_size': 200,
+        'epoch_size': 2000,
         'nr_epochs': 200,
 
         'env_flags': {
@@ -103,7 +103,7 @@ def make_network(env):
         if env.phase is env.Phase.TRAIN:
             label = O.placeholder('next_state', shape=(None, h, w, 3))
             label = label / 255.0
-            loss = O.raw_l2_loss('l2_loss', _, label).mean(name='loss')
+            loss = O.raw_l2_loss('l2_loss', _, label).sum(axis=[1,2,3]).mean(name='loss')
             net.set_loss(loss)
 
             summary.inference.scalar('loss', loss)
