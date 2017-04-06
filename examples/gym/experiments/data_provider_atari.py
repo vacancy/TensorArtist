@@ -50,14 +50,16 @@ def get_input_shape():
 
 
 class MyDataFlow(flow.SimpleDataFlowBase):
-    def __init__(self, player, memory=10000):
+    def __init__(self, player, shuffle=True, memory_size=10000):
         self._player = player
+        self._shuffle = shuffle
         self._player.restart()
         self._history = deque(maxlen=memory_size)
         #fill history
         self._player.action(1)
-        for i in range(memory_size):
-            self._history.append(self._get_data())
+        if self._shuffle:
+            for i in range(memory_size):
+                self._history.append(self._get_data())
 
     def _get_data(self):
         state = self._player._get_current_state()
@@ -68,8 +70,13 @@ class MyDataFlow(flow.SimpleDataFlowBase):
 
     def _gen(self):
         while True:
-            self._history.append(self._get_data())
-            yield random.choice(self._history)
+            new_data = self._get_data()
+            if self._shuffle:
+                self._history.append(new_data)
+                ind = random.choice(len(self._history))
+                yield self._history[ind]
+            else:
+                yield new_data
 
 
 def make_dataflow_train(env):
@@ -106,7 +113,7 @@ def make_dataflow_demo(env):
         return dict(state=state[np.newaxis].astype('float32'), action=[action]), dict(next_state=next_state)
 
     h, w, c = get_input_shape()
-    df = MyDataFlow(make_player())
+    df = MyDataFlow(make_player(), shuffle=False)
     df = flow.tools.ssmap(split_data, df)
     return df
 

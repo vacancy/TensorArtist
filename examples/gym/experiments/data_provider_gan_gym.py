@@ -18,6 +18,7 @@ from tartist.nn import train
 from tartist import rl, random
 import numpy as np
 import tqdm
+from collections import deque
 
 
 def make_player():
@@ -49,26 +50,37 @@ def get_input_shape():
 
 
 class MyDataFlow(flow.SimpleDataFlowBase):
-    def __init__(self, player, output_next=False):
-        self.player = player
-        self.player.restart()
+    def __init__(self, player, output_next=False, shuffle=True, memory_size=10000):
+        self._player = player
+        self._shuffle = shuffle
+        self._player.restart()
+        self._history = deque(maxlen=memory_size)
         self.output_next = output_next
+        #fill history
+        self._player.action(1)
+        if self._shuffle:
+            for i in range(memory_size):
+                self._history.append(self._get_data())
+
+    def _get_data(self):
+        state = self._player._get_current_state()
+        action = random.choice(get_player_nr_actions())
+        self._player.action(action)
+        next_state = self._player._get_current_state()[:, :, -3:]
+        if self.output_next:
+            return {'state': state, 'action': action, 'next_state': next_state}
+        else:
+            return {'state': state, 'action': action}            
 
     def _gen(self):
-        state = None
-        counter = 0
         while True:
-            action = random.choice(get_player_nr_actions())
-            self.player.action(action)
-            next_state = self.player._get_current_state()
-            if counter < get_env('gym.frame_history'):
-                counter += 1
+            new_data = self._get_data()
+            if self._shuffle:
+                self._history.append(new_data)
+                ind = random.choice(len(self._history))
+                yield self._history[ind]
             else:
-                if self.output_next:
-                    yield {'state': state, 'action': action, 'next_state': next_state[:, :, -3:]}
-                else:
-                    yield {'state': state, 'action': action}
-            state = next_state
+                yield new_data
 
 
 def make_dataflow_train(env):
@@ -104,7 +116,7 @@ def make_dataflow_demo(env):
         return dict(state=state[np.newaxis].astype('float32'), action=np.array(action)[np.newaxis].astype('int64')), dict(next_state=next_state)
 
     h, w, c = get_input_shape()
-    df = MyDataFlow(make_player(), output_next=True)
+    df = MyDataFlow(make_player(), shuffle=False, output_next=True)
     df = flow.tools.ssmap(split_data, df)
     return df
 
@@ -116,6 +128,7 @@ def demo(feed_dict, result, extra_info):
     assert(len(states.shape) == 3)
     states = tuple(np.split(states, n, axis=2))
     pred = result['output'][0]
+    #pred = (result['output'][0] + 1.0) * 128
     pred = np.minimum(np.maximum(pred, 0), 255)
     diff = states[-1] - pred
     #pred = pred * 255.0
