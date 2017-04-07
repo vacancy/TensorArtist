@@ -46,7 +46,7 @@ __envs__ = {
 __trainer_cls__ = train.gan.GANTrainer
 __trainer_env_cls__ = train.gan.GANTrainerEnv
 
-from data_provider_gan_gym import *
+from data_provider_max_loss_explorer import *
 
 
 def make_network(env):
