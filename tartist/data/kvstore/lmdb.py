@@ -35,7 +35,7 @@ class LMDBKVStore(KVStoreBase):
                                readahead=False,
                                map_size=1099511627776 * 2,
                                max_readers=100)
-        self._keys = keys
+        self._lmdb_keys = keys
         self._is_dirty = False
 
     @cached_property
@@ -49,10 +49,10 @@ class LMDBKVStore(KVStoreBase):
 
     def _put(self, key, value, replace=False):
         self._is_dirty = True
-        if self._keys is None:
-            self._keys = []
+        if self._lmdb_keys is None:
+            self._lmdb_keys = []
         # TODO(MJY):: test whehter the key already exists
-        self._keys.append(key)
+        self._lmdb_keys.append(key)
         return self.txn.put(key.encode(self._key_charset), _dumps(value), overwrite=replace)
 
     def _transaction(self, *args, **kwargs):
@@ -65,13 +65,13 @@ class LMDBKVStore(KVStoreBase):
         if exc_type:
             self.txn.abort()
         else:
-            self.txn.put(self._magic_key, _dumps(self._keys))
+            self.txn.put(self._magic_key, _dumps(self._lmdb_keys))
             self.txn.commit()
 
     def _keys(self):
-        if self._keys is None:
-            self._keys = self.txn.get(self._magic_key, None)
-            assert self._keys is not None, 'LMDBKVStore does not support __keys__ access' 
-            self._keys = _loads(self._keys)
-        return self._keys
+        if self._lmdb_keys is None:
+            self._lmdb_keys = self.txn.get(self._magic_key, None)
+            assert self._lmdb_keys is not None, 'LMDBKVStore does not support __keys__ access' 
+            self._lmdb_keys = _loads(self._lmdb_keys)
+        return self._lmdb_keys
 

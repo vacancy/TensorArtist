@@ -18,44 +18,51 @@ import os.path as osp
 
 
 class DiscoGANSplitDataFlow(flow.SimpleDataFlowBase):
-    def __init__(self, kv):
+    def __init__(self, kva, kvb):
         super().__init__()
-        self._kv = kv
+        self._kva = kva
+        self._kvb = kvb
+        self._img_shape = get_env('dataset.img_shape', (64, 64))
 
-    def _crop_and_resize(self, img, part):
-        if part == 0:
-            img = img[:, :256]
-        else:
-            img = img[:, 256:]
-
-        img = image.resize_minmax(img, 64)
+    def _crop_and_resize(self, img):
+        img = image.imdecode(img)
+        img = image.resize(img, self._img_shape)
+        return img
 
     def _gen(self):
-        it = iter(self._kv)
+        ita = iter(self._kva)
+        itb = iter(self._kvb)
         while True:
-            yield dict(
-                img_a=self._crop_and_resize(next(it), 0),
-                img_b=self._crop_and_resize(next(it), 1)
+            res = dict(
+                img_a=self._crop_and_resize(next(ita)),
+                img_b=self._crop_and_resize(next(itb))
             )
+            yield res
+
+
+def _make_dataflow(batch_size=1, use_prefetch=False):
+    img_shape = get_env('dataset.img_shape', (64, 64))
+
+    data_dir = get_env('dir.data')
+    db_a = osp.join(data_dir, get_env('dataset.db_a'))
+    db_b = osp.join(data_dir, get_env('dataset.db_b'))
+
+    dfs = []
+    dfa = flow.KVStoreRandomSampleDataFlow(lambda: kvstore.LMDBKVStore(db_a))
+    dfb = flow.KVStoreRandomSampleDataFlow(lambda: kvstore.LMDBKVStore(db_b))
+    df = DiscoGANSplitDataFlow(dfa, dfb)
+    df = flow.BatchDataFlow(df, batch_size, sample_dict={
+        'img_a': np.empty(shape=(batch_size, img_shape[0], img_shape[1], 3), dtype='float32'),
+        'img_b': np.empty(shape=(batch_size, img_shape[0], img_shape[1], 3), dtype='float32'),
+    })
+    if use_prefetch:
+        df = flow.MPPrefetchDataFlow(df, nr_workers=2)
+    return df
 
 
 def make_dataflow_train(env):
     batch_size = get_env('trainer.batch_size')
-
-    assert get_env('dataset.name' == 'edges2shoes')
-    data_dir = get_env('dir.data')
-
-    kv = kvstore.LMDBKVStore(osp.join(data_dir, 'train_db'))
-
-    dfs = []
-    for i in range(2):
-        df = flow.KVStoreRandomSampleDataFlow(kv)
-        df = DiscoGANSplitDataFlow(df)
-        df = flow.BatchDataFlow(df, batch_size, sample_dict={
-            'img_a': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
-            'img_b': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
-        })
-        dfs.append(df)
+    dfs = [_make_dataflow(batch_size, use_prefetch=True) for i in range(2)]
 
     df = train.gan.GANDataFlow(dfs[0], dfs[1], 
             get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
@@ -63,50 +70,21 @@ def make_dataflow_train(env):
     return df
 
 
-# does not support inference during training
-def make_dataflow_inference(env):
-    df = flow.tools.cycle([{'d': [], 'g': []}])
-    return df
-
-
 def make_dataflow_demo(env):
-    df = flow.EmptyDictDataFlow()
-    return df
+    return _make_dataflow(1)
 
 
-def demo(feed_dict, result, extra_info):
-    img = result['output'][0, :, :, 0]
+def demo(feed_dict, results, extra_info):
+    img_a, img_b = feed_dict['img_a'][0], feed_dict['img_b'][0]
+    img_ab, img_ba = results['img_ab'][0] * 255, results['img_ba'][0] * 255
+    img_aba, img_bab = results['img_aba'][0] * 255, results['img_bab'][0] * 255
 
-    img = np.repeat(img[:, :, np.newaxis], 3, axis=2) * 255
+    img = np.vstack([
+        np.hstack([img_a, img_ab, img_aba]), 
+        np.hstack([img_b, img_ba, img_bab])
+    ])
     img = img.astype('uint8')
-    img = image.resize_minmax(img, 256)
+    img = image.resize_minmax(img, 512, 2048)
 
     image.imshow('demo', img)
-
-
-def main_demo_infogan(env, func):
-    net = env.network
-    samples = net.zc_distrib.numerical_sample(net.zc_distrib_num_prior)
-    df = {'zc': samples.reshape(samples.shape[0], 1, -1)}
-    df = flow.DictOfArrayDataFlow(df)
-
-    all_outputs = []
-    for data in tqdm.tqdm(df, total=len(df), **get_tqdm_defaults()):
-        res = func(**data)
-        all_outputs.append(res['output'][0, :, :, 0])
-
-    grid_desc = get_env('demo.infogan.grid_desc')
-    final = image.image_grid(all_outputs, grid_desc)
-    final = (final * 255).astype('uint8')
-    image.imwrite('infogan.png', final)
-
-
-def main_demo(env, func):
-    mode = get_env('demo.mode')
-    assert mode is not None
-    
-    if mode == 'infogan':
-        main_demo_infogan(env, func)
-    else:
-        assert False, 'Unknown mode {}'.format(mode)
 

@@ -14,6 +14,7 @@ from tartist.nn import opr as O, optimizer, summary, train
 from tartist.nn.train.gan import GANGraphKeys
 
 import functools
+import re
 
 logger = get_logger(__file__)
 
@@ -24,13 +25,16 @@ __envs__ = {
     },
     'dataset': {
         'name': 'edges2shoes',
+        'db_a': 'train_edges_db',
+        'db_b': 'train_shoes_db',
     },
     'trainer': {
         'learning_rate': 2e-4,
 
-        'batch_size': 128,
-        'epoch_size': 390,
+        'batch_size': 32,
+        'epoch_size': 100,
         'nr_epochs': 200,
+        'nr_g_per_iter': 2,
 
         'env_flags': {
             'log_device_placement': False
@@ -45,10 +49,10 @@ __trainer_env_cls__ = train.gan.GANTrainerEnv
 def make_network(env):
     with env.create_network() as net:
         h, w, c = 64, 64, 3
-        z_dim = 100
 
-        def bn_leaky_relu(x):
-            return O.leaky_relu(O.bn_nonlin(x))
+        def bn_leaky_relu(x, name='bn_leaky_relu'):
+            with tf.name_scope(name):
+                return O.leaky_relu(O.bn_nonlin(x))
 
         dpc = env.create_dpcontroller()
         with dpc.activate():
@@ -64,7 +68,7 @@ def make_network(env):
                      O.argscope(O.leaky_relu, alpha=0.2):
 
                     _ = x 
-                    _ = O.conv2d('conv1', _, 64, nonlin=O.leack_relu)
+                    _ = O.conv2d('conv1', _, 64, nonlin=O.leaky_relu)
                     _ = O.conv2d('conv2', _, 128, nonlin=bn_leaky_relu, use_bias=False)
                     _ = O.conv2d('conv3', _, 256, nonlin=bn_leaky_relu, use_bias=False)
                     _ = O.conv2d('conv4', _, 512, nonlin=bn_leaky_relu, use_bias=False)
@@ -75,7 +79,8 @@ def make_network(env):
                 w_init = tf.truncated_normal_initializer(stddev=0.02)
                 with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.fc, W=w_init):
-
+                    
+                    _ = z
                     _ = O.deconv2d('deconv1', _, 256, nonlin=O.bn_relu)
                     _ = O.deconv2d('deconv2', _, 128, nonlin=O.bn_relu)
                     _ = O.deconv2d('deconv3', _, 64, nonlin=O.bn_relu)
@@ -99,6 +104,9 @@ def make_network(env):
                 return logit
 
             def forward(img_a, img_b):
+                img_a /= 255.
+                img_b /= 255.
+
                 img_ab = generator(img_a, name='atob', reuse=False)
                 img_ba = generator(img_b, name='btoa', reuse=False)
                 img_aba = generator(img_ab, name='btoa', reuse=True)
@@ -107,20 +115,21 @@ def make_network(env):
                 logit_fake_a = discriminator(img_ba, name='a', reuse=False)
                 logit_fake_b = discriminator(img_ab, name='b', reuse=False)
 
-                score_fake_a = O.sigmoid(logits_fake_a)
-                score_fake_b = O.sigmoid(logits_fake_b)
+                score_fake_a = O.sigmoid(logit_fake_a)
+                score_fake_b = O.sigmoid(logit_fake_b)
 
                 for name in ['img_ab', 'img_ba', 'img_aba', 'img_bab', 'score_fake_a', 'score_fake_b']:
                     dpc.add_output(locals()[name], name=name)
 
                 if env.phase is env.Phase.TRAIN:
-                    logit_real_a = discriminator(img_a, name='a', reuse=False)
-                    logit_real_b = discriminator(img_b, name='b', reuse=False)
-                    score_real_a = O.sigmoid(logits_real_a)
-                    score_real_b = O.sigmoid(logits_real_b)
-                    
+                    logit_real_a = discriminator(img_a, name='a', reuse=True)
+                    logit_real_b = discriminator(img_b, name='b', reuse=True)
+                    score_real_a = O.sigmoid(logit_real_a)
+                    score_real_b = O.sigmoid(logit_real_b)
+
                     all_g_loss = 0.
                     all_d_loss = 0.
+                    r_loss_ratio = 0.9
 
                     for pair_name, (real, fake), (logit_real, logit_fake), (score_real, score_fake) in zip(
                             ['lossa', 'lossb'],
@@ -140,13 +149,15 @@ def make_network(env):
                             d_accuracy = O.identity(.5 * (d_acc_real + d_acc_fake), name='d_accuracy')
                             d_loss = O.identity(.5 * (d_loss_real + d_loss_fake), name='d_loss')
 
-                            r_loss = O.raw_l2_loss(real, fake).flatten2().sum(axis=1).mean(name='r_loss')
+                            # r_loss = O.raw_l2_loss('raw_r_loss', real, fake).flatten2().sum(axis=1).mean(name='r_loss')
+                            r_loss = O.raw_l2_loss('raw_r_loss', real, fake).mean(name='r_loss')
 
-                            all_g_loss += g_loss + r_loss
+                            # all_g_loss += g_loss + r_loss
+                            all_g_loss += (1 - r_loss_ratio) * g_loss + r_loss_ratio * r_loss
                             all_d_loss += d_loss
 
-                        for v in [d_loss_real, d_loss_fake, g_loss, d_acc_real, d_acc_fake, g_accuracy, d_accuracy, d_loss]:
-                            dpc.add_output(v, reduce_method='sum')
+                        for v in [d_loss_real, d_loss_fake, g_loss, d_acc_real, d_acc_fake, g_accuracy, d_accuracy, d_loss, r_loss]:
+                            dpc.add_output(v, name=re.sub('^tower/\d+/', '', v.name)[:-2], reduce_method='sum')
                     
                     dpc.add_output(all_g_loss, name='g_loss', reduce_method='sum')
                     dpc.add_output(all_d_loss, name='d_loss', reduce_method='sum')
@@ -158,7 +169,7 @@ def make_network(env):
                 for v in ['d_loss_real', 'd_loss_fake', 'd_acc_real', 'd_acc_fake', 'd_accuracy', 'd_loss']:
                     name = p + '/' + v
                     summary.scalar(name, dpc.outputs[name], collections=[GANGraphKeys.DISCRIMINATOR_SUMMARIES])
-                for v in ['g_loss', 'g_accuracy']: 
+                for v in ['g_loss', 'g_accuracy', 'r_loss']: 
                     name = p + '/' + v
                     summary.scalar(name, dpc.outputs[name], collections=[GANGraphKeys.GENERATOR_SUMMARIES])
 

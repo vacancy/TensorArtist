@@ -20,7 +20,7 @@ class KVStoreBase(object):
         return self.__readonly
 
     def get(self, key, default=None):
-        return self._get(self, key, default=default)
+        return self._get(key, default=default)
 
     def put(self, key, value, replace=True):
         assert not self.readonly, 'KVStore is readonly: {}'.format(self)
