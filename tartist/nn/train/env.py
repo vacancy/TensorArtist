@@ -58,9 +58,8 @@ class TrainerEnvBase(Env):
         return self
 
     def dump_snapshot(self):
-        self._snapshot_parts = dict()
         snapshot = dict()
-        for identifier, (d, l) in self._snapshot_parts:
+        for identifier, (d, l) in self._snapshot_parts.items():
             snapshot[identifier] = d()
         return snapshot
 
