@@ -6,15 +6,15 @@
 # 
 # This file is part of TensorArtist
 
+import os.path as osp
+
+import numpy as np
+import tqdm
+
 from tartist import image
 from tartist.core import get_env
 from tartist.core.utils.thirdparty import get_tqdm_defaults
 from tartist.data import flow, kvstore
-from tartist.nn import train
-
-import numpy as np
-import tqdm
-import os.path as osp
 
 
 class DiscoGANSplitDataFlow(flow.SimpleDataFlowBase):
@@ -57,8 +57,8 @@ def make_dataflow_train(env):
         })
         dfs.append(df)
 
-    df = train.gan.GANDataFlow(dfs[0], dfs[1], 
-            get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
+    df = tartist.app.gan.GANDataFlow(dfs[0], dfs[1],
+                                     get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
 
     return df
 

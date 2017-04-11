@@ -153,8 +153,8 @@ def enable_summary_history(trainer, extra_summary_types=None):
             if not check_proto_contains(summaries, 'error'):
                 put_summary_history_scalar(trainer, 'error', trainer.runtime['error'])
 
-    register_event(trainer, 'optimization:before', summary_history_on_optimization_before)
-    register_event(trainer, 'iter:after', summary_history_on_iter_after)
+    trainer.register_event('optimization:before', summary_history_on_optimization_before)
+    trainer.register_event('iter:after', summary_history_on_iter_after)
 
 
 def enable_echo_summary_scalar(trainer, summary_spec=None):
@@ -169,7 +169,7 @@ def enable_echo_summary_scalar(trainer, summary_spec=None):
             spec = summary_spec.get(k, ['avg'])
 
             for meth in spec:
-                if not k.startswith('inference'): # do hack for inference
+                if not k.startswith('inference'):  # do hack for inference
                     avg = mgr.average(k, trainer.epoch_size, meth=meth)
                 else:
                     avg = mgr.average(k, trainer.runtime['inference_epoch_size'], meth=meth)
@@ -185,7 +185,7 @@ def enable_echo_summary_scalar(trainer, summary_spec=None):
         if len(log_strs) > 1:
             logger.info('\n'.join(log_strs))
 
-    register_event(trainer, 'epoch:after', summary_history_scalar_on_epoch_after)
+    trainer.register_event('epoch:after', summary_history_scalar_on_epoch_after)
 
 
 def set_error_summary_key(trainer, key):

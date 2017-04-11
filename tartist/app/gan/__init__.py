@@ -2,10 +2,9 @@
 # File   : __init__.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
-# Date   : 12/29/16
+# Date   : 4/10/17
 # 
 # This file is part of TensorArtist
 
-from .env import *
-from .trainer import *
 
+from .train import *

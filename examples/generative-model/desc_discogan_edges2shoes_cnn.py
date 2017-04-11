@@ -8,12 +8,10 @@
 
 import tensorflow as tf
 
+from tartist.app.gan import GANGraphKeys
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
-from tartist.nn import opr as O, optimizer, summary, train
-from tartist.nn.train.gan import GANGraphKeys
-
-import functools
+from tartist.nn import opr as O, optimizer, summary
 
 logger = get_logger(__file__)
 
@@ -38,8 +36,8 @@ __envs__ = {
     }
 }
 
-__trainer_cls__ = train.gan.GANTrainer
-__trainer_env_cls__ = train.gan.GANTrainerEnv
+__trainer_cls__ = gan.GANTrainer
+__trainer_env_cls__ = gan.GANTrainerEnv
 
 
 def make_network(env):

@@ -59,7 +59,7 @@ def enable_snapshot_saver(trainer, save_interval=1):
         logger.info('Model at epoch {} dumped to {}.\n(Also alias: {})'.format(
             trainer.epoch, fpath, ', '.join(fpath_aliased)))
 
-    register_event(trainer, 'epoch:after', dump_snapshot_on_epoch_after, priority=20)
+    trainer.register_event('epoch:after', dump_snapshot_on_epoch_after, priority=20)
 
 
 def load_snapshot_file(trainer, fpath):
@@ -106,7 +106,7 @@ def enable_snapshot_loading_after_initialization(trainer, *, continue_last=None,
                 logger.info('Restored snapshot from {} (aka. {}), continue={}'.format(
                     fpath, fpath_real, continue_last, continue_from))
 
-    register_event(trainer, 'initialization:after', load_snapshot_on_initialization_after, priority=25)
+    trainer.register_event('initialization:after', load_snapshot_on_initialization_after, priority=25)
 
 
 def enable_weights_loading_after_intialization(trainer, weights_fpath):
@@ -114,4 +114,4 @@ def enable_weights_loading_after_intialization(trainer, weights_fpath):
         if load_weights_file(trainer.env, weights_fpath):
             logger.info('Restored weights from {}'.format(weights_fpath))
 
-    register_event(trainer, 'initialization:after', load_weights_on_initialization_after, priority=25)
+    trainer.register_event('initialization:after', load_weights_on_initialization_after, priority=25)

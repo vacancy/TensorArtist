@@ -6,11 +6,11 @@
 # 
 # This file is part of TensorArtist
 
-from ...core import EnvBox, get_env, get_logger
-from ...core.utils.meta import notnone_property
-from ...data.rflow.query_pipe import QueryReqPipe, QueryRepPipe
-from ...nn.graph import select_device, reuse_context, Env
-from ...nn.train import TrainerBase, TrainerEnv, SimpleTrainer
+from tartist.core import EnvBox, get_env, get_logger
+from tartist.core.utils.meta import notnone_property
+from tartist.data.rflow.query_pipe import QueryReqPipe, QueryRepPipe
+from tartist.nn.graph import select_device, reuse_context, Env
+from tartist.nn.train import TrainerBase, SimpleTrainerEnv, SimpleTrainer
 
 import queue
 import threading
@@ -76,7 +76,7 @@ class A3CMaster(object):
         self.router.finalize()
 
 
-class A3CTrainerEnv(TrainerEnv):
+class A3CTrainerEnv(SimpleTrainerEnv):
     _player_master = None
     _net_funcs = None
     _inference_player_master = None

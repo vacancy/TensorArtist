@@ -7,7 +7,7 @@
 # This file is part of TensorArtist
 
 from .base import SimpleRLEnvironBase, DiscreteActionSpace, ProxyRLEnvironBase
-from ..core import io
+from tartist.core import io
 import threading
 import numpy as np
 import collections
