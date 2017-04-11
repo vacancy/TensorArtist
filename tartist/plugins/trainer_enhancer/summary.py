@@ -211,22 +211,27 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_tensorboard=Tr
         if len(log_strs) > 1:
             logger.info('\n'.join(log_strs))
 
-        if enable_tensorboard:
+        if enable_tensorboard and not trainer.runtime['zero_iter']:
             put_tensorboard_summary(trainer, extra_summary)
 
     def tensorboard_summary_enable(trainer, tb_path=tensorboard_path):
         if tb_path is None:
             tb_path = osp.join(get_env('dir.root'), 'tensorboard')
-            if osp.exists(tb_path):
+            restored = 'restore_weights' in trainer.runtime or 'restore_snapshot' in trainer.runtime
+            if osp.exists(tb_path) and not restored:
+                logger.warning('Removeint old tensorboard directory: {}'.format(tb_path))
                 shutil.rmtree(tb_path)
             io.mkdir(tb_path)
         trainer.runtime['tensorboard_summary_path'] = tb_path
         trainer._tensorboard_writer = tf.summary.FileWriter(tb_path, graph=trainer.env.graph)
 
     def tensorboard_summary_write(trainer, inp, out):
-        if 'summaries' in trainer.runtime:
+        if 'summaries' in trainer.runtime and not trainer.runtime['zero_iter']:
             summaries = trainer.runtime['summaries']
-            if isinstance(summaries, tf.Summary):
+            if isinstance(summaries, collections.Iterable):
+                for s in summaries:
+                    put_tensorboard_summary(trainer, s, use_internal_gs=True)
+            else:
                 put_tensorboard_summary(trainer, summaries)
 
     trainer.register_event('epoch:after', summary_history_scalar_on_epoch_after)

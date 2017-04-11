@@ -105,6 +105,7 @@ def enable_snapshot_loading_after_initialization(trainer, *, continue_last=None,
                 fpath_real = osp.relpath(osp.realpath(fpath), osp.dirname(fpath))
                 logger.info('Restored snapshot from {} (aka. {}), continue={}'.format(
                     fpath, fpath_real, continue_last, continue_from))
+                trainer.runtime['restore_snapshot'] = fpath
 
     trainer.register_event('initialization:after', load_snapshot_on_initialization_after, priority=25)
 
@@ -113,5 +114,7 @@ def enable_weights_loading_after_intialization(trainer, weights_fpath):
     def load_weights_on_initialization_after(trainer):
         if load_weights_file(trainer.env, weights_fpath):
             logger.info('Restored weights from {}'.format(weights_fpath))
+            trainer.runtime['restore_weights'] = weights_fpath
 
     trainer.register_event('initialization:after', load_weights_on_initialization_after, priority=25)
+

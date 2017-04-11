@@ -127,6 +127,7 @@ class TrainerBase(object):
 
         self.trigger_event('optimization:before')
 
+        self.runtime['zero_iter'] = True
         while self.runtime['iter'] <= self.nr_iters and not self.stop_signal:
             if self.runtime['iter'] == 0:
                 inp, out = {}, {}
@@ -147,6 +148,7 @@ class TrainerBase(object):
                     self.trigger_event('epoch:after')
 
             self.runtime['iter'] += 1
+            self.runtime['zero_iter'] = False
 
         self.trigger_event('optimization:after')
 
