@@ -6,15 +6,16 @@
 # 
 # This file is part of TensorArtist
 
-from tartist import image
-from tartist.core import get_env
-from tartist.core.utils.thirdparty import get_tqdm_defaults
-from tartist.data import flow, kvstore
-from tartist.nn import train
+import os.path as osp
 
 import numpy as np
 import tqdm
-import os.path as osp
+
+from tartist import image
+from tartist.app import gan
+from tartist.core import get_env
+from tartist.core.utils.thirdparty import get_tqdm_defaults
+from tartist.data import flow, kvstore
 
 
 class DiscoGANSplitDataFlow(flow.SimpleDataFlowBase):
@@ -59,12 +60,15 @@ def _make_dataflow(batch_size=1, use_prefetch=False):
         df = flow.MPPrefetchDataFlow(df, nr_workers=2)
     return df
 
+    df = gan.GANDataFlow(dfs[0], dfs[1],
+                                     get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
+
 
 def make_dataflow_train(env):
     batch_size = get_env('trainer.batch_size')
     dfs = [_make_dataflow(batch_size, use_prefetch=True) for i in range(2)]
 
-    df = train.gan.GANDataFlow(dfs[0], dfs[1], 
+    df = gan.GANDataFlow(dfs[0], dfs[1], 
             get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
 
     return df

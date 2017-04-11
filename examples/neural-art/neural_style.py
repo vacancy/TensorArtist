@@ -13,7 +13,7 @@ from tartist.core import io
 from tartist.core.utils.cli import parse_devices
 from tartist.nn import Env
 from tartist.nn import opr as O, optimizer
-from tartist.nn.train import TrainerEnv
+from tartist.nn.train import SimpleTrainerEnv
 import neural_style_opr
 
 import argparse
@@ -103,7 +103,7 @@ def main():
     res_smg = func(img=smg[np.newaxis])
     
     # create a new env for train
-    env = TrainerEnv(master_dev=args.device)
+    env = SimpleTrainerEnv(master_dev=args.device)
     with env.as_default():
         make_network(env, h, w)
 

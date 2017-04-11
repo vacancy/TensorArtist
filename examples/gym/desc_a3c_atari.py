@@ -11,23 +11,22 @@
 """This reproduction of A3C is based on ppwwyyxx's reproduction in his TensorPack framework.
 Credit to : https://github.com/ppwwyyxx/tensorpack/tree/master/examples/A3C-Gym"""
 
-import time
+import collections
+import functools
+import os
 import queue
 import threading
-import functools
-import collections
+
 import numpy as np
 import tensorflow as tf
-import os
 
-from tartist.core import get_env, get_logger, EnvBox
+from tartist import random, image
+from tartist.app import rl
+from tartist.core import get_env, get_logger
 from tartist.core.utils.cache import cached_result
-from tartist.core.utils.naming import get_dump_directory, get_data_directory
+from tartist.core.utils.naming import get_dump_directory
 from tartist.data import flow
-from tartist.data.rflow import QueryReqPipe
 from tartist.nn import opr as O, optimizer, summary
-from tartist import rl, random, image
-
 
 logger = get_logger(__file__)
 

@@ -38,5 +38,5 @@ def enable_epoch_progress(trainer):
         pbar.close()
         pbar = None
 
-    register_event(trainer, 'iter:after', epoch_progress_on_iter_after, priority=25)
-    register_event(trainer, 'epoch:after', epoch_progress_on_epoch_after, priority=5)
+    trainer.register_event('iter:after', epoch_progress_on_iter_after, priority=25)
+    trainer.register_event('epoch:after', epoch_progress_on_epoch_after, priority=5)
