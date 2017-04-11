@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 from .env import SimpleTrainerEnv
+from .. import summary
 from ..graph.env import Env
 from ..graph.tfqueue import QueuedInputFunction
 from ...core.event import EventManager, register_event, trigger_event

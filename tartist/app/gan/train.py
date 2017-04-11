@@ -134,6 +134,9 @@ class GANTrainer(TrainerBase):
         def process_summaries(out):
             if 'summaries' in out:
                 summaries = tf.Summary.FromString(out['summaries'])
+                if hasattr(self, '_tensorboard_writer'):
+                    from tartist.plugins.trainer_enhancer import summary
+                    summary.put_tensorboard_summary(self, summaries, use_internal_gs=True)
                 all_summaries.append(summaries)
 
         for feed_dict in data['d']:
