@@ -6,12 +6,15 @@
 # 
 # This file is part of TensorArtist
 
-from tartist.core import get_logger, get_env, io
+from tartist.core import get_logger, get_env, set_env, io
+from tartist.data.rflow.utils import get_addr
 from tartist.nn.tfutils import clean_summary_name
+import random
 import collections
 import threading
 import os.path as osp
 import shutil
+import subprocess
 import tensorflow as tf
 
 logger = get_logger()
@@ -213,6 +216,9 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_tensorboard=Tr
 
         if enable_tensorboard and not trainer.runtime['zero_iter']:
             put_tensorboard_summary(trainer, extra_summary)
+        if enable_tensorboard and hasattr(trainer, '_tensorboard_webserver'):
+            logger.info('Open your tensorboard webpage at http://{}:{}'.format(get_addr(), 
+                get_env('plugins.trainer_enhancer.summary.tensorboard_web_port')))
 
     def tensorboard_summary_enable(trainer, tb_path=tensorboard_path):
         if tb_path is None:
@@ -224,6 +230,14 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_tensorboard=Tr
             io.mkdir(tb_path)
         trainer.runtime['tensorboard_summary_path'] = tb_path
         trainer._tensorboard_writer = tf.summary.FileWriter(tb_path, graph=trainer.env.graph)
+        if get_env('plugins.trainer_enhancer.summary.enable_tensorboard_web', True):
+            port = random.randrange(49152, 65536)
+            port = get_env('plugins.trainer_enhancer.summary.tensorboard_web_port', port)
+            trainer._tensorboard_webserver = threading.Thread(
+                    target=_tensorboard_webserver_thread, args=['tensorboard', '--logdir', tb_path, '--port', str(port)],
+                    daemon=True)
+            trainer._tensorboard_webserver.start()
+            set_env('plugins.trainer_enhancer.summary.tensorboard_web_port', port)
 
     def tensorboard_summary_write(trainer, inp, out):
         if 'summaries' in trainer.runtime and not trainer.runtime['zero_iter']:
@@ -240,6 +254,10 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_tensorboard=Tr
         trainer.register_event('optimization:before', tensorboard_summary_enable)
         trainer.register_event('iter:after', tensorboard_summary_write, priority=9)
 
+
+def _tensorboard_webserver_thread(*command):
+    popen = subprocess.Popen(command)
+    popen.wait()
 
 def set_error_summary_key(trainer, key):
     if not key.startswith('train/'):
