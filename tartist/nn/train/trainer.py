@@ -197,3 +197,4 @@ class SimpleTrainer(TrainerBase):
             summaries = tf.Summary.FromString(out['summaries'])
             self.runtime['summaries'] = summaries
         return out
+
