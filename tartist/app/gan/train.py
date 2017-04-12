@@ -1,19 +1,19 @@
 # -*- coding:utf8 -*-
-# File   : gan.py
+# File   : train.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 3/17/17
 # 
 # This file is part of TensorArtist
 
-from .trainer import TrainerBase
-from .. import summary
-from ..graph.env import Env
-from ..graph.node import as_tftensor
-from ...data.flow.base import SimpleDataFlowBase
-from ...data.flow.collections import EmptyDictDataFlow
+from tartist.nn.train.trainer import TrainerBase
+from tartist.nn import summary
+from tartist.nn.train.env import TrainerEnvBase
+from tartist.nn.graph.node import as_tftensor
+from tartist.data.flow.base import SimpleDataFlowBase
+from tartist.data.flow.collections import EmptyDictDataFlow
 
-from ...core.utils.meta import notnone_property
+from tartist.core.utils.meta import notnone_property
 import tensorflow as tf
 
 
@@ -25,7 +25,7 @@ class GANGraphKeys:
     DISCRIMINATOR_SUMMARIES = 'discriminator_summaries'
 
 
-class GANTrainerEnv(Env):
+class GANTrainerEnv(TrainerEnvBase):
     _g_optimizer = None
     _d_optimizer = None
 
@@ -97,12 +97,12 @@ class GANTrainer(TrainerBase):
     _d_func = None
 
     def initialize(self):
-        super().initialize()
         with self.env.as_default():
             summary.scalar('g_loss', self.env.g_loss, collections=[GANGraphKeys.GENERATOR_SUMMARIES])
             summary.scalar('d_loss', self.env.d_loss, collections=[GANGraphKeys.DISCRIMINATOR_SUMMARIES])
         self._g_func, self._d_func = self.env.make_optimizable_func()
         assert not self._g_func.queue_enabled and not self._d_func.queue_enabled
+        super().initialize()
 
     @notnone_property
     def g_func(self):

@@ -28,6 +28,8 @@ import pickle
 dumpb = pickle.dumps
 loadb = pickle.loads
 
+__all__ = ['QueryMessage', 'QueryRepPipe', 'QueryReqPipe']
+
 QueryMessage = collections.namedtuple('QueryMessage', ['identifier', 'payload'])
 
 class QueryRepPipe(object):

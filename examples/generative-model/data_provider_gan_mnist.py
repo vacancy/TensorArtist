@@ -6,15 +6,15 @@
 # 
 # This file is part of TensorArtist
 
+import numpy as np
+import tqdm
+
 from tartist import image
 from tartist.core import get_env
 from tartist.core.utils.thirdparty import get_tqdm_defaults
-from tartist.data import flow 
+from tartist.app import gan
+from tartist.data import flow
 from tartist.data.datasets.mnist import load_mnist
-from tartist.nn import train
-
-import numpy as np
-import tqdm
 
 _mnist = []
 
@@ -36,7 +36,7 @@ def make_dataflow_train(env):
     df = flow.BatchDataFlow(df, batch_size, sample_dict={
         'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
     })
-    df = train.gan.GANDataFlow(None, df, get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
+    df = gan.GANDataFlow(None, df, get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
 
     return df
 

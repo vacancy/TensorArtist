@@ -6,7 +6,7 @@
 # 
 # This file is part of TensorArtist
 
-from .. import random
+from tartist import random
 import collections
 
 __all__ = [

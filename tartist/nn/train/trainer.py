@@ -6,10 +6,11 @@
 # 
 # This file is part of TensorArtist
 
-from .env import TrainerEnv
+from .env import SimpleTrainerEnv
+from .. import summary
 from ..graph.env import Env
 from ..graph.tfqueue import QueuedInputFunction
-from ...core import trigger_event
+from ...core.event import EventManager, register_event, trigger_event
 from ...core.utils.meta import assert_instance, notnone_property
 from ...core.utils.cache import cached_property
 
@@ -22,9 +23,8 @@ __all__ = ['TrainerBase', 'SimpleTrainer']
 class TrainerBase(object):
     def __init__(self, nr_iters, env=None, data_provider=None, desc=None):
         self._nr_iters = nr_iters
-        self._env = env or TrainerEnv()
+        self._env = env or SimpleTrainerEnv()
         self._data_provider = data_provider
-        self._runtime = dict()
         self._stop_signal = False
         self._desc = desc
         self._need_feed = True
@@ -57,18 +57,18 @@ class TrainerBase(object):
 
     @property
     def runtime(self):
-        return self._runtime
+        return self.env.runtime
 
     @property
     def iter(self):
-        return self._runtime.get('iter', 0)
+        return self.runtime.get('iter', 0)
 
     @property
     def epoch_size(self):
-        return self._runtime.get('epoch_size', 1)
+        return self.runtime.get('epoch_size', 1)
 
     def set_epoch_size(self, es):
-        self._runtime['epoch_size'] = es
+        self.runtime['epoch_size'] = es
         return self
 
     @property
@@ -100,81 +100,85 @@ class TrainerBase(object):
     def finalize(self):
         pass
 
-    def load_snapshot(self, snapshot):
-        trigger_event(self, 'snapshot:load:before', self, snapshot)
-        self._load_snapshot(snapshot)
-        trigger_event(self, 'snapshot:load:after', self)
+    def register_event(self, name, callback, *args, priority=EventManager.DEF_PRIORITY, **kwargs):
+        register_event(self, name, callback, *args, priority=priority, **kwargs)
+        return self
+
+    def trigger_event(self, name, *args, **kwargs):
+        trigger_event(self, name, self, *args, **kwargs)
+        return self
 
     def dump_snapshot(self):
-        trigger_event(self, 'snapshot:dump:before', self)
+        self.trigger_event('snapshot:dump:before')
         snapshot = self._dump_snapshot()
-        trigger_event(self, 'snapshot:dump:after', self, snapshot)
+        self.trigger_event('snapshot:dump:after', snapshot)
         return snapshot
 
+    def load_snapshot(self, snapshot):
+        self.trigger_event('snapshot:load:before', snapshot)
+        self._load_snapshot(snapshot)
+        self.trigger_event('snapshot:load:after')
+
     def train(self):
-        trigger_event(self, 'initialization:before', self)
+        self.trigger_event('initialization:before')
         self.initialize()
-        trigger_event(self, 'initialization:after', self)
+        self.trigger_event('initialization:after')
         self.runtime.setdefault('iter', 0)
 
-        trigger_event(self, 'optimization:before', self)
+        self.trigger_event('optimization:before')
 
+        self.runtime['zero_iter'] = True
         while self.runtime['iter'] <= self.nr_iters and not self.stop_signal:
             if self.runtime['iter'] == 0:
                 inp, out = {}, {}
-                trigger_event(self, 'epoch:before', self)
-                trigger_event(self, 'iter:before', self, inp)
-                trigger_event(self, 'iter:after', self, inp, out)
-                trigger_event(self, 'epoch:after', self)
+                self.trigger_event('epoch:before')
+                self.trigger_event('iter:before', inp)
+                self.trigger_event('iter:after', inp, out)
+                self.trigger_event('epoch:after')
             else:
                 if self.runtime['iter'] % self.epoch_size == 1:
-                    trigger_event(self, 'epoch:before', self)
+                    self.trigger_event('epoch:before')
 
                 inp = next(self._iter_train) if self._need_feed else {}
-                trigger_event(self, 'iter:before', self, inp)
+                self.trigger_event('iter:before', inp)
                 out = self._run_step(inp)
-                trigger_event(self, 'iter:after', self, inp, out)
+                self.trigger_event('iter:after', inp, out)
 
                 if self.runtime['iter'] % self.epoch_size == 0:
-                    trigger_event(self, 'epoch:after', self)
+                    self.trigger_event('epoch:after')
 
             self.runtime['iter'] += 1
+            self.runtime['zero_iter'] = False
 
-        trigger_event(self, 'optimization:after', self)
+        self.trigger_event('optimization:after')
 
-        trigger_event(self, 'finalization:before', self)
+        self.trigger_event('finalization:begin')
         self.finalize()
-        trigger_event(self, 'finalization:after', self)
+        self.trigger_event('finalization:after')
 
     def _run_step(self, data):
         raise NotImplementedError()
 
     def _dump_snapshot(self):
-        variables = self.network.fetch_all_variables_dict()
-        runtime = self.runtime.copy()
-        snapshot = dict(variables=variables, runtime=runtime)
-        return snapshot
+        return self.env.dump_snapshot()
 
     def _load_snapshot(self, snapshot):
-        variables = snapshot['variables']
-        runtime = snapshot['runtime'].copy()
-        self._runtime = runtime
-        self.network.assign_all_variables_dict(variables)
+        self.env.load_snapshot(snapshot)
+        return self
 
 
 class SimpleTrainer(TrainerBase):
     _fn_train = None
 
     def initialize(self):
-        super().initialize()
         self._fn_train = self.env.make_optimizable_func(self.network.loss)
         if isinstance(self._fn_train, QueuedInputFunction):
             self._need_feed = False
+        super().initialize()
 
     @notnone_property
     def fn_train(self):
         return self._fn_train
-
 
     def _compile_fn_train(self):
         if not self._fn_train.compiled:

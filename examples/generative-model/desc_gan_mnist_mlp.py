@@ -6,12 +6,13 @@
 # 
 # This file is part of TensorArtist
 
+import tensorflow as tf
+
+from tartist.app import gan
+from tartist.app.gan import GANGraphKeys
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
-from tartist.nn import opr as O, optimizer, summary, train
-from tartist.nn.train.gan import GANGraphKeys
-
-import tensorflow as tf
+from tartist.nn import opr as O, optimizer, summary
 
 logger = get_logger(__file__)
 
@@ -34,8 +35,8 @@ __envs__ = {
     },
 }
 
-__trainer_cls__ = train.gan.GANTrainer
-__trainer_env_cls__ = train.gan.GANTrainerEnv
+__trainer_cls__ = gan.GANTrainer
+__trainer_env_cls__ = gan.GANTrainerEnv
 
 
 def make_network(env):
@@ -78,24 +79,28 @@ def make_network(env):
                     score_fake = O.sigmoid(logits_fake)
 
                 if is_train:
+                    # build loss
                     with tf.variable_scope('loss'):
-                        d_loss = (
-                            O.sigmoid_cross_entropy_with_logits(
-                                labels=O.ones([logits_real.shape[0]]), logits=logits_real) +
-                            O.sigmoid_cross_entropy_with_logits(
-                                labels=O.zeros([logits_fake.shape[0]]), logits=logits_fake)
-                        ).mean() / 2.
-
+                        d_loss_real = O.sigmoid_cross_entropy_with_logits(
+                            logits=logits_real, labels=O.ones_like(logits_real)).mean()
+                        d_loss_fake = O.sigmoid_cross_entropy_with_logits(
+                            logits=logits_fake, labels=O.zeros_like(logits_fake)).mean()
                         g_loss = O.sigmoid_cross_entropy_with_logits(
-                            labels=O.ones([logits_fake.shape[0]]), logits=logits_fake).mean()
+                            logits=logits_fake, labels=O.ones_like(logits_fake)).mean()
 
-                        accuracy_real = (score_real > 0.5).astype('float32').mean()
-                        accuracy_fake = (score_fake < 0.5).astype('float32').mean()
+                    d_acc_real = (score_real > 0.5).astype('float32').mean()
+                    d_acc_fake = (score_fake < 0.5).astype('float32').mean()
+                    g_accuracy = (score_fake > 0.5).astype('float32').mean()
 
-                    dpc.add_output(g_loss, name='g_loss', reduce_method='sum')
+                    d_accuracy = .5 * (d_acc_real + d_acc_fake)
+                    d_loss = .5 * (d_loss_real + d_loss_fake)
+
                     dpc.add_output(d_loss, name='d_loss', reduce_method='sum')
-                    dpc.add_output(accuracy_real, name='d_accuracy_real', reduce_method='sum')
-                    dpc.add_output(accuracy_fake, name='d_accuracy_fake', reduce_method='sum')
+                    dpc.add_output(d_accuracy, name='d_accuracy', reduce_method='sum')
+                    dpc.add_output(d_acc_real, name='d_acc_real', reduce_method='sum')
+                    dpc.add_output(d_acc_fake, name='d_acc_fake', reduce_method='sum')
+                    dpc.add_output(g_loss, name='g_loss', reduce_method='sum')
+                    dpc.add_output(g_accuracy, name='g_accuracy', reduce_method='sum')
 
                 dpc.add_output(x_given_z, name='output')
                 dpc.add_output(score_fake, name='score')
@@ -103,8 +108,9 @@ def make_network(env):
             dpc.set_input_maker(inputs).set_forward_func(forward)
 
         if is_train:
-            for acc in ['d_accuracy_real', 'd_accuracy_fake']:
+            for acc in ['d_accuracy', 'd_acc_real', 'd_acc_fake']:
                 summary.scalar(acc, dpc.outputs[acc], collections=[GANGraphKeys.DISCRIMINATOR_SUMMARIES])
+            summary.scalar('g_accuracy', dpc.outputs['g_accuracy'], collections=[GANGraphKeys.GENERATOR_SUMMARIES])
 
         net.add_all_dpc_outputs(dpc)
 

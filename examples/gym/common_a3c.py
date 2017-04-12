@@ -6,20 +6,12 @@
 # 
 # This file is part of TensorArtist
 
-import time
-import queue
-import threading
 import collections
-import numpy as np
-import tensorflow as tf
+import threading
 
-from tartist.core import get_env, get_logger, EnvBox
-from tartist.core.utils.cache import cached_result
-from tartist.core.utils.naming import get_dump_directory, get_data_directory
-from tartist.data import flow
-from tartist.data.rflow import QueryReqPipe
-from tartist.nn import opr as O, optimizer, summary
-from tartist import rl, random, image
+import numpy as np
+
+from tartist.core import get_env
 
 PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward'))
 

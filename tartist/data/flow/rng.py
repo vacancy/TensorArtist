@@ -13,12 +13,12 @@ from ...core.utils.meta import UniqueValueGetter
 
 import numpy as np
 
-__all__ = ['RandomizedDataFlow', 
+__all__ = ['RandomizedDataFlowBase', 
         'LOARandomSampleDataFlow', 
         'DOARandomSampleDataFlow']
 
 
-class RandomizedDataFlow(SimpleDataFlowBase):
+class RandomizedDataFlowBase(SimpleDataFlowBase):
     _rng = None
 
     def __init__(self, seed=None):
@@ -28,7 +28,7 @@ class RandomizedDataFlow(SimpleDataFlowBase):
         self._rng = gen_rng(seed=self._seed)
 
 
-class LOARandomSampleDataFlow(RandomizedDataFlow):
+class LOARandomSampleDataFlow(RandomizedDataFlowBase):
     def __init__(self, loa, seed=None):
         super().__init__(seed=seed)
         self._loa = loa

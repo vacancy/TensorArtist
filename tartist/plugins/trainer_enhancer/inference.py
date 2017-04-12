@@ -61,5 +61,5 @@ def enable_inference_runner(trainer, dataflow, interval=1,
                 extra_outputs_callback(trainer, data, out)
         trainer.runtime['inference_epoch_size'] = count
 
-    register_event(trainer, 'initialization:after', compile_fn_inference)
-    register_event(trainer, 'epoch:after', run_step, priority=5)
+    trainer.register_event('initialization:after', compile_fn_inference)
+    trainer.register_event('epoch:after', run_step, priority=5)

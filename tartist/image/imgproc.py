@@ -81,7 +81,7 @@ def resize_wh(img, size_wh):
 
 def resize_scale(img, scale):
     scale = get_2dshape(scale, type=float)
-    new_size = int(img.shape[0] * scale[0]), int(img.shape[1] * scale[1])
+    new_size = math.ceil(img.shape[0] * scale[0]), math.ceil(img.shape[1] * scale[1])
     return resize(img, new_size)
 
 
@@ -135,15 +135,17 @@ def crop(image, l, t, w, h, extra_crop=None):
 
 def center_crop(img, target_shape):
     """ center crop """
+    target_shape = get_2dshape(target_shape)
     rest = _get_crop2d_rest(img, target_shape)
     start = rest[0] // 2, rest[1] // 2
-
+    
     return _crop2d(img, start, target_shape)
 
 
 def leftup_crop(img, target_shape):
     """ left-up crop """
     start = 0, 0
+    target_shape = get_2d2shape(target_shape)
 
     return _crop2d(img, start, target_shape)
 
