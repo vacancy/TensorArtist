@@ -256,8 +256,11 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_tensorboard=Tr
 
 
 def _tensorboard_webserver_thread(*command):
-    popen = subprocess.Popen(command)
-    popen.wait()
+    import atexit
+    def term(p):
+        p.terminate()
+    p = subprocess.Popen(command)
+    atexit.register(term, p)
 
 def set_error_summary_key(trainer, key):
     if not key.startswith('train/'):
