@@ -1,4 +1,4 @@
-# -*- coding:utf8 -*-
+#pmt -*- coding:utf8 -*-
 # File   : summary.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
@@ -13,6 +13,7 @@ import random
 import collections
 import threading
 import os.path as osp
+import json
 import shutil
 import subprocess
 import tensorflow as tf
@@ -179,7 +180,13 @@ def put_tensorboard_summary(trainer, summary, use_internal_gs=False):
         trainer._tensorboard_writer.add_summary(summary, gs)
 
 
-def enable_echo_summary_scalar(trainer, summary_spec=None, enable_tensorboard=True, tensorboard_path=None):
+def put_summary_json(trainer, data):
+    with open(trainer.runtime['json_summary_path'], 'a') as f:
+        f.write(json.dumps(data) + '\n')
+
+
+def enable_echo_summary_scalar(trainer, summary_spec=None, enable_json=True, enable_tensorboard=True, 
+        json_path=None, tensorboard_path=None):
     if summary_spec is None:
         summary_spec = {}
 
@@ -188,6 +195,7 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_tensorboard=Tr
         extra_summary = tf.Summary()
 
         log_strs = ['Summaries: epoch = {}'.format(trainer.epoch)]
+        log_json = dict(epoch=trainer.epoch)
         for k in sorted(mgr.get_all_summaries('scalar')):
             spec = summary_spec.get(k, ['avg'])
 
@@ -197,37 +205,56 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_tensorboard=Tr
                 else:
                     avg = mgr.average(k, trainer.runtime['inference_epoch_size'], meth=meth)
 
+                tag = '{}/{}'.format(k, meth)
                 if avg != 'N/A':
-                    extra_summary.value.add(tag='{}/{}'.format(k, meth), simple_value=avg)
-                log_strs.append('  {}/{} = {}'.format(k, meth, avg))
+                    extra_summary.value.add(tag=tag, simple_value=avg)
+                log_strs.append('  {} = {}'.format(tag, avg))
+                log_json[tag] = avg
 
         for k in sorted(mgr.get_all_summaries('async_scalar')):
             spec = summary_spec.get(k, ['avg'])
             for meth in spec:
                 avg = mgr.average(k, meth=meth)
 
+                tag = '{}/{}'.format(k, meth)
                 if avg != 'N/A':
-                    extra_summary.value.add(tag='{}/{}'.format(k, meth), simple_value=avg)
-                log_strs.append('  {}/{} = {}'.format(k, meth, avg))
+                    extra_summary.value.add(tag=tag, simple_value=avg)
+                    log_json[tag] = avg
+                log_strs.append('  {} = {}'.format(tag, avg))
             mgr.update_last_query(k)
 
         if len(log_strs) > 1:
             logger.info('\n'.join(log_strs))
-
+            
         if enable_tensorboard and not trainer.runtime['zero_iter']:
             put_tensorboard_summary(trainer, extra_summary)
+
+        if enable_json and not trainer.runtime['zero_iter']:
+            put_summary_json(trainer, log_json)
+
         if enable_tensorboard and hasattr(trainer, '_tensorboard_webserver'):
             logger.info('Open your tensorboard webpage at http://{}:{}'.format(get_addr(), 
                 get_env('plugins.trainer_enhancer.summary.tensorboard_web_port')))
 
+    
+    def json_summary_enable(trainer, js_path=json_path):
+        if js_path is None:
+            js_path = osp.join(get_env('dir.root'), 'summary.json')
+        restored = 'restore_weights' in trainer.runtime or 'restore_snapshot' in trainer.runtime
+        if osp.exists(js_path) and not restored:
+            logger.warning('Removeing old summary json: {}'.format(js_path))
+            os.remove(js_path)
+        trainer.runtime['json_summary_path'] = js_path
+
+
     def tensorboard_summary_enable(trainer, tb_path=tensorboard_path):
         if tb_path is None:
             tb_path = osp.join(get_env('dir.root'), 'tensorboard')
-            restored = 'restore_weights' in trainer.runtime or 'restore_snapshot' in trainer.runtime
-            if osp.exists(tb_path) and not restored:
-                logger.warning('Removeint old tensorboard directory: {}'.format(tb_path))
-                shutil.rmtree(tb_path)
-            io.mkdir(tb_path)
+        restored = 'restore_weights' in trainer.runtime or 'restore_snapshot' in trainer.runtime
+        if osp.exists(tb_path) and not restored:
+            logger.warning('Removeing old tensorboard directory: {}'.format(tb_path))
+            shutil.rmtree(tb_path)
+        io.mkdir(tb_path)
         trainer.runtime['tensorboard_summary_path'] = tb_path
         trainer._tensorboard_writer = tf.summary.FileWriter(tb_path, graph=trainer.env.graph)
         if get_env('plugins.trainer_enhancer.summary.enable_tensorboard_web', True):
@@ -250,6 +277,9 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_tensorboard=Tr
 
     trainer.register_event('epoch:after', summary_history_scalar_on_epoch_after)
 
+    if enable_json:
+        trainer.register_event('optimization:before', json_summary_enable)
+
     if enable_tensorboard:
         trainer.register_event('optimization:before', tensorboard_summary_enable)
         trainer.register_event('iter:after', tensorboard_summary_write, priority=9)
@@ -261,6 +291,7 @@ def _tensorboard_webserver_thread(*command):
         p.terminate()
     p = subprocess.Popen(command)
     atexit.register(term, p)
+
 
 def set_error_summary_key(trainer, key):
     if not key.startswith('train/'):
