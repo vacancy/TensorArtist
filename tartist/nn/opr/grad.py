@@ -12,7 +12,7 @@ from .helper import as_varnode, as_tftensor, wrap_varnode_func, wrap_simple_name
 import tensorflow as tf
 import functools
 
-__all__ = ['clip_gradient', 'preserve_gradient_simple', 'binarize_01']
+__all__ = ['clip_gradient', 'preserve_gradient_simple']
 
 
 @wrap_varnode_func
