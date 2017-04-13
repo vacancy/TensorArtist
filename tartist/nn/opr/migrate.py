@@ -27,6 +27,7 @@ __all_migrated_oprs__ = []
 # unary arith
 __all_migrated_oprs__.extend([
     ('identity', tf.identity),
+
     ('neg', tf.negative),
     ('abs', tf.abs),
     ('log', tf.log),
@@ -63,6 +64,7 @@ __all_migrated_oprs__.extend([
     ('mod', tf.mod),
     ('cross', tf.cross),
     ('matmul', tf.matmul),
+    ('bias_add', tf.nn.bias_add),
     ('max', tf.maximum),
     ('min', tf.minimum),
     ('argmax', tf.maximum),
@@ -130,6 +132,14 @@ __all_migrated_oprs__.extend([
     ('sparse_softmax_cross_entropy_with_logits', tf.nn.sparse_softmax_cross_entropy_with_logits),
     ('softmax_cross_entropy_with_logits', tf.nn.softmax),
     ('sigmoid_cross_entropy_with_logits', tf.nn.sigmoid_cross_entropy_with_logits),
+])
+
+# clipping
+__all_migrated_oprs__.extend([
+    ('clip_by_value', tf.clip_by_value),
+    ('clip_by_norm', tf.clip_by_norm),
+    ('clip_by_global_norm', tf.clip_by_global_norm),
+    ('clip_by_average_norm', tf.clip_by_average_norm)
 ])
 
 __all_migrated_oprs__ = dict(__all_migrated_oprs__)
