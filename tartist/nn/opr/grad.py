@@ -9,10 +9,12 @@
 
 from .helper import lazy_O as O
 from .helper import as_varnode, as_tftensor, wrap_varnode_func, wrap_simple_named_op
+from tensorflow.python.framework import function
+
 import tensorflow as tf
 import functools
 
-__all__ = ['clip_gradient', 'preserve_gradient_simple']
+__all__ = ['clip_gradient', 'preserve_gradient_unary']
 
 
 @wrap_varnode_func
@@ -30,16 +32,15 @@ def clip_gradient(inpvar, clip_value_min, clip_value_max, name='clip_gradient'):
     return output
 
 
-def preserve_gradient_simple(func):
+def preserve_gradient_unary(func):
     @wrap_varnode_func
-    @functools.wraps(func)
     def new_func(inpvar, *args, **kwargs):
         def _backward(op, grad):
             return grad
-
+        
         @function.Defun(inpvar.dtype, python_grad_func=_backward, func_name=func.__name__)
         def _forward(x):
-            return func(inpvar, *args, **kwargs)
+            return func(x, *args, **kwargs)
 
         with tf.name_scope(func.__name__, values=[inpvar]):
             out = _forward(inpvar)
