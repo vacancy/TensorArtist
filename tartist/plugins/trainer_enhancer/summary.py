@@ -12,6 +12,7 @@ from tartist.nn.tfutils import clean_summary_name
 import random
 import collections
 import threading
+import os
 import os.path as osp
 import json
 import shutil
