@@ -15,12 +15,15 @@ logger = get_logger(__file__)
 
 __all__ = ['callback_injector']
 
+
 def _rms(var):
     return np.sqrt((var ** 2).mean())
 
+
 def _default_log_callback(tensor, var):
-    logger.info('log for {}: mean={}, std={}, rms={}, min={}, max={}'.format(tensor.name,
+    logger.info('log for {} (shape = {}): mean={}, std={}, rms={}, min={}, max={}'.format(tensor.name, var.shape,
           var.mean(), var.std(), _rms(var), var.min(), var.max()))
+
 
 def _default_embed_callback(tensor, var):
     logger.info('embed for {}, access by tensor and var'.format(tensor.name))

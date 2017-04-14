@@ -8,7 +8,7 @@
 
 from .. import TArtGraphKeys
 from ..graph.env import get_default_env
-from ..graph.node import OprNode, as_varnode
+from ..graph.node import OprNode, as_varnode, as_tftensor
 from ...core.logger import get_logger
 from ...core.utils.context import EmptyContext
 from ...core.utils.shape import get_2dshape, get_4dshape
@@ -21,6 +21,7 @@ logger = get_logger(__file__)
 
 __all__ = [
     'device_context', 
+    'as_varnode', 'as_tftensor',
     'get_2dshape', 'get_4dshape', 
     'wrap_varnode_func', 'wrap_simple_named_op', 'wrap_named_op', 'wrap_named_class_func',
     'unique_opr_name', 'StaticDynamicDim', 'lazy_O'

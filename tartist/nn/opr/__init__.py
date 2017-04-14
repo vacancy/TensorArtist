@@ -10,6 +10,7 @@ from ..graph.node import as_varnode, as_tftensor
 from .arith import *
 from .cnn import *
 from .debug import *
+from .grad import *
 from .helper import *
 from .imgproc import *
 from .linalg import *

@@ -43,11 +43,16 @@ def opencv_only(func):
     return new_func
 
 
-def pil_img2nd(image):
-    return np.array(image)
+def pil_img2nd(image, require_chl3=True):
+    nd = np.array(image)
+    if require_chl3 and len(nd.shape) == 2:
+        return nd[:, :, np.newaxis]
+    return nd
 
 
 def pil_nd2img(image):
+    if len(image.shape) == 3 and image.shape[2] == 1:
+        image = image[:, :, 0]
     return Image.fromarray(image)
 
 
