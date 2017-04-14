@@ -1,51 +1,59 @@
-tartist.data.flow package
-=========================
+tartist\.data\.flow package
+===========================
 
 Submodules
 ----------
 
-tartist.data.flow.base module
------------------------------
+tartist\.data\.flow\.base module
+--------------------------------
 
 .. automodule:: tartist.data.flow.base
     :members:
     :undoc-members:
     :show-inheritance:
 
-tartist.data.flow.batch module
-------------------------------
+tartist\.data\.flow\.batch module
+---------------------------------
 
 .. automodule:: tartist.data.flow.batch
     :members:
     :undoc-members:
     :show-inheritance:
 
-tartist.data.flow.collections module
-------------------------------------
+tartist\.data\.flow\.collections module
+---------------------------------------
 
 .. automodule:: tartist.data.flow.collections
     :members:
     :undoc-members:
     :show-inheritance:
 
-tartist.data.flow.remote module
--------------------------------
+tartist\.data\.flow\.kv module
+------------------------------
+
+.. automodule:: tartist.data.flow.kv
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+tartist\.data\.flow\.remote module
+----------------------------------
 
 .. automodule:: tartist.data.flow.remote
     :members:
     :undoc-members:
     :show-inheritance:
 
-tartist.data.flow.rng module
-----------------------------
+tartist\.data\.flow\.rng module
+-------------------------------
 
 .. automodule:: tartist.data.flow.rng
     :members:
     :undoc-members:
     :show-inheritance:
 
-tartist.data.flow.tools module
-------------------------------
+tartist\.data\.flow\.tools module
+---------------------------------
 
 .. automodule:: tartist.data.flow.tools
     :members:

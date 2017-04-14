@@ -1,27 +1,19 @@
-tartist.nn.train package
-========================
+tartist\.nn\.train package
+==========================
 
 Submodules
 ----------
 
-tartist.nn.train.env module
----------------------------
+tartist\.nn\.train\.env module
+------------------------------
 
 .. automodule:: tartist.nn.train.env
     :members:
     :undoc-members:
     :show-inheritance:
 
-tartist.nn.train.gan module
----------------------------
-
-.. automodule:: tartist.nn.train.gan
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tartist.nn.train.trainer module
--------------------------------
+tartist\.nn\.train\.trainer module
+----------------------------------
 
 .. automodule:: tartist.nn.train.trainer
     :members:

@@ -241,7 +241,7 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_json=True, ena
     def json_summary_enable(trainer, js_path=json_path):
         if js_path is None:
             js_path = osp.join(get_env('dir.root'), 'summary.json')
-        restored = 'restore_weights' in trainer.runtime or 'restore_snapshot' in trainer.runtime
+        restored = 'restore_snapshot' in trainer.runtime
         if osp.exists(js_path) and not restored:
             logger.warning('Removing old summary json: {}'.format(js_path))
             os.remove(js_path)
@@ -251,7 +251,7 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_json=True, ena
     def tensorboard_summary_enable(trainer, tb_path=tensorboard_path):
         if tb_path is None:
             tb_path = osp.join(get_env('dir.root'), 'tensorboard')
-        restored = 'restore_weights' in trainer.runtime or 'restore_snapshot' in trainer.runtime
+        restored = 'restore_snapshot' in trainer.runtime
         if osp.exists(tb_path) and not restored:
             logger.warning('Removing old tensorboard directory: {}'.format(tb_path))
             shutil.rmtree(tb_path)
