@@ -6,13 +6,13 @@ Subpackages
 
 .. toctree::
 
+    tartist.app
     tartist.core
     tartist.data
     tartist.image
     tartist.nn
     tartist.plugins
     tartist.random
-    tartist.rl
 
 Module contents
 ---------------

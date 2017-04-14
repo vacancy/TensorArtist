@@ -1,5 +1,5 @@
-tartist.plugins package
-=======================
+tartist\.plugins package
+========================
 
 Module contents
 ---------------

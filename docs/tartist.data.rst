@@ -1,5 +1,5 @@
-tartist.data package
-====================
+tartist\.data package
+=====================
 
 Subpackages
 -----------
@@ -8,13 +8,14 @@ Subpackages
 
     tartist.data.datasets
     tartist.data.flow
+    tartist.data.kvstore
     tartist.data.rflow
 
 Submodules
 ----------
 
-tartist.data.iterator module
-----------------------------
+tartist\.data\.iterator module
+------------------------------
 
 .. automodule:: tartist.data.iterator
     :members:
