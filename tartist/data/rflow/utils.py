@@ -94,8 +94,24 @@ def uid():
     return socket.gethostname() + '/' + uuid.uuid4().hex
 
 
-def get_addr():
+def get_addrv1():
     return socket.gethostbyname(socket.gethostname())
+
+
+# http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
+def get_addrv2():
+    resolve = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1]
+    if len(resolve):
+        return resolve[0]
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    addr = s.getsockname()[0]
+    s.close()
+    return addr
+
+
+get_addr = get_addrv2
 
 
 def graceful_close(sock):
