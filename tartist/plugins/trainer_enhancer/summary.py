@@ -186,8 +186,10 @@ def put_summary_json(trainer, data):
         f.write(json.dumps(data) + '\n')
 
 
-def enable_echo_summary_scalar(trainer, summary_spec=None, enable_json=True, enable_tensorboard=True, 
-        json_path=None, tensorboard_path=None):
+def enable_echo_summary_scalar(trainer, summary_spec=None, 
+        enable_json=True, enable_tensorboard=True, enable_tensorboard_web=True,
+        json_path=None, tensorboard_path=None, tensorboard_web_port=None):
+
     if summary_spec is None:
         summary_spec = {}
 
@@ -235,7 +237,7 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_json=True, ena
 
         if enable_tensorboard and hasattr(trainer, '_tensorboard_webserver'):
             logger.info('Open your tensorboard webpage at http://{}:{}'.format(get_addr(), 
-                get_env('plugins.trainer_enhancer.summary.tensorboard_web_port')))
+                trainer.runtime['tensorboard_web_port']))
 
     
     def json_summary_enable(trainer, js_path=json_path):
@@ -258,14 +260,14 @@ def enable_echo_summary_scalar(trainer, summary_spec=None, enable_json=True, ena
         io.mkdir(tb_path)
         trainer.runtime['tensorboard_summary_path'] = tb_path
         trainer._tensorboard_writer = tf.summary.FileWriter(tb_path, graph=trainer.env.graph)
-        if get_env('plugins.trainer_enhancer.summary.enable_tensorboard_web', True):
+        if enable_tensorboard_web:
             port = random.randrange(49152, 65536)
-            port = get_env('plugins.trainer_enhancer.summary.tensorboard_web_port', port)
+            port = trainer.runtime.get('tensorboard_web_port', port)
             trainer._tensorboard_webserver = threading.Thread(
                     target=_tensorboard_webserver_thread, args=['tensorboard', '--logdir', tb_path, '--port', str(port)],
                     daemon=True)
             trainer._tensorboard_webserver.start()
-            set_env('plugins.trainer_enhancer.summary.tensorboard_web_port', port)
+            trainer.runtime['tensorboard_web_port'] = port
 
     def tensorboard_summary_write(trainer, inp, out):
         if 'summaries' in trainer.runtime and not trainer.runtime['zero_iter']:
