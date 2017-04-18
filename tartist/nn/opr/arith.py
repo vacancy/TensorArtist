@@ -9,7 +9,7 @@
 from .helper import as_varnode, wrap_varnode_func, wrap_simple_named_op
 from .helper import lazy_O as O
 
-__all__ = ['rms', 'std']
+__all__ = ['rms', 'std', 'atanh', 'logit']
 
 
 @wrap_simple_named_op
@@ -23,4 +23,18 @@ def rms(inpvar, name='rms'):
 def std(inpvar, name='std'):
     inpvar = as_varnode(inpvar)
     return O.sqrt(((inpvar - inpvar.mean()) ** 2.).mean(), name=name)
+
+
+@wrap_simple_named_op
+@wrap_varnode_func
+def atanh(inpvar, name='atanh', eps=1e-6):
+    inpvar = as_varnode(inpvar)
+    return 0.5 * O.log((1. + inpvar) / (1. - inpvar + eps) + eps)
+
+
+@wrap_simple_named_op
+@wrap_varnode_func
+def logit(inpvar, name='logit', eps=1e-6):
+    inpvar = as_varnode(inpvar)
+    return 0.5 * O.log(inpvar / (1. - inpvar + eps) + eps)
 
