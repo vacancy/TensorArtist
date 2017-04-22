@@ -25,7 +25,9 @@ __all__ = [
 def canonize_sym_shape(shape, name='canonize_shape'):
     if type(shape) in (tuple, list) and type(shape[0]) in (tuple, list):
         shape = shape[0] 
-
+    
+    if not isinstance(shape, (tuple, list)):
+        return shape
     if all(map(lambda x: type(x) is int, shape)):
         return shape
     return tf.stack(shape)
