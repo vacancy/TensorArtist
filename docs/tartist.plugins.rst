@@ -1,6 +1,13 @@
 tartist.plugins package
 =======================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    tartist.plugins.trainer_enhancer
+
 Module contents
 ---------------
 
