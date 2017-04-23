@@ -9,6 +9,7 @@
 from tartist.core import get_logger, get_env, set_env, io
 from tartist.data.rflow.utils import get_addr
 from tartist.nn.tfutils import clean_summary_name
+import math
 import random
 import collections
 import threading
@@ -79,13 +80,18 @@ class SummaryHistoryManager(object):
         self._summaries_type[key] = value
 
     def _do_average(self, values, meth):
-        assert meth in ['avg', 'max', 'sum']
+        assert meth in ['avg', 'max', 'min', 'sum', 'std']
         if meth == 'avg':
             return sum(values) / (len(values) + 1e-4)
         elif meth == 'max':
             return max(values)
+        elif meth == 'min':
+            return min(values)
         elif meth == 'sum':
             return sum(values)
+        elif meth == 'std':
+            l = len(values) + 1e-4
+            return math.sqrt(sum([v ** 2 for v in values]) / l - (sum(values) / l) ** 2)
 
     def average(self, key, top_k=None, meth='avg'):
         type = self.get_type(key)
