@@ -3,7 +3,7 @@
 # Author : Jiayuan Mao
 #          Honghua Dong
 # Email  : maojiayuan@gmail.com
-#          dhh19951@gmail,com
+#          dhh19951@gmail.com
 # Date   : 3/18/17
 #
 # This file is part of TensorArtist

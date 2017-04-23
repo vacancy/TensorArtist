@@ -3,20 +3,20 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 4/22/17
-# 
+#
 # This file is part of TensorArtist
 
-from tartist import random
-from tartist.app import rl
-from tartist.core.utils.meta import notnone_property
-from tartist.core.utils.shape import get_2dshape
+from ..base import SimpleRLEnvironBase, DiscreteActionSpace
+from .... import random
+from ....core.utils.meta import notnone_property
+from ....core.utils.shape import get_2dshape
 import numpy as np
 import collections
 
 __all__ = ['MazeEnv']
 
 
-class MazeEnv(rl.SimpleRLEnvironBase):
+class MazeEnv(SimpleRLEnvironBase):
     """
     Create a maze environment.
     :param map_size: A single int or a tuple (h, w), representing the map size.
@@ -46,11 +46,11 @@ class MazeEnv(rl.SimpleRLEnvironBase):
 
     _action_delta_valid = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 
-    # just default value 
+    # just default value
     _action_delta = [(0, 0), (-1, 0), (0, 1), (1, 0), (0, -1)]
     _action_mapping = [0, 1, 2, 3, 4]
 
-    def __init__(self, map_size=14, visible_size=None, obs_ratio=0.3, 
+    def __init__(self, map_size=14, visible_size=None, obs_ratio=0.3,
                  random_action_mapping=None,
                  enable_noaction=True, reward_move=-1, reward_noaction=0, reward_final=100, reward_error=-2):
 
@@ -64,11 +64,11 @@ class MazeEnv(rl.SimpleRLEnvironBase):
         self._obs_ratio = obs_ratio
 
         if enable_noaction:
-            self._action_space = rl.DiscreteActionSpace(5, action_meanings=['NOOP', 'UP', 'RIGHT', 'DOWN', 'LEFT'])
+            self._action_space = DiscreteActionSpace(5, action_meanings=['NOOP', 'UP', 'RIGHT', 'DOWN', 'LEFT'])
             self._action_delta = [(0, 0), (-1, 0), (0, 1), (1, 0), (0, -1)]
             self._action_mapping = [0, 1, 2, 3, 4]
         else:
-            self._action_space = rl.DiscreteActionSpace(4, action_meanings=['UP', 'RIGHT', 'DOWN', 'LEFT'])
+            self._action_space = DiscreteActionSpace(4, action_meanings=['UP', 'RIGHT', 'DOWN', 'LEFT'])
             self._action_delta = [(-1, 0), (0, 1), (1, 0), (0, -1)]
             self._action_mapping = [0, 1, 2, 3]
 
@@ -186,7 +186,7 @@ class MazeEnv(rl.SimpleRLEnvironBase):
                         if (yy, xx) not in v:
                             q.append((yy, xx))
                             v.add((yy, xx))
-        
+
         path = []
         y, x = fy, fx
 
@@ -214,13 +214,13 @@ class MazeEnv(rl.SimpleRLEnvironBase):
         for i in range(self._map_size[1] + 2):
             self._fill_canvas(canvas, 0, i, 4, delta=0)
             self._fill_canvas(canvas, self._map_size[1] + 1, i, 4, delta=0)
-        
+
         if obstacles is None:
             for i in range(int(self._map_size[0] * self._map_size[1] * self._obs_ratio)):
-                self._fill_canvas(canvas, *self._gen_rpt(), 1)
+                self._fill_canvas(canvas, *self._gen_rpt(), v=1)
         else:
             for y, x in obstacles:
-                self._fill_canvas(canvas, y, x, 1)
+                self._fill_canvas(canvas, y, x, v=1)
 
         self._start_point = start_point or self._gen_rpt()
         while True:
@@ -228,28 +228,28 @@ class MazeEnv(rl.SimpleRLEnvironBase):
             if self._start_point[0] != self._final_point[0] or self._start_point[1] != self._final_point[1]:
                 break
 
-        self._fill_canvas(canvas, *self._start_point, 2)
-        self._fill_canvas(canvas, *self._final_point, 3)
-        
+        self._fill_canvas(canvas, *self._start_point, v=2)
+        self._fill_canvas(canvas, *self._final_point, v=3)
+
         path = self._gen_shortest_path(canvas, self._start_point, self._final_point)
         for y, x in path:
-            self._fill_canvas(canvas, y, x, 0)
+            self._fill_canvas(canvas, y, x, v=0)
 
-        self._fill_canvas(canvas, *self._start_point, 2)
-        self._fill_canvas(canvas, *self._final_point, 3)
-        
-        self._shortest_path = path 
+        self._fill_canvas(canvas, *self._start_point, v=2)
+        self._fill_canvas(canvas, *self._final_point, v=3)
+
+        self._shortest_path = path
         self._current_point = self._start_point
 
     def _refresh_view(self):
         if self._visible_size is None:
             self._set_current_state(self._canvas.copy())
             return
-        
+
         view = np.empty((self._visible_size[0], self._visible_size[1], 3), dtype='uint8')
         view[:, :, :] = self._colors[1]
-        
-        y, x = self._current_point 
+
+        y, x = self._current_point
         ch, cw = self.canvas_size
         vh, vw = self._visible_size
 
@@ -257,16 +257,16 @@ class MazeEnv(rl.SimpleRLEnvironBase):
         vu, vl = (vh - 1) // 2, (vw - 1) // 2
         vd, vr = vh - vu, vw - vl
         # visible center y, x
-        vcy, vcx = vu, vl 
+        vcy, vcx = vu, vl
 
         y0, x0 = max(0, y - vu), max(0, x - vl)
         y1, x1 = min(ch, y + vd), min(cw, x + vr)
         vu, vl = y - y0, x - x0
         vd, vr = y1 - y, x1 - x
-           
+
         view[vcy-vu:vcy+vd, vcx-vl:vcx+vr, :] = self._canvas[y-vu:y+vd, x-vl:x+vr, :]
         self._set_current_state(view)
-        
+
     def _get_action_space(self):
         return self._action_space
 
@@ -289,9 +289,9 @@ class MazeEnv(rl.SimpleRLEnvironBase):
             reward = self._rewards[0]
             is_over = False
 
-        self._fill_canvas(self._canvas, *self._current_point, 0)
+        self._fill_canvas(self._canvas, *self._current_point, v=0)
         self._current_point = (y, x)
-        self._fill_canvas(self._canvas, *self._current_point, 2)
+        self._fill_canvas(self._canvas, *self._current_point, v=2)
         self._refresh_view()
 
         return reward, is_over
