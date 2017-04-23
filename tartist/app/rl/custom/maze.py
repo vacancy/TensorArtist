@@ -19,6 +19,7 @@ __all__ = ['MazeEnv']
 class MazeEnv(SimpleRLEnvironBase):
     """
     Create a maze environment.
+
     :param map_size: A single int or a tuple (h, w), representing the map size.
     :param visible_size: A single int or a tuple (h, w), representing the visible size. The agent will at the center
         of the visible window, and out-of-border part will be colored by obstacle color.
