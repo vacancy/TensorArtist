@@ -69,28 +69,28 @@ def imshow(title, img, *, shuffle=False):
     _backend.imshow(title, img)
 
 
-def resize(img, size):
+def resize(img, size, interpolation='LINEAR'):
     size = get_2dshape(size)
-    return _backend.resize(img, (size[1], size[0]))
+    return _backend.resize(img, (size[1], size[0]), interpolation=interpolation)
 
 
-def resize_wh(img, size_wh):
+def resize_wh(img, size_wh, interpolation='LINEAR'):
     size_wh = get_2dshape(size_wh)
-    return _backend.resize(img, size_wh)
+    return _backend.resize(img, size_wh, interpolation=interpolation)
 
 
-def resize_scale(img, scale):
+def resize_scale(img, scale, interpolation='LINEAR'):
     scale = get_2dshape(scale, type=float)
     new_size = math.ceil(img.shape[0] * scale[0]), math.ceil(img.shape[1] * scale[1])
-    return resize(img, new_size)
+    return resize(img, new_size, interpolation=interpolation)
 
 
-def resize_scale_wh(img, scale_wh):
+def resize_scale_wh(img, scale_wh, interpolation='LINEAR'):
     scale_wh = get_2dshape(scale_wh, type=float)
-    return resize_scale(img, (scale_wh[1], scale_wh[0]))
+    return resize_scale(img, (scale_wh[1], scale_wh[0]), interpolation=interpolation)
 
 
-def resize_minmax(img, min_dim, max_dim=None):
+def resize_minmax(img, min_dim, max_dim=None, interpolation='LINEAR'):
     if max_dim is None:
         max_dim = min_dim
 
@@ -98,7 +98,7 @@ def resize_minmax(img, min_dim, max_dim=None):
     short, long = min(h, w), max(h, w)
     scale = min_dim / short
     scale = min(max_dim / long, scale)
-    return resize_scale(img, scale)
+    return resize_scale(img, scale, interpolation=interpolation)
 
 
 def crop(image, l, t, w, h, extra_crop=None):
