@@ -39,8 +39,12 @@ class MazeEnv(SimpleRLEnvironBase):
     _shortest_path = None
     _distance_mat = None
     _distance_prev = None
+    _quick_distance_mat = None
+    _quick_distance_prev = None
     _current_point = None
+
     _canvas = None
+    _origin_canvas = None
 
     """empty, obstacle, current, final, border"""
     _total_dim = 5
@@ -91,6 +95,11 @@ class MazeEnv(SimpleRLEnvironBase):
         return self._canvas
 
     @notnone_property
+    def origin_canvas(self):
+        """Return the original canvas (at time 0, full)"""
+        return self._origin_canvas
+
+    @notnone_property
     def start_point(self):
         """Start point (r, c)"""
         return self._start_point
@@ -111,13 +120,26 @@ class MazeEnv(SimpleRLEnvironBase):
         return self._shortest_path
 
     @notnone_property
-    def distance_mat(self):
-        """Distance matrix"""
-        return self._distance_mat
+    def quick_distance_mat(self):
+        """Distance matrix: this is done during the first run of SPFA, so if you ensure
+        that all valid points are in the same connected component, you can use it"""
+        return self._quick_distance_mat
 
     @notnone_property
+    def quick_distance_prev(self):
+        """Distance-prev matrix: see also `quick_distance_mat`"""
+        return self._quick_distance_mat
+
+    @property
+    def distance_mat(self):
+        """Distance matrix"""
+        self._gen_distance_info()
+        return self._distance_mat
+
+    @property
     def distance_prev(self):
         """Distance-prev matrix"""
+        self._gen_distance_info()
         return self._distance_prev
 
     @property
@@ -167,7 +189,10 @@ class MazeEnv(SimpleRLEnvironBase):
         """Generate a random point uniformly"""
         return [self._rng.randint(d) for d in self._map_size]
 
-    def _gen_shortest_path(self, c, start_point, final_point, all_points=False):
+    def _fill_canvas(self, c, y, x, v, delta=1):
+        c[y + delta, x + delta, :] = self._colors[v]
+
+    def _gen_shortest_path(self, c, start_point, final_point):
         sy, sx = start_point
         fy, fx = final_point
 
@@ -185,8 +210,6 @@ class MazeEnv(SimpleRLEnvironBase):
         while len(q):
             y, x = q.popleft()
             v.remove((y, x))
-            if not all_points and y == fy and x == fx:
-                break
             assert self._get_canvas_label(y, x) < 4
 
             for dy, dx in self._action_delta_valid:
@@ -208,11 +231,6 @@ class MazeEnv(SimpleRLEnvironBase):
             path.append((y, x))
             y, x = p[y, x]
         return path, d, p
-
-    def _fill_canvas(self, c, y, x, v, delta=1):
-        y += delta
-        x += delta
-        c[y, x, :] = self._colors[v]
 
     def _gen_map(self, obstacles=None, start_point=None, final_point=None):
         canvas = np.empty((self._map_size[0] + 2, self._map_size[1] + 2, 3), dtype='uint8')
@@ -245,18 +263,24 @@ class MazeEnv(SimpleRLEnvironBase):
         self._fill_canvas(canvas, *self._start_point, v=2)
         self._fill_canvas(canvas, *self._final_point, v=3)
 
-        path, _, _ = self._gen_shortest_path(canvas, self._start_point, self._final_point)
+        path, d, p = self._gen_shortest_path(canvas, self._start_point, self._final_point)
         for y, x in path:
             self._fill_canvas(canvas, y, x, v=0)
-        path, d, p = self._gen_shortest_path(canvas, self._start_point, self._final_point, all_points=True)
 
         self._fill_canvas(canvas, *self._start_point, v=2)
         self._fill_canvas(canvas, *self._final_point, v=3)
 
+        self._origin_canvas = canvas.copy()
+
         self._shortest_path = path
+        self._quick_distance_mat = d
+        self._quick_distance_prev = p
+        self._current_point = self._start_point
+
+    def _gen_distance_info(self):
+        path, d, p = self._gen_shortest_path(self.origin_canvas, self._start_point, self._final_point)
         self._distance_mat = d
         self._distance_prev = p
-        self._current_point = self._start_point
 
     def _refresh_view(self):
         if self._visible_size is None:
