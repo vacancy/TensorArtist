@@ -3,6 +3,7 @@
 from tartist import image, random
 from tartist.app import rl
 import numpy as np
+import itertools
 
 
 def r(m):
@@ -13,9 +14,13 @@ def r(m):
 
 
 def main():
-    m = rl.custom.MazeEnv(enable_noaction=False, visible_size=7)
-    
-    m.restart()
+    m = rl.custom.MazeEnv(map_size=15, enable_noaction=True, visible_size=None) 
+    obstacles = itertools.chain(
+            [(i, 7) for i in range(15) if i not in (3, 11)], 
+            [(7, i) for i in range(15) if i not in (3, 11)]
+    )
+    m.restart(obstacles=obstacles, start_point=(3, 3), finish_point=(11, 11))
+
     demo = [r(m)]
     for i in range(19):
         a = random.choice(4)
