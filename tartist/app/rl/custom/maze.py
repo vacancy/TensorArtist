@@ -297,6 +297,9 @@ class MazeEnv(rl.SimpleRLEnvironBase):
         return reward, is_over
 
     def restart(self, obstacles=None, start_point=None, final_point=None):
+        if start_point is not None and final_point is not None:
+            assert start_point[0] != final_point[0] or start_point[1] != final_point[1], 'Invalid start and final point: {} {}'.format(
+                    start_point, final_point)
         self._gen_map(obstacles=obstacles, start_point=start_point, final_point=final_point)
         self._refresh_view()
 

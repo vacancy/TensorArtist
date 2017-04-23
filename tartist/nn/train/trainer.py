@@ -138,7 +138,7 @@ class TrainerBase(object):
             else:
                 if self.runtime['iter'] % self.epoch_size == 1:
                     self.trigger_event('epoch:before')
-
+                
                 inp = next(self._iter_train) if self._need_feed else {}
                 self.trigger_event('iter:before', inp)
                 out = self._run_step(inp)
