@@ -37,6 +37,8 @@ class MazeEnv(SimpleRLEnvironBase):
     _start_point = None
     _final_point = None
     _shortest_path = None
+    _distance_mat = None
+    _distance_prev = None
     _current_point = None
     _canvas = None
 
@@ -108,6 +110,16 @@ class MazeEnv(SimpleRLEnvironBase):
         """One of the shortest paths from start to finish, list of point (r, c)"""
         return self._shortest_path
 
+    @notnone_property
+    def distance_mat(self):
+        """Distance matrix"""
+        return self._distance_mat
+
+    @notnone_property
+    def distance_prev(self):
+        """Distance-prev matrix"""
+        return self._distance_prev
+
     @property
     def action_delta(self):
         """Action deltas: the tuple (dy, dx) when you perform action i"""
@@ -155,13 +167,14 @@ class MazeEnv(SimpleRLEnvironBase):
         """Generate a random point uniformly"""
         return [self._rng.randint(d) for d in self._map_size]
 
-    def _gen_shortest_path(self, c, start_point, final_point):
+    def _gen_shortest_path(self, c, start_point, final_point, all_points=False):
         sy, sx = start_point
         fy, fx = final_point
 
+        obs_dis = self.canvas_size[0] * self.canvas_size[1]
         q = collections.deque()
         v = set()
-        d = np.ones(self._map_size, dtype='int32') * 100000
+        d = np.ones(self._map_size, dtype='int32') * obs_dis * 2
         p = np.zeros(self._map_size + (2, ), dtype='int32')
 
         q.append((sy, sx))
@@ -172,7 +185,7 @@ class MazeEnv(SimpleRLEnvironBase):
         while len(q):
             y, x = q.popleft()
             v.remove((y, x))
-            if y == fy and x == fx:
+            if not all_points and y == fy and x == fx:
                 break
             assert self._get_canvas_label(y, x) < 4
 
@@ -180,7 +193,7 @@ class MazeEnv(SimpleRLEnvironBase):
                 yy, xx = y + dy, x + dx
                 tt = self._get_canvas_label(yy, xx)
                 if tt < 4:
-                    dd = 2 if tt == 1 else 1
+                    dd = obs_dis if tt == 1 else 1
                     if d[yy, xx] > d[y, x] + dd:
                         d[yy, xx] = d[y, x] + dd
                         p[yy, xx, :] = (y, x)
@@ -194,7 +207,7 @@ class MazeEnv(SimpleRLEnvironBase):
         while y != -1 and x != -1:
             path.append((y, x))
             y, x = p[y, x]
-        return path
+        return path, d, p
 
     def _fill_canvas(self, c, y, x, v, delta=1):
         y += delta
@@ -232,14 +245,17 @@ class MazeEnv(SimpleRLEnvironBase):
         self._fill_canvas(canvas, *self._start_point, v=2)
         self._fill_canvas(canvas, *self._final_point, v=3)
 
-        path = self._gen_shortest_path(canvas, self._start_point, self._final_point)
+        path, _, _ = self._gen_shortest_path(canvas, self._start_point, self._final_point)
         for y, x in path:
             self._fill_canvas(canvas, y, x, v=0)
+        path, d, p = self._gen_shortest_path(canvas, self._start_point, self._final_point, all_points=True)
 
         self._fill_canvas(canvas, *self._start_point, v=2)
         self._fill_canvas(canvas, *self._final_point, v=3)
 
         self._shortest_path = path
+        self._distance_mat = d
+        self._distance_prev = p
         self._current_point = self._start_point
 
     def _refresh_view(self):
