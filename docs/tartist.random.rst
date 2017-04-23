@@ -1,11 +1,11 @@
-tartist\.random package
-=======================
+tartist.random package
+======================
 
 Submodules
 ----------
 
-tartist\.random\.rng module
----------------------------
+tartist.random.rng module
+-------------------------
 
 .. automodule:: tartist.random.rng
     :members:

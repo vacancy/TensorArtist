@@ -1,27 +1,27 @@
-tartist\.core\.io package
-=========================
+tartist.core.io package
+=======================
 
 Submodules
 ----------
 
-tartist\.core\.io\.common module
---------------------------------
+tartist.core.io.common module
+-----------------------------
 
 .. automodule:: tartist.core.io.common
     :members:
     :undoc-members:
     :show-inheritance:
 
-tartist\.core\.io\.fs module
-----------------------------
+tartist.core.io.fs module
+-------------------------
 
 .. automodule:: tartist.core.io.fs
     :members:
     :undoc-members:
     :show-inheritance:
 
-tartist\.core\.io\.network module
----------------------------------
+tartist.core.io.network module
+------------------------------
 
 .. automodule:: tartist.core.io.network
     :members:

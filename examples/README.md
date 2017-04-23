@@ -18,7 +18,7 @@ that example.
 + Basic MLP Variational Auto-Encoder (VAE) on MNIST: `generative-model/desc_vae_mnist_mlp_bernoulli_adam.py`
 + Basic MLP Generative Adverserial Netowrk (GAN) on MNIST: `generative-model/desc_gan_mnist_mlp.py`
 + Basic Deep Convolutional Generative Adverserial Netowrk (DCGAN) on MNIST: `generative-model/desc_gan_mnist_cnn.py`
-+ Basic Wasserstein GAN (WGAN) on MNIST: `desc_wgan_mnist_cnn.py`, a reproduction of [1701.07875] Wasserstein GAN (https://arxiv.org/abs/1701.07875).
++ Basic Wasserstein GAN (WGAN) on MNIST: `generative-model/desc_wgan_mnist_cnn.py`.
 + Basic InfoGAN on MNIST: `generative-model/desc_infogan_mnist_cnn.py`
 + Basic Deep Recurrent Attention Write (DRAW) on MNIST: `generative-model/desc_draw_mnist.py`
 
@@ -28,3 +28,5 @@ that example.
 
 #### Deep Reinforcement learning:
 + Basic A3C on Atari games: `gym/desc_a3c_atari.py`
++ RL Environment Simulator: `rl-sim/README.md`
+

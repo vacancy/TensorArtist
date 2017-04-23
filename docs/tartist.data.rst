@@ -1,5 +1,5 @@
-tartist\.data package
-=====================
+tartist.data package
+====================
 
 Subpackages
 -----------
@@ -14,8 +14,8 @@ Subpackages
 Submodules
 ----------
 
-tartist\.data\.iterator module
-------------------------------
+tartist.data.iterator module
+----------------------------
 
 .. automodule:: tartist.data.iterator
     :members:

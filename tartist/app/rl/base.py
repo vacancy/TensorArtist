@@ -136,13 +136,18 @@ class ActionSpaceBase(object):
 
 
 class DiscreteActionSpace(ActionSpaceBase):
-    def __init__(self, nr_actions):
+    def __init__(self, nr_actions, action_meanings=None):
         super().__init__()
         self._nr_actions = nr_actions
+        self._action_meanings = action_meanings
 
     @property
     def nr_actions(self):
         return self._nr_actions
+
+    @property
+    def action_meanings(self):
+        return self._action_meanings
 
     def _sample(self, theta=None):
         if theta is None:

@@ -160,7 +160,7 @@ def batch_norm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dty
 
 @wrap_named_op
 @wrap_varnode_func
-def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
+def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME', out_shape=None,
         use_bias=True, bias_is_shared_in_channel=True,
         nonlin=__default_nonlin__,
         W=None, b=None, param_dtype=__default_dtype__):
@@ -174,11 +174,15 @@ def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
     stride2 = get_2dshape(stride)
     stride4 = get_4dshape(stride)
 
-    pad = (0, 0) if padding == 'SAME' else (kernel[0] - stride2[0], kernel[1] - stride2[1])
-    sd_h = StaticDynamicDim(in_shape[1], inpvar.shape[1]) * stride2[0] + pad[0]
-    sd_w = StaticDynamicDim(in_shape[2], inpvar.shape[2]) * stride2[1] + pad[1]
-    out_shape_static = [in_shape[0], sd_h.static, sd_w.static, nr_output_channels]
-    out_shape_dynamic = O.canonize_sym_shape([inpvar.shape[0], sd_h.dynamic, sd_w.dynamic, nr_output_channels])
+    if out_shape is None:
+        sd_h = StaticDynamicDim(in_shape[1], inpvar.shape[1]) * stride2[0]
+        sd_w = StaticDynamicDim(in_shape[2], inpvar.shape[2]) * stride2[1]
+        out_shape_static = [in_shape[0], sd_h.static, sd_w.static, nr_output_channels]
+        out_shape_dynamic = O.canonize_sym_shape([inpvar.shape[0], sd_h.dynamic, sd_w.dynamic, nr_output_channels])
+    else:
+        out_shape = get_2dshape(out_shape)
+        out_shape_static = [in_shape[0], out_shape[0], out_shape[1], nr_output_channels]
+        out_shape_dynamic = O.canonize_sym_shape([inpvar.shape[0], out_shape[0], out_shape[1], nr_output_channels])
 
     W_shape = kernel + (nr_output_channels, nr_input_channels)
 

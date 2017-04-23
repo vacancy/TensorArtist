@@ -1,11 +1,11 @@
-tartist\.app\.gan package
-=========================
+tartist.app.gan package
+=======================
 
 Submodules
 ----------
 
-tartist\.app\.gan\.train module
--------------------------------
+tartist.app.gan.train module
+----------------------------
 
 .. automodule:: tartist.app.gan.train
     :members:
