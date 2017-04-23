@@ -64,11 +64,11 @@ class MazeEnv(rl.SimpleRLEnvironBase):
         self._obs_ratio = obs_ratio
 
         if enable_noaction:
-            self._action_space = rl.DiscreteActionSpace(5)
+            self._action_space = rl.DiscreteActionSpace(5, action_meanings=['NOOP', 'UP', 'RIGHT', 'DOWN', 'LEFT'])
             self._action_delta = [(0, 0), (-1, 0), (0, 1), (1, 0), (0, -1)]
             self._action_mapping = [0, 1, 2, 3, 4]
         else:
-            self._action_space = rl.DiscreteActionSpace(4)
+            self._action_space = rl.DiscreteActionSpace(4, action_meanings=['UP', 'RIGHT', 'DOWN', 'LEFT'])
             self._action_delta = [(-1, 0), (0, 1), (1, 0), (0, -1)]
             self._action_mapping = [0, 1, 2, 3]
 
@@ -93,9 +93,9 @@ class MazeEnv(rl.SimpleRLEnvironBase):
         return self._start_point
 
     @notnone_property
-    def finish_point(self):
+    def final_point(self):
         """Finish point (r, c)"""
-        return self._finish_point
+        return self._final_point
 
     @notnone_property
     def current_point(self):
@@ -200,7 +200,7 @@ class MazeEnv(rl.SimpleRLEnvironBase):
         x += delta
         c[y, x, :] = self._colors[v]
 
-    def _gen_map(self, obstacles=None, start_point=None, finish_point=None):
+    def _gen_map(self, obstacles=None, start_point=None, final_point=None):
         canvas = np.empty((self._map_size[0] + 2, self._map_size[1] + 2, 3), dtype='uint8')
         canvas[:, :, :] = self._colors[0]
 
@@ -224,7 +224,7 @@ class MazeEnv(rl.SimpleRLEnvironBase):
 
         self._start_point = start_point or self._gen_rpt()
         while True:
-            self._final_point = finish_point or self._gen_rpt()
+            self._final_point = final_point or self._gen_rpt()
             if self._start_point[0] != self._final_point[0] or self._start_point[1] != self._final_point[1]:
                 break
 
@@ -272,7 +272,7 @@ class MazeEnv(rl.SimpleRLEnvironBase):
 
     def _action(self, action):
         if self._enable_noaction and action == 0:
-            return self._rewards[1]
+            return self._rewards[1], False
 
         dy, dx = self._action_delta[self._action_mapping[action]]
         y, x = self._current_point
@@ -280,22 +280,24 @@ class MazeEnv(rl.SimpleRLEnvironBase):
         x += dx
 
         if self._get_canvas_label(y, x) in (1, 4):
-            return self._rewards[3]
+            return self._rewards[3], False
 
         if y == self._final_point[0] and x == self._final_point[1]:
             reward = self._rewards[2]
+            is_over = True
         else:
             reward = self._rewards[0]
+            is_over = False
 
         self._fill_canvas(self._canvas, *self._current_point, 0)
         self._current_point = (y, x)
         self._fill_canvas(self._canvas, *self._current_point, 2)
         self._refresh_view()
 
-        return reward
+        return reward, is_over
 
-    def restart(self, obstacles=None, start_point=None, finish_point=None):
-        self._gen_map(obstacles=obstacles, start_point=start_point, finish_point=finish_point)
+    def restart(self, obstacles=None, start_point=None, final_point=None):
+        self._gen_map(obstacles=obstacles, start_point=start_point, final_point=final_point)
         self._refresh_view()
 
     def _restart(self):

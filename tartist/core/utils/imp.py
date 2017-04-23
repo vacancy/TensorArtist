@@ -12,9 +12,9 @@ import sys
 
 
 __all__ = [
-    'load_module', 'load_module_filename', 
+    'load_module', 'load_module_filename', 'load_source',
     'tuple_to_classname', 'classname_to_tuple', 
-    'load_class'
+    'load_class', 'module_vars_as_dict'
 ]
 
 
@@ -32,6 +32,18 @@ def load_module_filename(module_filename):
     module = load_module(module_name)
     del sys.path[0]
     return module
+
+
+def load_source(filename, name=None):
+    import imp
+
+    if name is None:
+        basename = os.path.basename(filename)
+        if basename.endswith('.py'):
+            basename = basename[:-3]
+        name = basename.replace('.', '_')
+
+    return imp.load_source(name, filename)
 
 
 def tuple_to_classname(t):
@@ -64,3 +76,12 @@ def load_class(classname, exit_on_error=True):
         if exit_on_error:
             exit(1)
     return None
+
+
+def module_vars_as_dict(module):
+    res = {}
+    for k in dir(module):
+        if not k.startswith('__'):
+            res[k] = getattr(module, k)
+    return res
+

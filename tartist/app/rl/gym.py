@@ -45,7 +45,7 @@ class GymRLEnviron(SimpleRLEnvironBase):
     def _get_action_space(self):
         spc = self._gym.action_space
         assert isinstance(spc, gym.spaces.discrete.Discrete)
-        return DiscreteActionSpace(spc.n)
+        return DiscreteActionSpace(spc.n, action_meanings=self._gym.get_action_meanings())
 
     def _action(self, action):
         o, r, is_over, info = self._gym.step(action)

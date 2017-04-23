@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     tartist.app.rl.custom
+    tartist.app.rl.simulator
     tartist.app.rl.train
 
 Submodules

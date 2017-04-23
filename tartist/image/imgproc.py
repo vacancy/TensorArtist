@@ -93,6 +93,7 @@ def resize_scale_wh(img, scale_wh, interpolation='LINEAR'):
 def resize_minmax(img, min_dim, max_dim=None, interpolation='LINEAR'):
     if max_dim is None:
         max_dim = min_dim
+    min_dim, max_dim = min(min_dim, max_dim), max(min_dim, max_dim)
 
     h, w = img.shape[:2]
     short, long = min(h, w), max(h, w)
