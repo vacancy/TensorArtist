@@ -30,7 +30,7 @@ except ImportError:
 
 from ..utils.meta import assert_instance
 
-__all__ = ['IOMethod', 'load', 'dump', 'link', 'makedir', 'mkdir', 'make_dir', 'assert_extension']
+__all__ = ['IOMethod', 'load', 'dump', 'link', 'makedir', 'mkdir', 'make_dir', 'assert_extension', 'make_env_dir']
 
 
 class IOMethod(enum.Enum):
@@ -161,7 +161,7 @@ def _infer_method(path):
     elif path.endswith('.txt'):
         method = IOMethod.TEXT
     else:
-        method = IOMethod.BINARY
+        method = IOMethod.PICKLE
     return method
 
 
@@ -177,4 +177,10 @@ def assert_extension(path, extension):
     if not path.endswith(extension):
         return path + extension
     return path
+
+
+def make_env_dir(key, path):
+    from ..environ import set_env
+    make_dir(path)
+    set_env(key, path)
 

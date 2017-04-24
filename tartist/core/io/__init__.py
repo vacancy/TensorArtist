@@ -10,3 +10,6 @@ from .common import *
 from .fs import *
 from .network import *
 
+import os.path as osp
+from os.path import join as pjoin
+

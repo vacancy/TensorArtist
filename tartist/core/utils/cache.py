@@ -6,9 +6,11 @@
 # 
 # This file is part of TensorArtist
 
+from .. import io, get_env
 import functools
+import os.path as osp
 
-__all__ = ['cached_property', 'cached_result']
+__all__ = ['cached_property', 'cached_result', 'fs_cached_result']
 
 
 class cached_property:
@@ -44,4 +46,25 @@ def cached_result(func):
         return impl()
 
     return f
+
+
+def fs_cached_result(cache_key):
+    def wrapper(func):
+        @functools.wraps(func)
+        def wrapped_func(*args, **kwargs):
+            if get_env('dir.cache') is None:
+                io.make_env_dir('dir.cache', osp.join(get_env('dir.root'), 'cache'))
+
+            nonlocal cache_key
+            cache_key = io.assert_extension(cache_key, '.cache.pkl')
+            cache_file = osp.join(get_env('dir.cache'), cache_key)
+            cached_value = io.load(cache_file)
+            if cached_value is not None:
+                return cached_value
+            computed_value = func(*args, **kwargs)
+            io.dump(cache_file, computed_value)
+            return computed_value
+        return wrapped_func
+    return wrapper
+
 
