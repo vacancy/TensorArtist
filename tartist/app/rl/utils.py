@@ -9,7 +9,7 @@
 from .base import ProxyRLEnvironBase
 
 
-__all__ = ['AutoRestartProxyRLEnviron', 'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron']
+__all__ = ['AutoRestartProxyRLEnviron', 'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron', "remove_proxies"]
 
 
 class AutoRestartProxyRLEnviron(ProxyRLEnvironBase):
@@ -22,7 +22,6 @@ class AutoRestartProxyRLEnviron(ProxyRLEnvironBase):
 
 
 class LimitLengthProxyRLEnviron(ProxyRLEnvironBase):
-    """limit length + auto restart"""
     def __init__(self, other, limit):
         super().__init__(other)
         self._limit = limit
@@ -47,3 +46,11 @@ class MapStateProxyRLEnviron(ProxyRLEnvironBase):
 
     def _get_current_state(self):
         return self._func(self.proxy.current_state)
+
+
+def remove_proxies(environ):
+    """Remove all wrapped proxy environs"""
+    if isinstance(environ, ProxyRLEnvironBase):
+        environ = environ.proxy
+    return environ
+

@@ -12,8 +12,9 @@ from ....core.utils.meta import notnone_property
 from ....core.utils.shape import get_2dshape
 import numpy as np
 import collections
+import itertools
 
-__all__ = ['MazeEnv']
+__all__ = ['MazeEnv', 'CustomLavaWorldEnv']
 
 
 class MazeEnv(SimpleRLEnvironBase):
@@ -346,4 +347,61 @@ class MazeEnv(SimpleRLEnvironBase):
 
     def _restart(self):
         pass
+
+
+class CustomLavaWorldEnv(MazeEnv):
+    """A maze similar to Lava World in OpenAI Gym"""
+
+    def __init__(self, map_size=15, mode=None):
+        super().__init__(map_size)
+        mode = mode or 'ALL'
+        assert mode in ('ALL', 'TRAIN', 'VAL')
+        h, w = get_2dshape(map_size)
+
+        assert h % 4 == 3 and w % 4 == 3
+
+        self._lv_obstacles = list(itertools.chain(
+            [(i, (w-1) // 2) for i in range(h) if i not in ((h-3) // 4, (h-1)//2 + (h+1)//4)],
+            [((h-1) // 2, i) for i in range(w) if i not in ((w-3) // 4, (w-1)//2 + (w+1)//4)]
+        ))
+        self._lv_starts = [(i,j) for i in range(h) for j in range(w) if (i,j) not in self._lv_obstacles]
+        if mode == 'ALL':
+            self._lv_finals = self._lv_starts.copy()
+        elif mode == 'TRAIN':
+            self._lv_finals = [(i,j) for i in range(h) for j in range(w)
+                    if (i < h // 2 or j < w // 2) and (i,j) not in self._lv_obstacles]
+        elif mode == 'VAL':
+            self._lv_finals = [(i,j) for i in range(h) for j in range(w)
+                    if not (i < h // 2 or j < w // 2) and (i,j) not in self._lv_obstacles]
+
+    @property
+    def lv_obstacles(self):
+        return self._lv_obstacles
+
+    @property
+    def lv_starts(self):
+        return self._lv_starts
+
+    @property
+    def lv_finals(self):
+        return self._lv_finals
+
+    def restart(self, start_point=None, final_point=None):
+        if start_point is None:
+            i = random.choice(len(self.lv_starts))
+            start_point = self.lv_starts[i]
+        start_point = tuple(start_point)
+
+        if final_point is None:
+            while True:
+                j = random.choice(len(self.lv_finals))
+                final_point = self.lv_finals[j]
+                if start_point != final_point:
+                    break
+        final_point = tuple(final_point)
+
+        assert start_point != final_point, 'Invalid start and final point: {} {}'.format(
+                start_point, final_point)
+
+        super().restart(self.lv_obstacles, start_point, final_point)
 
