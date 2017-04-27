@@ -22,6 +22,9 @@ logger = get_logger(__file__)
 
 
 def vis_and_action(args, cfg, controller, observation):
+    # here, the observation is actually a state
+    if hasattr(cfg, 'observe'):
+        observation = cfg.observe(observation)
     display = image.resize_minmax(observation, *args.winsize, interpolation='NEAREST')
     controller.update(display)
 

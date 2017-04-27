@@ -346,3 +346,4 @@ class MazeEnv(SimpleRLEnvironBase):
 
     def _restart(self):
         pass
+

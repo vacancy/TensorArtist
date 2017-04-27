@@ -87,3 +87,11 @@ __all__.extend(__rng_meths__)
 random = random_sample
 __all__.append('random')
 
+_rng = rng
+def list_choice(l, rng=None):
+    """Efficiently draw an element from an list, if the rng is given, use it instead of the system one"""
+    rng = rng or _rng
+    assert type(l) in (list, tuple)
+    return l[rng.choice(len(l))]
+    
+__all__.append('list_choice')

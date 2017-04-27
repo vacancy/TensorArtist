@@ -76,11 +76,31 @@ class RLEnvironBase(object):
 class SimpleRLEnvironBase(RLEnvironBase):
     _current_state = None
 
+    def __init__(self):
+        super().__init__()
+        self._reward_history = []
+
     def _get_current_state(self):
         return self._current_state
 
     def _set_current_state(self, state):
         self._current_state = state
+
+    def action(self, action):
+        r, is_over = self._action(action)
+        self._reward_history.append(r) 
+        return r, is_over
+
+    def restart(self):
+        rc = self._restart()
+        self._reward_history = []
+        return rc
+
+    def finish(self):
+        rc = self._finish()
+        self.append_stat('score', sum(self._reward_history))
+        self._reward_history = []
+        return rc
 
 
 class ProxyRLEnvironBase(RLEnvironBase):
