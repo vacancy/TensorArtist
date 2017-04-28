@@ -6,9 +6,9 @@
 # 
 # This file is part of TensorArtist
 
-from tartist import qs
-from tartist.qs import *
+from tartist import cao
+from tartist.cao import *
 
 
 if __name__ == '__main__':
-    qs.embed()
+    cao.embed()
