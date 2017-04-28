@@ -15,8 +15,11 @@ __all__ = ['release_syslim', 'tune_opencv', 'tune_tensorflow', 'initialize_main'
 
 def release_syslim():
     sys.setrecursionlimit(1000000)
-    slim = 65536 * 1024
-    resource.setrlimit(resource.RLIMIT_STACK, (slim, slim))
+    try:
+        slim = 65536 * 1024
+        resource.setrlimit(resource.RLIMIT_STACK, (slim, slim))
+    except ValueError:
+        pass
 
 
 def tune_tensorflow():
@@ -31,5 +34,4 @@ def tune_opencv():
 def initialize_main():
     release_syslim()
     tune_tensorflow()
-    tune_opencv()
-
+    
