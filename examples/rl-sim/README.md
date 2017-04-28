@@ -32,3 +32,12 @@ the controller. To make highly-customized file (customize the game settings), yo
 and do customization (basically, rewrite `make` function).
 
 For examples, turn to: `custom.MazeEnv.lava_world.conf.py`
+
+## prerequistte
+
+The RL Environment Simulator use TK package to create windows. For python3 users, you may need to install the
+following packages:
+
+```
+sudo apt-get install python3-tk python3-pil.image
+```
