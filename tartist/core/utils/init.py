@@ -31,5 +31,4 @@ def tune_opencv():
 def initialize_main():
     release_syslim()
     tune_tensorflow()
-    tune_opencv()
 
