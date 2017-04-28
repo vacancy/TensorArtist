@@ -199,7 +199,7 @@ class MazeEnv(SimpleRLEnvironBase):
         obs_dis = self.canvas_size[0] * self.canvas_size[1]
         q = collections.deque()
         v = set()
-        d = np.ones(self._map_size, dtype='int32') * obs_dis * 2
+        d = np.ones(self._map_size, dtype='int32') * obs_dis * obs_dis
         p = np.zeros(self._map_size + (2, ), dtype='int32')
 
         q.append((sy, sx))
