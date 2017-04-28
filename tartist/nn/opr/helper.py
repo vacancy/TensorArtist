@@ -7,7 +7,7 @@
 # This file is part of TensorArtist
 
 from .. import TArtGraphKeys
-from ..graph.env import get_default_env
+from ..graph.env import get_default_env, reuse_context
 from ..graph.node import OprNode, as_varnode, as_tftensor
 from ...core.logger import get_logger
 from ...core.utils.context import EmptyContext
@@ -24,7 +24,7 @@ __all__ = [
     'as_varnode', 'as_tftensor',
     'get_2dshape', 'get_4dshape', 
     'wrap_varnode_func', 'wrap_simple_named_op', 'wrap_named_op', 'wrap_named_class_func',
-    'unique_opr_name', 'StaticDynamicDim', 'lazy_O'
+    'unique_opr_name', 'StaticDynamicDim', 'lazy_O', 'auto_reuse'
 ]
 
 
@@ -189,3 +189,23 @@ class AllOprGetter(object):
         return getattr(O, item)
 
 lazy_O = AllOprGetter()
+
+
+def auto_reuse(func):
+    used_graphs = set()
+
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        g = tf.get_default_graph()
+        if g not in used_graphs:
+            used_graphs.add(g)
+            reuse = False
+        else:
+            reuse = True
+
+        with reuse_context(activate=reuse):
+            return func(*args, **kwargs)
+
+    return wrapped
+
+

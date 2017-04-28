@@ -13,7 +13,7 @@ import tensorflow as tf
 
 __all__ = [
     '__valid_tensor_types__', '__valid_tf_tensor_types__',
-    'VarNode', 'as_varnode', 'as_tftensor'
+    'VarNode', 'OprNode', 'as_varnode', 'as_tftensor'
 ]
 
 
@@ -271,10 +271,10 @@ class VarNode(VarNodeOpDecl):
 
 
 class OprNode(object):
-    def __init__(self, name, inputs=[], outputs=[]):
+    def __init__(self, name, inputs=None, outputs=None):
         self.__name = name 
-        self.__inputs = inputs
-        self.__outputs = outputs
+        self.__inputs = inputs or []
+        self.__outputs = outputs or []
 
         self.__mark_outputs()
 
