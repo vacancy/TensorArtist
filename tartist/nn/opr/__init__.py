@@ -6,7 +6,7 @@
 #
 # This file is part of TensorArtist
 
-from ..graph.node import as_varnode, as_tftensor, as_varnode as var
+from ..graph.node import as_varnode, as_tftensor, as_varnode
 from .arith import *
 from .cnn import *
 from .debug import *
@@ -25,3 +25,6 @@ from .migrate import *
 from .helper import argscope
 
 from . import distrib
+
+var = as_varnode
+
