@@ -222,6 +222,11 @@ class VarNode(VarNodeOpDecl):
         return self.__impl
 
     @property
+    def tft(self):
+        """tensorflow tensor"""
+        return self.__impl
+
+    @property
     def flags(self):
         return self.__flags
 

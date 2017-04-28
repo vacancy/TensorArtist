@@ -41,8 +41,6 @@ class GymRLEnviron(SimpleRLEnvironBase):
             io.mkdir(dump_dir)
             self._gym = gym.wrappers.Monitor(self._gym, dump_dir)
 
-        self._reward_history = []
-
     def _get_action_space(self):
         spc = self._gym.action_space
         assert isinstance(spc, gym.spaces.discrete.Discrete)
@@ -50,17 +48,12 @@ class GymRLEnviron(SimpleRLEnvironBase):
 
     def _action(self, action):
         o, r, is_over, info = self._gym.step(action)
-        self._reward_history.append(r)
         self._set_current_state(o)
         return r, is_over
 
     def _restart(self):
         o = self._gym.reset()
         self._set_current_state(o)
-        self._reward_history = []
-
-    def _finish(self):
-        self.append_stat('score', sum(self._reward_history))
 
 
 class GymHistoryProxyRLEnviron(ProxyRLEnvironBase):

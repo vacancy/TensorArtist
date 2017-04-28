@@ -6,5 +6,4 @@
 # 
 # This file is part of TensorArtist
 
-from .maze import MazeEnv
-
+from .maze import *

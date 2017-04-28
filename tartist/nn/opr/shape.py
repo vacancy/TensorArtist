@@ -16,8 +16,7 @@ __all__ = [
     'canonize_sym_shape',
     'flatten', 'flatten2', 
     'reshape', 'dimshuffle', 'transpose', 'broadcast', 'tile',
-    'add_axis', 'expand_dim', 'remove_axis', 'sqeeze',
-    'split'
+    'add_axis', 'expand_dim', 'remove_axis', 'sqeeze'
 ]
 
 
@@ -92,9 +91,4 @@ def broadcast(inpvar, tshape, name='broadcast'):
     tshape = canonize_sym_shape(tshape)
     multiples = tshape // sshape 
     return tf.tile(inpvar, multiples, name='out')
-
-
-@wrap_varnode_func
-def split(value, num_or_size_splits, axis=0, num=None, name='split'):
-    return tf.split(value, num_or_size_splits, axis=axis, num=num, name=name)
 

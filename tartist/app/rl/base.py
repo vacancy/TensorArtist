@@ -48,14 +48,23 @@ class RLEnvironBase(object):
     def finish(self):
         return self._finish()
 
-    def play_one_episode(self, func):
+    def play_one_episode(self, func, ret_states=False):
+        states = []
+
         self.restart()
         while True:
             state = self.current_state
             action = func(state)
             r, is_over = self.action(action)
+            if ret_states:
+                states.append(state)
             if is_over:
-                return self.finish()
+                self.finish()
+                break
+
+        if ret_states:
+            states.append(self.current_state)
+            return states
 
     def _get_action_space(self):
         return None
@@ -76,11 +85,31 @@ class RLEnvironBase(object):
 class SimpleRLEnvironBase(RLEnvironBase):
     _current_state = None
 
+    def __init__(self):
+        super().__init__()
+        self._reward_history = []
+
     def _get_current_state(self):
         return self._current_state
 
     def _set_current_state(self, state):
         self._current_state = state
+
+    def action(self, action):
+        r, is_over = self._action(action)
+        self._reward_history.append(r) 
+        return r, is_over
+
+    def restart(self):
+        rc = self._restart()
+        self._reward_history = []
+        return rc
+
+    def finish(self):
+        rc = self._finish()
+        self.append_stat('score', sum(self._reward_history))
+        self._reward_history = []
+        return rc
 
 
 class ProxyRLEnvironBase(RLEnvironBase):

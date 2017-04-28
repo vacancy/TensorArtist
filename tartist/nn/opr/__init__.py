@@ -6,7 +6,7 @@
 #
 # This file is part of TensorArtist
 
-from ..graph.node import as_varnode, as_tftensor
+from ..graph.node import as_varnode, as_tftensor, as_varnode as var
 from .arith import *
 from .cnn import *
 from .debug import *
