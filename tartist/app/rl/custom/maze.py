@@ -357,8 +357,12 @@ class MazeEnv(SimpleRLEnvironBase):
 class CustomLavaWorldEnv(MazeEnv):
     """A maze similar to Lava World in OpenAI Gym"""
 
+    _empty_canvas = None
+
     def __init__(self, map_size=15, mode=None, **kwargs):
+        kwargs.setdefault('enable_path_checking', False)
         super().__init__(map_size, **kwargs)
+
         mode = mode or 'ALL'
         assert mode in ('ALL', 'TRAIN', 'VAL')
         h, w = get_2dshape(map_size)
@@ -407,6 +411,20 @@ class CustomLavaWorldEnv(MazeEnv):
 
         assert start_point != final_point, 'Invalid start and final point: {} {}'.format(
                 start_point, final_point)
-
-        super().restart(self.lv_obstacles, start_point, final_point)
+        
+        if self._empty_canvas is None:
+            super().restart(self.lv_obstacles, start_point, final_point)
+            self._empty_canvas = self._canvas.copy()
+            self._fill_canvas(self._empty_canvas, *self._start_point, v=0)
+            self._fill_canvas(self._empty_canvas, *self._final_point, v=0)
+        else:
+            # do partial reload
+            self._start_point = start_point
+            self._final_point = final_point
+            self._current_point = start_point
+            self._canvas = self._empty_canvas.copy()
+            self._fill_canvas(self._canvas, *self._start_point, v=2)
+            self._fill_canvas(self._canvas, *self._final_point, v=3)
+            self._origin_canvas = self._canvas.copy()
+            self._refresh_view()
 
