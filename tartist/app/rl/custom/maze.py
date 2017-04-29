@@ -60,7 +60,7 @@ class MazeEnv(SimpleRLEnvironBase):
 
     def __init__(self, map_size=14, visible_size=None, obs_ratio=0.3,
                  random_action_mapping=None,
-                 enable_noaction=True, reward_move=-1, reward_noaction=0, reward_final=100, reward_error=-2):
+                 enable_noaction=False, reward_move=-1, reward_noaction=0, reward_final=100, reward_error=-2):
 
         super().__init__()
         self._rng = random.gen_rng()
@@ -352,8 +352,8 @@ class MazeEnv(SimpleRLEnvironBase):
 class CustomLavaWorldEnv(MazeEnv):
     """A maze similar to Lava World in OpenAI Gym"""
 
-    def __init__(self, map_size=15, mode=None):
-        super().__init__(map_size)
+    def __init__(self, map_size=15, mode=None, **kwargs):
+        super().__init__(map_size, **kwargs)
         mode = mode or 'ALL'
         assert mode in ('ALL', 'TRAIN', 'VAL')
         h, w = get_2dshape(map_size)
