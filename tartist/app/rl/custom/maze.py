@@ -25,8 +25,10 @@ class MazeEnv(SimpleRLEnvironBase):
     :param visible_size: A single int or a tuple (h, w), representing the visible size. The agent will at the center
         of the visible window, and out-of-border part will be colored by obstacle color.
     :param obs_ratio: Obstacle ratio (how many obstacles will be in the map).
+    :param enable_path_checking: Enable path computation in map construction. Turn it down only when you are sure about 
+        valid maze.
     :param random_action_mapping: Whether to enable random action mapping. If true, the result of performing
-        every action will be shuffled. If a single bool True is provided, we do random shuffle. Otherwise,
+        every action will be shuffled. _checkingIf a single bool True is provided, we do random shuffle. Otherwise,
         it should be a list with same length as action space (5 when noaction enabled, 4 otherwise).
     :param enable_noaction: Whether to enable no-action operation.
     :param reward_move: Reward for a valid move.
@@ -58,14 +60,15 @@ class MazeEnv(SimpleRLEnvironBase):
     _action_delta = [(0, 0), (-1, 0), (0, 1), (1, 0), (0, -1)]
     _action_mapping = [0, 1, 2, 3, 4]
 
-    def __init__(self, map_size=14, visible_size=None, obs_ratio=0.3,
-                 random_action_mapping=None,
-                 enable_noaction=False, reward_move=-1, reward_noaction=0, reward_final=100, reward_error=-2):
+    def __init__(self, map_size=14, visible_size=None, obs_ratio=0.3, enable_path_checking=True,
+                 random_action_mapping=None, 
+                 enable_noaction=False, reward_move=-1, reward_noaction=0, reward_final=10, reward_error=-2):
 
         super().__init__()
         self._rng = random.gen_rng()
         self._map_size = get_2dshape(map_size)
         self._visible_size = visible_size
+        self._enable_path_checking = enable_path_checking
         if self._visible_size is not None:
             self._visible_size = get_2dshape(self._visible_size)
 
@@ -263,20 +266,22 @@ class MazeEnv(SimpleRLEnvironBase):
 
         self._fill_canvas(canvas, *self._start_point, v=2)
         self._fill_canvas(canvas, *self._final_point, v=3)
+        
+        if self._enable_path_checking:
+            path, d, p = self._gen_shortest_path(canvas, self._start_point, self._final_point)
+            for y, x in path:
+                self._fill_canvas(canvas, y, x, v=0)
 
-        path, d, p = self._gen_shortest_path(canvas, self._start_point, self._final_point)
-        for y, x in path:
-            self._fill_canvas(canvas, y, x, v=0)
+            self._fill_canvas(canvas, *self._start_point, v=2)
+            self._fill_canvas(canvas, *self._final_point, v=3)
 
-        self._fill_canvas(canvas, *self._start_point, v=2)
-        self._fill_canvas(canvas, *self._final_point, v=3)
+            self._shortest_path = path
+            self._quick_distance_mat = d
+            self._quick_distance_prev = p
+
+        self._current_point = self._start_point
 
         self._origin_canvas = canvas.copy()
-
-        self._shortest_path = path
-        self._quick_distance_mat = d
-        self._quick_distance_prev = p
-        self._current_point = self._start_point
 
     def _gen_distance_info(self):
         path, d, p = self._gen_shortest_path(self.origin_canvas, self._start_point, self._final_point)
