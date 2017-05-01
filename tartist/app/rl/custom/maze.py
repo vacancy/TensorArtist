@@ -344,6 +344,7 @@ class MazeEnv(SimpleRLEnvironBase):
         return reward, is_over
 
     def restart(self, obstacles=None, start_point=None, final_point=None):
+        super().restart()
         if start_point is not None and final_point is not None:
             assert start_point[0] != final_point[0] or start_point[1] != final_point[1], 'Invalid start and final point: {} {}'.format(
                     start_point, final_point)
@@ -396,6 +397,8 @@ class CustomLavaWorldEnv(MazeEnv):
         return self._lv_finals
 
     def restart(self, start_point=None, final_point=None):
+        super().restart()
+
         if start_point is None:
             i = random.choice(len(self.lv_starts))
             start_point = self.lv_starts[i]
