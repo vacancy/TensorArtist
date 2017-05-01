@@ -95,3 +95,4 @@ def list_choice(l, rng=None):
     return l[rng.choice(len(l))]
     
 __all__.append('list_choice')
+

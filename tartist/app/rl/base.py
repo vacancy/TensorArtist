@@ -180,6 +180,6 @@ class DiscreteActionSpace(ActionSpaceBase):
 
     def _sample(self, theta=None):
         if theta is None:
-            return self.rng.randint(self._nr_actions)
+            return self.rng.choice(self._nr_actions)
         return self.rng.choice(self._nr_actions, p=theta)
 

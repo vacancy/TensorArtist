@@ -414,7 +414,7 @@ class CustomLavaWorldEnv(MazeEnv):
 
         assert start_point != final_point, 'Invalid start and final point: {} {}'.format(
                 start_point, final_point)
-        
+
         if self._empty_canvas is None:
             super().restart(self.lv_obstacles, start_point, final_point)
             self._empty_canvas = self._canvas.copy()
