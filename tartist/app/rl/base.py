@@ -108,7 +108,6 @@ class SimpleRLEnvironBase(RLEnvironBase):
     def finish(self):
         rc = self._finish()
         self.append_stat('score', sum(self._reward_history))
-        self._reward_history = []
         return rc
 
 
