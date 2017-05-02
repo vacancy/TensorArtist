@@ -44,7 +44,11 @@ class GymRLEnviron(SimpleRLEnvironBase):
     def _get_action_space(self):
         spc = self._gym.action_space
         assert isinstance(spc, gym.spaces.discrete.Discrete)
-        return DiscreteActionSpace(spc.n, action_meanings=self._gym.get_action_meanings())
+        try:
+            action_meanings = self._gym.get_action_meanings()
+        except AttributeError:
+            action_meanings = ['action{}'.format(i) for i in range(spc.n)]
+        return DiscreteActionSpace(spc.n)
 
     def _action(self, action):
         o, r, is_over, info = self._gym.step(action)
