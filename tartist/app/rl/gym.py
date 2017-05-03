@@ -43,7 +43,7 @@ class GymRLEnviron(SimpleRLEnvironBase):
 
     def _get_action_space(self):
         spc = self._gym.action_space
-        assert isinstance(spc, gym.spaces.discrete.Discrete)
+        assert isinstance(spc, gym.spaces.discrete.Discrete), 'Unknown gym space spec: {}.'.format(spc)
         try:
             action_meanings = self._gym.get_action_meanings()
         except AttributeError:
