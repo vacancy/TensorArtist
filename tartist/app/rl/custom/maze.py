@@ -31,7 +31,9 @@ class MazeEnv(SimpleRLEnvironBase):
         every action will be shuffled. _checkingIf a single bool True is provided, we do random shuffle. Otherwise,
         it should be a list with same length as action space (5 when noaction enabled, 4 otherwise).
     :param enable_noaction: Whether to enable no-action operation.
-    :param reward_move: Reward for a valid move.
+    :param dense_reward: Whether the reward is dense.
+    :param reward_move: Reward for a valid move. For dense reward setting, it should be a positive number.
+        While in sparse reward setting, it is expected to be a non-positive number.
     :param reward_noaction: Reward for a no-action.
     :param reward_final: Reward when you arrive at the final point.
     :param reward_error: Reward when you perform an invalid move.
@@ -64,7 +66,8 @@ class MazeEnv(SimpleRLEnvironBase):
 
     def __init__(self, map_size=14, visible_size=None, obs_ratio=0.3, enable_path_checking=True,
                  random_action_mapping=None, 
-                 enable_noaction=False, reward_move=-1, reward_noaction=0, reward_final=10, reward_error=-2):
+                 enable_noaction=False, dense_reward=False, 
+                 reward_move=None, reward_noaction=0, reward_final=10, reward_error=-2):
 
         super().__init__()
         self._rng = random.gen_rng()
@@ -93,6 +96,9 @@ class MazeEnv(SimpleRLEnvironBase):
                 self._action_mapping = random_action_mapping
 
         self._enable_noaction = enable_noaction
+        self._dense_reward = dense_reward
+        if reward_move is None:
+            reward_move = -1 if not dense_reward else 1
         self._rewards = (reward_move, reward_noaction, reward_final, reward_error)
 
     @notnone_property
@@ -352,6 +358,7 @@ class MazeEnv(SimpleRLEnvironBase):
 
         dy, dx = self._action_delta[self._action_mapping[action]]
         y, x = self._current_point
+        oy, ox = y, x
         y += dy
         x += dx
 
@@ -362,7 +369,10 @@ class MazeEnv(SimpleRLEnvironBase):
             reward = self._rewards[2]
             is_over = True
         else:
-            reward = self._rewards[0]
+            if self.inv_distance_mat[oy, ox] > self.inv_distance_mat[y, x]:
+                reward = self._rewards[0]
+            else:
+                reward = self._rewards[1]
             is_over = False
 
         self._fill_canvas(self._canvas, *self._current_point, v=0)
