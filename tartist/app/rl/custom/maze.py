@@ -42,6 +42,8 @@ class MazeEnv(SimpleRLEnvironBase):
     _shortest_path = None
     _distance_mat = None
     _distance_prev = None
+    _inv_distance_mat = None
+    _inv_distance_prev = None
     _quick_distance_mat = None
     _quick_distance_prev = None
     _current_point = None
@@ -145,6 +147,16 @@ class MazeEnv(SimpleRLEnvironBase):
         """Distance-prev matrix"""
         self._gen_distance_info()
         return self._distance_prev
+
+    @property
+    def inv_distance_mat(self):
+        self._gen_inv_distance_info()
+        return self._inv_distance_mat
+
+    @property
+    def inv_distance_prev(self):
+        self._gen_inv_distance_info()
+        return self._inv_distance_prev
 
     @property
     def action_delta(self):
@@ -283,10 +295,27 @@ class MazeEnv(SimpleRLEnvironBase):
 
         self._origin_canvas = canvas.copy()
 
+    def _clear_distance_info(self):
+        self._distance_mat = None
+        self._distance_prev = None
+        self._inv_distance_mat = None
+        self._inv_distance_prev = None
+
     def _gen_distance_info(self):
+        if self._distance_mat is not None:
+            return
+
         path, d, p = self._gen_shortest_path(self.origin_canvas, self._start_point, self._final_point)
         self._distance_mat = d
         self._distance_prev = p
+
+    def _gen_inv_distance_info(self):
+        if self._inv_distance_mat is not None:
+            return
+
+        path, d, p = self._gen_shortest_path(self.origin_canvas, self._final_point, self._start_point)
+        self._inv_distance_mat = d
+        self._inv_distance_prev = p
 
     def _refresh_view(self):
         if self._visible_size is None:
@@ -350,6 +379,7 @@ class MazeEnv(SimpleRLEnvironBase):
                     start_point, final_point)
         self._gen_map(obstacles=obstacles, start_point=start_point, final_point=final_point)
         self._refresh_view()
+        self._clear_distance_info()
 
     def _restart(self):
         pass
@@ -430,4 +460,5 @@ class CustomLavaWorldEnv(MazeEnv):
             self._fill_canvas(self._canvas, *self._final_point, v=3)
             self._origin_canvas = self._canvas.copy()
             self._refresh_view()
+            self._clear_distance_info()
 
