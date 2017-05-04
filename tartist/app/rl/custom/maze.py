@@ -400,6 +400,12 @@ class MazeEnv(SimpleRLEnvironBase):
     def _restart(self):
         pass
 
+    def _finish(self):
+        if self._current_point == self._final_point:
+            self.append_stat('success', 1)
+        else:
+            self.append_stat('success', 0)
+
 
 class CustomLavaWorldEnv(MazeEnv):
     """A maze similar to Lava World in OpenAI Gym"""
