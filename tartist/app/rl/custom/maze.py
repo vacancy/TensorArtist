@@ -39,6 +39,7 @@ class MazeEnv(SimpleRLEnvironBase):
     :param reward_error: Reward when you perform an invalid move.
     """
 
+    _obstacles = None
     _start_point = None
     _final_point = None
     _shortest_path = None
@@ -110,6 +111,10 @@ class MazeEnv(SimpleRLEnvironBase):
     def origin_canvas(self):
         """Return the original canvas (at time 0, full)"""
         return self._origin_canvas
+
+    @notnone_property
+    def obstacles(self):
+        return self._obstacles
 
     @notnone_property
     def start_point(self):
@@ -270,11 +275,12 @@ class MazeEnv(SimpleRLEnvironBase):
             self._fill_canvas(canvas, self._map_size[1] + 1, i, 4, delta=0)
 
         if obstacles is None:
+            obstacles = []
             for i in range(int(self._map_size[0] * self._map_size[1] * self._obs_ratio)):
-                self._fill_canvas(canvas, *self._gen_rpt(), v=1)
-        else:
-            for y, x in obstacles:
-                self._fill_canvas(canvas, y, x, v=1)
+                obstacles.append(self._gen_rpt())
+        for y, x in obstacles:
+            self._fill_canvas(canvas, y, x, v=1)
+        self._obstacles = obstacles
 
         self._start_point = start_point or self._gen_rpt()
         while True:
@@ -436,7 +442,9 @@ class CustomLavaWorldEnv(MazeEnv):
     def lv_finals(self):
         return self._lv_finals
 
-    def restart(self, start_point=None, final_point=None):
+    def restart(self, obstacles=None, start_point=None, final_point=None):
+        assert obstacles is None, 'Can not provide obstacles to CustomLavaWorldEnv'
+        # CAUTION: this method ignores the obstacles parameter
         super().restart()
 
         if start_point is None:
