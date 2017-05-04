@@ -7,7 +7,6 @@
 # This file is part of TensorArtist
 
 from .base import SimpleDataFlowBase
-from .collections import DictDataFlowProxy
 from ...random import gen_rng
 from ...core.utils.meta import UniqueValueGetter
 
@@ -49,6 +48,8 @@ class LOARandomSampleDataFlow(RandomizedDataFlowBase):
 
 
 def DOARandomSampleDataFlow(doa, seed=None):
+    from .collections import DictDataFlowProxy
+
     keys = doa.keys()
     values = [doa[k] for k in keys]
     return DictDataFlowProxy(keys, LOARandomSampleDataFlow(values, seed=seed))
