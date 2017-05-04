@@ -7,12 +7,11 @@
 # This file is part of TensorArtist
 
 from .base import SimpleDataFlowBase
-from .rng import RandomizedDataFlowBase
 from ...core.utils.meta import UniqueValueGetter
 import collections
 
 __all__ = ['DictDataFlowProxy', 'EmptyDictDataFlow', 
-        'QueueDataFlow', 'RandomRepeatDataFlow',
+        'QueueDataFlow',
         'ListOfArrayDataFlow', 'DictOfArrayDataFlow']
 
 
@@ -43,26 +42,6 @@ class QueueDataFlow(SimpleDataFlowBase):
     def _gen(self):
         while True:
             yield self._queue.get()
-
-
-class RandomRepeatDataFlow(RandomizedDataFlowBase):
-    def __init__(self, source, nr_repeat, cache_size, seed=None):
-        super().__init__(seed=seed)
-        self._source = source
-        self._nr_repeat = nr_repeat
-        self._cache_size = cache_size
-
-    def _gen(self):
-        it = iter(self._source)
-        while True:
-            data = []
-            for i in range(self._cache_size):
-                d = next(it)
-                data.append(d)
-                yield d
-            for i in range((self._nr_repeat - 1) * self._cache_size):
-                idx = self._rng.randint(len(data))
-                yield data[idx]
 
 
 class ListOfArrayDataFlow(SimpleDataFlowBase):
