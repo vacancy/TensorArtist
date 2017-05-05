@@ -58,7 +58,7 @@ class GymRLEnviron(SimpleRLEnvironBase):
             except AttributeError:
                 action_meanings = ['action{}'.format(i) for i in range(spc.n)]
             return DiscreteActionSpace(spc.n)
-        elif isinstance(gym.spaces.box.Box):
+        elif isinstance(spc, gym.spaces.box.Box):
             return ContinuousActionSpace(spc.low, spc.high, spc.shape)
         else:
             raise ValueError('Unknown gym space spec: {}.'.format(spc))
