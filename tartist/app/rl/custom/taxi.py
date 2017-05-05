@@ -70,6 +70,9 @@ class CustomTaxiEnv(SimpleRLEnvironBase):
             final_point=self._final_point2
         )
 
+    def _finish(self):
+        self._maze_env.finish()
+
 
 class CustomLavaWorldTaxiEnv(CustomTaxiEnv):
     def __init__(self, maze_env=None, *args, **kwargs):
@@ -80,3 +83,12 @@ class CustomLavaWorldTaxiEnv(CustomTaxiEnv):
 
     def _enter_phase2(self):
         self._maze_env.restart(start_point=self._maze_env.current_point, final_point=self._final_point2)
+
+    def _finish(self):
+        super()._finish()
+
+        if self._phase == 2 and self._maze_env._current_point == self._maze_env._final_point:
+            self.append_stat('success', 1)
+        else:
+            self.append_stat('success', 0)
+
