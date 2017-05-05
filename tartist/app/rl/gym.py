@@ -6,7 +6,8 @@
 # 
 # This file is part of TensorArtist
 
-from .base import SimpleRLEnvironBase, DiscreteActionSpace, ProxyRLEnvironBase
+from .base import SimpleRLEnvironBase, ProxyRLEnvironBase
+from .base import DiscreteActionSpace, ContinuousActionSpace
 from tartist.core import io
 import copy
 import threading
@@ -41,16 +42,32 @@ class GymRLEnviron(SimpleRLEnvironBase):
             io.mkdir(dump_dir)
             self._gym = gym.wrappers.Monitor(self._gym, dump_dir)
 
+    @property
+    def gym(self):
+        return self._gym
+
+    def render(self, mode='human', close=False):
+        return self._gym.render(mode=mode, close=close)
+
     def _get_action_space(self):
         spc = self._gym.action_space
-        assert isinstance(spc, gym.spaces.discrete.Discrete), 'Unknown gym space spec: {}.'.format(spc)
-        try:
-            action_meanings = self._gym.get_action_meanings()
-        except AttributeError:
-            action_meanings = ['action{}'.format(i) for i in range(spc.n)]
-        return DiscreteActionSpace(spc.n)
+
+        if isinstance(spc, gym.spaces.discrete.Discrete):
+            try:
+                action_meanings = self._gym.get_action_meanings()
+            except AttributeError:
+                action_meanings = ['action{}'.format(i) for i in range(spc.n)]
+            return DiscreteActionSpace(spc.n)
+        elif isinstance(gym.spaces.box.Box):
+            return ContinuousActionSpace(spc.low, spc.high, spc.shape)
+        else:
+            raise ValueError('Unknown gym space spec: {}.'.format(spc))
 
     def _action(self, action):
+        # hack for continuous control
+        if type(action) in (tuple, list):
+            action = np.array(action)
+
         o, r, is_over, info = self._gym.step(action)
         self._set_current_state(o)
         return r, is_over
