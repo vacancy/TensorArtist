@@ -35,7 +35,7 @@ def get_weights_path():
         epoch = int(args.epoch_num)
         filename = 'epoch_{}.snapshot.pkl'.format(epoch)
 
-    return osp.join(get_env('dir.root'), 'snapshot', filename)
+    return osp.join(get_env('dir.root'), 'snapshots', filename)
 
 
 def main():
