@@ -375,10 +375,13 @@ class MazeEnv(SimpleRLEnvironBase):
             reward = self._rewards[2]
             is_over = True
         else:
-            if self.inv_distance_mat[oy, ox] > self.inv_distance_mat[y, x]:
-                reward = self._rewards[0]
+            if self._dense_reward:
+                if self.inv_distance_mat[oy, ox] > self.inv_distance_mat[y, x]:
+                    reward = self._rewards[0]
+                else:
+                    reward = self._rewards[1]
             else:
-                reward = self._rewards[1]
+                reward = self._rewards[0]
             is_over = False
 
         self._fill_canvas(self._canvas, *self._current_point, v=0)
