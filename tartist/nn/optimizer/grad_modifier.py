@@ -98,8 +98,8 @@ class GradClip(NameBasedGradModifierBase):
             rule = float(rule)
             lower, upper = -rule, rule
         _ = grad
-        _ = tf.maximum(_, upper)
-        _ = tf.minimum(_, lower)
+        _ = tf.minimum(_, upper)
+        _ = tf.maximum(_, lower)
         return _
 
 
@@ -111,8 +111,8 @@ class GlobalGradClip(GlobalGradModifierBase):
 
     def _op(self, grad, var):
         _ = grad
-        _ = tf.maximum(_, self._upper)
-        _ = tf.minimum(_, self._lower)
+        _ = tf.minimum(_, self._upper)
+        _ = tf.maximum(_, self._lower)
         return _
 
 
