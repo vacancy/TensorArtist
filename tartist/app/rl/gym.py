@@ -87,7 +87,7 @@ class GymHistoryProxyRLEnviron(ProxyRLEnvironBase):
             assert len(self._history) > 0
             v = self._history[-1]
             self._history.appendleft(np.zeros_like(v, dtype=v.dtype))
-        return np.concatenate(self._history, axis=2)
+        return np.concatenate(self._history, axis=-1)
 
     def _set_current_state(self, state):
         if len(self._history) == self._history.maxlen:

@@ -39,7 +39,7 @@ def raw_l2_loss(name, pred, label):
 
 @wrap_named_op
 @wrap_varnode_func
-def raw_smooth_l1_loss(name, pred, label):
+def raw_smooth_l1_loss(name, pred, label, sigma=1.):
     delta = O.abs(pred - label)
     mask = (delta > float(sigma)).astype('float32')
     sigma2 = float(sigma * sigma)
