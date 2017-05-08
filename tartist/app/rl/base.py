@@ -83,6 +83,10 @@ class RLEnvironBase(object):
     def _finish(self):
         pass
 
+    @property
+    def unwrapped(self):
+        return self
+
 
 class SimpleRLEnvironBase(RLEnvironBase):
     _current_state = None
@@ -153,6 +157,10 @@ class ProxyRLEnvironBase(RLEnvironBase):
 
     def _finish(self):
         return self.__proxy.finish()
+
+    @property
+    def unwrapped(self):
+        return self.proxy.unwrapped
 
 
 class ActionSpaceBase(object):
