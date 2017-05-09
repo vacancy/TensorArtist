@@ -9,7 +9,7 @@ from ....core.utils.imp import module_vars_as_dict
 
 
 class Pack(object):
-    def __init__(self, cfg):
+    def __init__(self, cfg=None):
         self.cfg = cfg
         self.steps = []
         self.is_ended = False
@@ -37,9 +37,13 @@ class Pack(object):
             info=info)
         self.steps.append(record)
 
+        if done:
+            record = dict(action=None, observation=observation, reward=None, info=None)
+            self.steps.append(record)
+
     def make_pickleable(self):
         return dict(
-            cfg=module_vars_as_dict(self.cfg),
+            cfg=module_vars_as_dict(self.cfg) if self.cfg is not None else None,
             steps=self.steps,
             is_ended=self.is_ended
         )

@@ -7,11 +7,13 @@
 # This file is part of TensorArtist
 
 from tartist import random
+from tartist.core.utils.cache import cached_property
+import numpy as np
 import collections
 
 __all__ = [
     'RLEnvironBase', 'SimpleRLEnvironBase', 'ProxyRLEnvironBase',
-    'ActionSpaceBase', 'DiscreteActionSpace'
+    'ActionSpaceBase', 'DiscreteActionSpace', 'ContinuousActionSpace'
 ]
 
 
@@ -31,7 +33,7 @@ class RLEnvironBase(object):
         self._stats = collections.defaultdict(list)
         return self
 
-    @property
+    @cached_property
     def action_space(self):
         return self._get_action_space()
 
@@ -81,6 +83,10 @@ class RLEnvironBase(object):
     def _finish(self):
         pass
 
+    @property
+    def unwrapped(self):
+        return self
+
 
 class SimpleRLEnvironBase(RLEnvironBase):
     _current_state = None
@@ -108,7 +114,6 @@ class SimpleRLEnvironBase(RLEnvironBase):
     def finish(self):
         rc = self._finish()
         self.append_stat('score', sum(self._reward_history))
-        self._reward_history = []
         return rc
 
 
@@ -133,8 +138,13 @@ class ProxyRLEnvironBase(RLEnvironBase):
         self.__proxy.clear_stats()
         return self
 
-    def _get_action_space(self):
+    @property
+    def action_space(self):
         return self.__proxy.action_space
+
+    # directly override the action_space to disable cache
+    # def _get_action_space(self):
+    #     return self.__proxy.action_space
 
     def _get_current_state(self):
         return self.__proxy.current_state
@@ -148,14 +158,23 @@ class ProxyRLEnvironBase(RLEnvironBase):
     def _finish(self):
         return self.__proxy.finish()
 
+    @property
+    def unwrapped(self):
+        return self.proxy.unwrapped
+
 
 class ActionSpaceBase(object):
-    def __init__(self):
+    def __init__(self, action_meanings=None):
         self.__rng = random.gen_rng()
+        self._action_meanings = action_meanings
 
     @property
     def rng(self):
         return self.__rng
+
+    @property
+    def action_meanings(self):
+        return self._action_meanings
 
     def sample(self, theta=None):
         return self._sample(theta)
@@ -166,20 +185,65 @@ class ActionSpaceBase(object):
 
 class DiscreteActionSpace(ActionSpaceBase):
     def __init__(self, nr_actions, action_meanings=None):
-        super().__init__()
+        super().__init__(action_meanings=action_meanings)
         self._nr_actions = nr_actions
-        self._action_meanings = action_meanings
 
     @property
     def nr_actions(self):
         return self._nr_actions
 
-    @property
-    def action_meanings(self):
-        return self._action_meanings
-
     def _sample(self, theta=None):
         if theta is None:
-            return self.rng.randint(self._nr_actions)
+            return self.rng.choice(self._nr_actions)
         return self.rng.choice(self._nr_actions, p=theta)
+
+
+class ContinuousActionSpace(ActionSpaceBase):
+    @staticmethod
+    def __canonize_bound(v, shape):
+        if type(v) is np.ndarray:
+            assert v.shape == shape, 'Invalid shape for bound value: expect {}, got {}.'.format(
+                    shape, v.shape)
+            return v
+
+        assert type(v) in (int, float), 'Invalid type for boudn value'
+        return np.ones(shape=shape, dtype='float32') * v
+
+    def __init__(self, low, high=None, shape=None, action_meanings=None):
+        super().__init__(action_meanings=action_meanings)
+
+        if high is None:
+            low, high = -low, low
+
+        if shape is None:
+            assert low is not None and high is not None, 'Must provide low and high'
+            low, high = np.array(low), np.array(high)
+            assert low.shape == high.shape, 'Low and high must have smae shape, got: {} and {}'.format(
+                    low.shape, high.shape)
+
+            self._low = low
+            self._high = high
+            self._shape = low.shape
+        else:
+            self._low = self.__canonize_bound(low, shape)
+            self._high = self.__canonize_bound(high, shape)
+            self._shape = shape
+
+    @property
+    def low(self):
+        return self._low
+
+    @property
+    def high(self):
+        return self._high
+
+    @property
+    def shape(self):
+        return self._shape
+
+    def _sample(self, theta=None):
+        if theta is not None:
+            mu, std = theta
+            return self.rng.randn(*self.shape) * std + mu
+        return self.rng.uniform(self._low, self._high)
 

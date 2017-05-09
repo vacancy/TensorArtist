@@ -93,7 +93,7 @@ def main(args, controller):
             if args.record:
                 pack.step(action, game.current_state, reward, is_over)
 
-            if not cfg.mute_noaction or action != 0:
+            if not cfg.mute_noaction or args.fps == 0 or action != 0:
                 logger.info('Perform action: {}, reward={}.'.format(cfg.action_names[action], reward))
 
             if is_over:

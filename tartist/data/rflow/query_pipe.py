@@ -8,6 +8,7 @@
 
 
 from . import configs, utils
+from ...core import get_logger
 from ...core.utils.callback import CallbackManager
 from ...core.utils.meta import notnone_property
 
@@ -27,6 +28,8 @@ import functools
 import pickle
 dumpb = pickle.dumps
 loadb = pickle.loads
+
+logger = get_logger(__file__)
 
 __all__ = ['QueryMessage', 'QueryRepPipe', 'QueryReqPipe']
 
@@ -91,19 +94,36 @@ class QueryRepPipe(object):
     def mainloop_recv(self):
         try:
             while True:
+                if self._frsock.closed:
+                    break
+
                 msg = loadb(self._frsock.recv(copy=False).bytes)
                 identifier, type, payload = msg
                 self._dispatcher.dispatch(type, self, identifier, payload)
         except zmq.ContextTerminated:
             pass
+        except zmq.ZMQError as e:
+            if self._tosock.closed:
+                logger.warn('Recv socket closed unexpectedly')
+            else:
+                raise e
+
 
     def mainloop_send(self):
         try:
             while True:
+                if self._tosock.closed:
+                    break
+
                 job = self._send_queue.get()
                 self._tosock.send_multipart([job.identifier, dumpb(job.payload)], copy=False)
         except zmq.ContextTerminated:
             pass
+        except zmq.ZMQError as e:
+            if self._tosock.closed:
+                logger.warn('Send socket closed unexpectedly')
+            else:
+                raise e
 
     def send(self, identifier, msg):
         self._send_queue.put(QueryMessage(identifier, msg))

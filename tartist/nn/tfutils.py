@@ -26,8 +26,21 @@ def clean_name(tensor, suffix=':0'):
     return name
 
 
-def clean_summary_name(name):
+def clean_summary_suffix(name):
     return re.sub('_\d+$', '', name)
+
+
+def remove_tower_name(name):
+    return re.sub('^tower/\d+/', '', name)
+
+
+def format_summary_name(name):
+    name = clean_summary_suffix(name)
+    name = remove_tower_name(name)
+    if 'train/' in name:
+        name = name.replace('train/', '')
+        name = 'train/' + name
+    return name
 
 
 def assign_variable(var, value, session=None, use_locking=False):

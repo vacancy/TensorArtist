@@ -7,7 +7,6 @@
 # This file is part of TensorArtist
 
 from .base import SimpleDataFlowBase
-from .collections import DictDataFlowProxy
 from ...random import gen_rng
 from ...core.utils.meta import UniqueValueGetter
 
@@ -15,7 +14,8 @@ import numpy as np
 
 __all__ = ['RandomizedDataFlowBase', 
         'LOARandomSampleDataFlow', 
-        'DOARandomSampleDataFlow']
+        'DOARandomSampleDataFlow',
+        'RandomRepeatDataFlow']
 
 
 class RandomizedDataFlowBase(SimpleDataFlowBase):
@@ -49,7 +49,33 @@ class LOARandomSampleDataFlow(RandomizedDataFlowBase):
 
 
 def DOARandomSampleDataFlow(doa, seed=None):
+    from .collections import DictDataFlowProxy
+
     keys = doa.keys()
     values = [doa[k] for k in keys]
     return DictDataFlowProxy(keys, LOARandomSampleDataFlow(values, seed=seed))
+
+
+class RandomRepeatDataFlow(RandomizedDataFlowBase):
+    def __init__(self, source, nr_repeat, cache_size, block=False, seed=None):
+        super().__init__(seed=seed)
+        self._source = source
+        self._nr_repeat = nr_repeat
+        self._cache_size = cache_size
+        self._block = block
+
+    def _gen(self):
+        it = iter(self._source)
+        while True:
+            data = []
+            for i in range(self._cache_size):
+                d = next(it)
+                data.append(d)
+                if not self._block:
+                    yield d
+
+            nr_repeat = self._nr_repeat if self._block else self._nr_repeat - 1
+            for i in range(nr_repeat * self._cache_size):
+                idx = self._rng.randint(len(data))
+                yield data[idx]
 

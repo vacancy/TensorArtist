@@ -8,7 +8,7 @@
 
 from tartist.core import get_logger, get_env, set_env, io
 from tartist.data.rflow.utils import get_addr
-from tartist.nn.tfutils import clean_summary_name
+from tartist.nn.tfutils import format_summary_name, clean_summary_suffix
 import math
 import random
 import collections
@@ -60,7 +60,7 @@ class SummaryHistoryManager(object):
         for val in summaries.value:
             if val.WhichOneof('value') == 'simple_value':
                 # XXX: do hacks here
-                val.tag = clean_summary_name(val.tag)
+                val.tag = format_summary_name(val.tag)
                 self.put_scalar(val.tag, val.simple_value)
                 self.set_type(val.tag, 'scalar')
 
@@ -157,7 +157,7 @@ def enable_summary_history(trainer, extra_summary_types=None):
 
         if isinstance(summaries, collections.Iterable):
             for s in summaries:
-                mgr.put_summaries(s)
+                put_summary_history(trainer, s)
         else:
             if 'loss' in trainer.runtime and not check_proto_contains(summaries, 'train/loss'):
                 summaries.value.add(tag='train/loss', simple_value=trainer.runtime['loss'])
@@ -166,7 +166,7 @@ def enable_summary_history(trainer, extra_summary_types=None):
             if mgr.has(error_summary_key):
                 if not check_proto_contains(summaries, 'train/error'):
                     for v in summaries.value:
-                        if clean_summary_name(v.tag) == error_summary_key:
+                        if clean_summary_suffix(v.tag) == error_summary_key:
                             trainer.runtime['error'] = v.simple_value
                     summaries.value.add(tag='train/error', simple_value=trainer.runtime['error'])
 

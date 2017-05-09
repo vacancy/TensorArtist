@@ -71,7 +71,8 @@ def _on_train_flag(attr_name):
         if attr is None:
             return get_default_env().phase is Env.Phase.TRAIN
         if callable(attr):
-            return attr(name)
+            e = get_default_env()
+            return get_default_env().phase is Env.Phase.TRAIN and attr(e.get_name_scope())
         return bool(attr)
     return compute
 

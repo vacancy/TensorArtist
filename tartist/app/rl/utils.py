@@ -50,7 +50,7 @@ class MapStateProxyRLEnviron(ProxyRLEnvironBase):
 
 def remove_proxies(environ):
     """Remove all wrapped proxy environs"""
-    if isinstance(environ, ProxyRLEnvironBase):
+    while isinstance(environ, ProxyRLEnvironBase):
         environ = environ.proxy
     return environ
 

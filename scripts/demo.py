@@ -11,17 +11,31 @@ from tartist.core.utils.cli import load_desc, parse_devices
 from tartist.nn import Env
 
 import argparse
+import os.path as osp
 import tensorflow as tf
 
 logger = get_logger(__file__)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(dest='desc', help='The description file module')
-parser.add_argument('-w', '--weights', dest='weights_path', required=True,
-                    help='The pickle containing weights')
+parser.add_argument('-w', '--weights', dest='weights_path', help='The pickle containing weights')
+parser.add_argument('-e', '--epoch', dest='epoch_num', help='Epoch number')
 parser.add_argument('-d', '--dev', dest='devices', default=[], nargs='+',
                     help='The devices trainer will use, default value can be set in env')
 args = parser.parse_args()
+
+
+def get_weights_path():
+    if args.weights_path is not None:
+        return args.weights_path
+    
+    if args.epoch_num == 'last':
+        filename = 'last_epoch.snapshot.pkl'
+    else:
+        epoch = int(args.epoch_num)
+        filename = 'epoch_{}.snapshot.pkl'.format(epoch)
+
+    return osp.join(get_env('dir.root'), 'snapshots', filename)
 
 
 def main():
@@ -30,6 +44,8 @@ def main():
     desc = load_desc(args.desc)
     devices = parse_devices(args.devices)
     assert len(devices) > 0
+
+    assert args.weights_path is not None or args.epoch_num is not None
 
     env = Env(Env.Phase.TEST, devices[0])
     env.flags.update(**get_env('demo.env_flags', {}))
@@ -47,7 +63,7 @@ def main():
         func.compile(env.network.outputs)
 
         env.initialize_all_variables()
-        snapshot.load_weights_file(env, args.weights_path)
+        snapshot.load_weights_file(env, get_weights_path())
 
     if get_env('demo.customized'):
         desc.main_demo(env, func)
@@ -66,3 +82,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
