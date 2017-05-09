@@ -20,23 +20,6 @@ __all__ = ['MazeEnv', 'CustomLavaWorldEnv']
 class MazeEnv(SimpleRLEnvironBase):
     """
     Create a maze environment.
-
-    :param map_size: A single int or a tuple (h, w), representing the map size.
-    :param visible_size: A single int or a tuple (h, w), representing the visible size. The agent will at the center
-        of the visible window, and out-of-border part will be colored by obstacle color.
-    :param obs_ratio: Obstacle ratio (how many obstacles will be in the map).
-    :param enable_path_checking: Enable path computation in map construction. Turn it down only when you are sure about 
-        valid maze.
-    :param random_action_mapping: Whether to enable random action mapping. If true, the result of performing
-        every action will be shuffled. _checkingIf a single bool True is provided, we do random shuffle. Otherwise,
-        it should be a list with same length as action space (5 when noaction enabled, 4 otherwise).
-    :param enable_noaction: Whether to enable no-action operation.
-    :param dense_reward: Whether the reward is dense.
-    :param reward_move: Reward for a valid move. For dense reward setting, it should be a positive number.
-        While in sparse reward setting, it is expected to be a non-positive number.
-    :param reward_noaction: Reward for a no-action.
-    :param reward_final: Reward when you arrive at the final point.
-    :param reward_error: Reward when you perform an invalid move.
     """
 
     _obstacles = None
@@ -69,7 +52,29 @@ class MazeEnv(SimpleRLEnvironBase):
                  random_action_mapping=None, 
                  enable_noaction=False, dense_reward=False, 
                  reward_move=None, reward_noaction=0, reward_final=10, reward_error=-2):
-
+        """
+        :param map_size: A single int or a tuple (h, w), representing the map size.
+        :param visible_size: A single int or a tuple (h, w), representing the visible size. The agent will at the center
+            of the visible window, and out-of-border part will be colored by obstacle color.
+    
+        :param obs_ratio: Obstacle ratio (how many obstacles will be in the map).
+        :param enable_path_checking: Enable path computation in map construction. Turn it down only when you are sure about 
+            valid maze.
+    
+        :param random_action_mapping: Whether to enable random action mapping. If true, the result of performing
+            every action will be shuffled. _checkingIf a single bool True is provided, we do random shuffle. Otherwise,
+            it should be a list with same length as action space (5 when noaction enabled, 4 otherwise).
+    
+        :param enable_noaction: Whether to enable no-action operation.
+        :param dense_reward: Whether the reward is dense.
+        :param reward_move: Reward for a valid move. For dense reward setting, it should be a positive number.
+            While in sparse reward setting, it is expected to be a non-positive number.
+    
+        :param reward_noaction: Reward for a no-action.
+        :param reward_final: Reward when you arrive at the final point.
+        :param reward_error: Reward when you perform an invalid move.
+        """
+    
         super().__init__()
         self._rng = random.gen_rng()
         self._map_size = get_2dshape(map_size)
