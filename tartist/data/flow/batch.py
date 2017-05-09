@@ -13,6 +13,7 @@ from ...core.utils.meta import iter_kv, assert_none
 
 from copy import copy, deepcopy
 from threading import Thread, Event
+import traceback
 logger = get_logger(__file__)
 
 __all__ = ['BatchDataFlow', 'EpochDataFlow']
@@ -63,6 +64,7 @@ class BatchDataFlow(SimpleDataFlowBase):
                 current = 1 - current
         except Exception as e:
             logger.warn('{} got exception {} in filler thread: {}'.format(type(self), type(e), e))
+            traceback.print_exc()
             self._cond[current].set_true()
             self._stop_event.set()
 
