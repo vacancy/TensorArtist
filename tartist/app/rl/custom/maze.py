@@ -134,6 +134,8 @@ class MazeEnv(SimpleRLEnvironBase):
     @notnone_property
     def shortest_path(self):
         """One of the shortest paths from start to finish, list of point (r, c)"""
+        if self._shortest_path is None:
+            self._gen_distance_info()
         return self._shortest_path
 
     @notnone_property
@@ -257,7 +259,7 @@ class MazeEnv(SimpleRLEnvironBase):
         while y != -1 and x != -1:
             path.append((y, x))
             y, x = p[y, x]
-        return path, d, p
+        return list(reversed(path)), d, p
 
     def _gen_map(self, obstacles=None, start_point=None, final_point=None):
         canvas = np.empty((self._map_size[0] + 2, self._map_size[1] + 2, 3), dtype='uint8')
@@ -302,6 +304,10 @@ class MazeEnv(SimpleRLEnvironBase):
             self._shortest_path = path
             self._quick_distance_mat = d
             self._quick_distance_prev = p
+        else:
+            self._shortest_path = None
+            self._quick_distance_mat = None
+            self._quick_distance_prev = None
 
         self._current_point = self._start_point
 
@@ -318,6 +324,8 @@ class MazeEnv(SimpleRLEnvironBase):
             return
 
         path, d, p = self._gen_shortest_path(self.origin_canvas, self._start_point, self._final_point)
+        if self._shortest_path is None:
+            self._shortest_path = path
         self._distance_mat = d
         self._distance_prev = p
 
