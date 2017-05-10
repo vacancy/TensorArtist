@@ -11,7 +11,8 @@ def make():
 
 def observe(o):
     from tartist.app.rl.custom import render_maze
-    return render_maze(o)
+    return render_maze(o)[:, :, ::-1]
+
 
 name = 'custom.CustomLavaWorldEnv'
 action_names = ['UP', 'RIGHT', 'DOWN', 'LEFT']
