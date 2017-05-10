@@ -171,10 +171,13 @@ class SimpleTrainer(TrainerBase):
     _fn_train = None
 
     def initialize(self):
+        super().initialize()
+        self._initialize_train_func()
+
+    def _initialize_train_func(self):
         self._fn_train = self.env.make_optimizable_func(self.network.loss)
         if isinstance(self._fn_train, QueuedInputFunction):
             self._need_feed = False
-        super().initialize()
 
     @notnone_property
     def fn_train(self):

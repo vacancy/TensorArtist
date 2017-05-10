@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 from ...core.logger import get_logger
+import traceback
 import collections
 logger = get_logger(__file__)
 
@@ -53,7 +54,7 @@ class SimpleDataFlowBase(DataFlowBase):
                 yield v
         except Exception as e:
             logger.warn('{} got exception {} during iter: {}'.format(type(self), type(e), e))
-            pass
+            traceback.print_exc()
         finally:
             self._finalize()
 
