@@ -8,6 +8,11 @@ def make():
     game.restart()
     return game
 
+
+def observe(o):
+    from tartist.app.rl.custom import render_maze
+    return render_maze(o)
+
 name = 'custom.CustomLavaWorldEnv'
 action_names = ['UP', 'RIGHT', 'DOWN', 'LEFT']
 action_keys = [65362, 65363, 65364, 65361]

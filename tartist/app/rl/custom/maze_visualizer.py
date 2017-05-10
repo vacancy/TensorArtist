@@ -1,4 +1,4 @@
-# -*- coding:utf8 -*-
+# -*- co:ing:utf8 -*-
 # File   : maze_visualizer.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
@@ -8,6 +8,7 @@
 
 from .maze import MazeEnv
 
+import base64
 import numpy as np
 
 __all__ = ['MazeVisualizer', 'render_maze']
@@ -33,11 +34,11 @@ class MazeVisualizer(object):
 
         self._maze_colors = _maze_colors
         self._maze_assets = [
-                np.frombytes(p, dtype='uint8').reshape((_maze_psize, _maze_psize, 3))
+                np.fromstring(base64.b64decode(p), dtype='uint8').reshape((_maze_psize, _maze_psize, 3))
                 for p in _maze_assets]
 
     def translate(self, p):
-        self._laod_settings()
+        self._load_settings()
 
         p = tuple(map(int, p))
         for i, c in enumerate(self._maze_colors):
@@ -52,10 +53,10 @@ class MazeVisualizer(object):
         viz = np.zeros((h * ps, w * ps, 3), dtype='uint8')
         for i in range(h):
             for j in range(w):
-                i, v  = self.translate(m[i, j])
+                vid, v  = self.translate(m[i, j])
                 if vid == 2:
-                    v = self._overlap(v, self._maze_assets[0])
-                viz[i*ps:i*ps+ps, j*ps:j*ps+ps, :] = v
+                    v = self._overlap_color(v, self._maze_assets[0])
+                viz[i*ps:i*ps+ps, j*ps:j*ps+ps, :] = v[:, :, :3]
         return viz
 
     @staticmethod
