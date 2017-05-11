@@ -7,5 +7,6 @@
 # This file is part of TensorArtist
 
 from .maze import *
+from .maze_visualizer import *
 from .taxi import *
 
