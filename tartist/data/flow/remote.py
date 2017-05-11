@@ -7,12 +7,13 @@
 # This file is part of TensorArtist
 
 from .base import SimpleDataFlowBase
-from ..rflow import InputPipe, control
+from ..rflow import InputPipe, OutputPipe, control
 from ..rflow import make_push_pair
 
 from multiprocessing import Process
+import time
 
-__all__ = ['RemoteDataFlow', 'MPPrefetchDataFlow']
+__all__ = ['RemoteDataFlow', 'MPPrefetchDataFlow', 'RemoteMonitorDataFlow']
 
 
 class RemoteDataFlow(SimpleDataFlowBase):
@@ -50,4 +51,16 @@ class MPPrefetchDataFlow(SimpleDataFlowBase):
         with self._pull.activate():
             while True:
                 yield self._pull.recv()
+
+
+class RemoteMonitorDataFlow(SimpleDataFlowBase):
+    def __init__(self, df, pipe_name, bufsize=1):
+        self._df = df
+        self._pipe = OutputPipe(pipe_name, bufsize=bufsize)
+
+    def _gen(self):
+        with control([self._pipe]):
+            for data in self._df:
+                self._pipe.put_nowait({'data': data, 'time': time.time()})
+                yield data
 
