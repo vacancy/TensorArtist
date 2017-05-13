@@ -36,10 +36,14 @@ varnode_store = VarNodeStore()
 
 class VarNodeOpDecl(object):
     def __binary(self, rhs, op_name):
+        if (self.dtype == 'float32' or self.dtype == 'float64') and type(rhs) is int:
+            rhs = float(rhs)
         rhs = as_varnode(rhs)
         return as_varnode(getattr(tf, op_name)(self, rhs))
 
     def __rbinary(self, lhs, op_name):
+        if (self.dtype == 'float32' or self.dtype == 'float64') and type(lhs) is int:
+            lhs = float(lhs)
         lhs = as_varnode(lhs)
         return as_varnode(getattr(tf, op_name)(lhs, self))
 
