@@ -32,7 +32,7 @@ __all__ = ['GymRLEnviron', 'GymHistoryProxyRLEnviron', 'GymPreventStuckProxyRLEn
 
 
 class GymRLEnviron(SimpleRLEnvironBase):
-    def __init__(self, name, dump_dir=None):
+    def __init__(self, name, dump_dir=None, force_dump=False):
         super().__init__()
 
         with get_env_lock():
@@ -40,7 +40,7 @@ class GymRLEnviron(SimpleRLEnvironBase):
 
         if dump_dir:
             io.mkdir(dump_dir)
-            self._gym = gym.wrappers.Monitor(self._gym, dump_dir)
+            self._gym = gym.wrappers.Monitor(self._gym, dump_dir, force=force_dump)
 
     @property
     def gym(self):
@@ -75,6 +75,9 @@ class GymRLEnviron(SimpleRLEnvironBase):
     def _restart(self):
         o = self._gym.reset()
         self._set_current_state(o)
+
+    def _finish(self):
+        self._gym.close()
 
 
 class GymHistoryProxyRLEnviron(ProxyRLEnvironBase):
