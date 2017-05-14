@@ -27,6 +27,14 @@ class LimitLengthProxyRLEnviron(ProxyRLEnvironBase):
         self._limit = limit
         self._cnt = 0
 
+    @property
+    def limit(self):
+        return self._limit
+
+    def set_limit(self, limit):
+        self._limit = limit
+        return self
+
     def _action(self, action):
         r, is_over = self.proxy.action(action)
         self._cnt += 1
