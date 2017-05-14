@@ -31,8 +31,9 @@ def get_env_lock():
 __all__ = ['GymRLEnviron', 'GymHistoryProxyRLEnviron', 'GymPreventStuckProxyRLEnviron']
 
 
+
 class GymRLEnviron(SimpleRLEnvironBase):
-    def __init__(self, name, dump_dir=None, force_dump=False):
+    def __init__(self, name, dump_dir=None, force_dump=False, state_mode='DEFAULT'):
         super().__init__()
 
         with get_env_lock():
@@ -42,12 +43,26 @@ class GymRLEnviron(SimpleRLEnvironBase):
             io.mkdir(dump_dir)
             self._gym = gym.wrappers.Monitor(self._gym, dump_dir, force=force_dump)
 
+        assert state_mode in ('DEFAULT', 'RENDER', 'BOTH')
+        self._state_mode = state_mode
+
     @property
     def gym(self):
         return self._gym
 
     def render(self, mode='human', close=False):
         return self._gym.render(mode=mode, close=close)
+
+    def _set_current_state(self, o):
+        if self._state_mode == 'DEFAULT':
+            pass
+        else:
+            rendered = self.render('rgb_array')
+            if self._state_mode == 'RENDER':
+                o = rendered
+            else:
+                o = (o, rendered)
+        super()._set_current_state(o)
 
     def _get_action_space(self):
         spc = self._gym.action_space
