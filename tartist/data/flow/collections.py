@@ -8,8 +8,11 @@
 
 from .base import SimpleDataFlowBase
 from ...core.utils.meta import UniqueValueGetter
+import collections
 
-__all__ = ['DictDataFlowProxy', 'EmptyDictDataFlow', 'QueueDataFlow', 'ListOfArrayDataFlow', 'DictOfArrayDataFlow']
+__all__ = ['DictDataFlowProxy', 'EmptyDictDataFlow', 
+        'QueueDataFlow',
+        'ListOfArrayDataFlow', 'DictOfArrayDataFlow']
 
 
 class DictDataFlowProxy(SimpleDataFlowBase):

@@ -6,6 +6,7 @@
 # 
 # This file is part of TensorArtist
 
+from .base import SimpleDataFlowBase
 from itertools import repeat, cycle as cached_cycle
 from itertools import takewhile, dropwhile, filterfalse
 from itertools import chain
@@ -20,7 +21,8 @@ __all__ = [
     'chain',
     'map', 'starmap', 'ssmap'
     'islice', 'truncate',
-    'tee'
+    'tee',
+    'MapDataFlow'
 ]
 
 repeat_n = repeat
@@ -45,4 +47,22 @@ cycle_n = cycle
 def ssmap(function, iterable):
     for args in iterable:
         yield function(**args)
+
+
+class MapDataFlow(SimpleDataFlowBase):
+    def __init__(self, proxy, map_func=None):
+        self.__proxy = other
+        self.__map_func = map_func
+
+    @property
+    def proxy(self):
+        return self.__proxy
+
+    def _map(self, data):
+        return self.__map_func(data)
+
+    def _gen(self):
+        for data in self.proxy:
+            yield self._map(data)
+
 

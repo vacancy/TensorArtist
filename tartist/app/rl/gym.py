@@ -6,7 +6,8 @@
 # 
 # This file is part of TensorArtist
 
-from .base import SimpleRLEnvironBase, DiscreteActionSpace, ProxyRLEnvironBase
+from .base import SimpleRLEnvironBase, ProxyRLEnvironBase
+from .base import DiscreteActionSpace, ContinuousActionSpace
 from tartist.core import io
 import copy
 import threading
@@ -30,8 +31,9 @@ def get_env_lock():
 __all__ = ['GymRLEnviron', 'GymHistoryProxyRLEnviron', 'GymPreventStuckProxyRLEnviron']
 
 
+
 class GymRLEnviron(SimpleRLEnvironBase):
-    def __init__(self, name, dump_dir=None):
+    def __init__(self, name, dump_dir=None, force_dump=False, state_mode='DEFAULT'):
         super().__init__()
 
         with get_env_lock():
@@ -39,14 +41,48 @@ class GymRLEnviron(SimpleRLEnvironBase):
 
         if dump_dir:
             io.mkdir(dump_dir)
-            self._gym = gym.wrappers.Monitor(self._gym, dump_dir)
+            self._gym = gym.wrappers.Monitor(self._gym, dump_dir, force=force_dump)
+
+        assert state_mode in ('DEFAULT', 'RENDER', 'BOTH')
+        self._state_mode = state_mode
+
+    @property
+    def gym(self):
+        return self._gym
+
+    def render(self, mode='human', close=False):
+        return self._gym.render(mode=mode, close=close)
+
+    def _set_current_state(self, o):
+        if self._state_mode == 'DEFAULT':
+            pass
+        else:
+            rendered = self.render('rgb_array')
+            if self._state_mode == 'RENDER':
+                o = rendered
+            else:
+                o = (o, rendered)
+        super()._set_current_state(o)
 
     def _get_action_space(self):
         spc = self._gym.action_space
-        assert isinstance(spc, gym.spaces.discrete.Discrete)
-        return DiscreteActionSpace(spc.n, action_meanings=self._gym.get_action_meanings())
+
+        if isinstance(spc, gym.spaces.discrete.Discrete):
+            try:
+                action_meanings = self._gym.get_action_meanings()
+            except AttributeError:
+                action_meanings = ['action{}'.format(i) for i in range(spc.n)]
+            return DiscreteActionSpace(spc.n)
+        elif isinstance(spc, gym.spaces.box.Box):
+            return ContinuousActionSpace(spc.low, spc.high, spc.shape)
+        else:
+            raise ValueError('Unknown gym space spec: {}.'.format(spc))
 
     def _action(self, action):
+        # hack for continuous control
+        if type(action) in (tuple, list):
+            action = np.array(action)
+
         o, r, is_over, info = self._gym.step(action)
         self._set_current_state(o)
         return r, is_over
@@ -54,6 +90,9 @@ class GymRLEnviron(SimpleRLEnvironBase):
     def _restart(self):
         o = self._gym.reset()
         self._set_current_state(o)
+
+    def _finish(self):
+        self._gym.close()
 
 
 class GymHistoryProxyRLEnviron(ProxyRLEnvironBase):
@@ -66,7 +105,7 @@ class GymHistoryProxyRLEnviron(ProxyRLEnvironBase):
             assert len(self._history) > 0
             v = self._history[-1]
             self._history.appendleft(np.zeros_like(v, dtype=v.dtype))
-        return np.concatenate(self._history, axis=2)
+        return np.concatenate(self._history, axis=-1)
 
     def _set_current_state(self, state):
         if len(self._history) == self._history.maxlen:
