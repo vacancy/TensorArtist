@@ -13,7 +13,7 @@ from ..rflow import make_push_pair
 from multiprocessing import Process
 import time
 
-__all__ = ['RemoteDataFlow', 'MPPrefetchDataFlow', 'RemoteMonitorDataFlow']
+__all__ = ['RemoteDataFlow', 'MPPrefetchDataFlow', 'MPCustomDataFlow', 'RemoteMonitorDataFlow']
 
 
 class RemoteDataFlow(SimpleDataFlowBase):
@@ -39,11 +39,36 @@ class MPPrefetchDataFlow(SimpleDataFlowBase):
         self._send_qsize = send_qsize
         self._pull = None
         self._pushs = None
+        self._procs = None
 
     def _initialize(self):
         super()._initialize()
         self._pull, self._pushs = make_push_pair(str(self), self._nr_workers, mode=self._mode, send_qsize=self._send_qsize)
         self._procs = [Process(target=self._mainloop_worker, args=(i, ), daemon=True) for i in range(self._nr_workers)]
+        for p in self._procs:
+            p.start()
+    
+    def _gen(self):
+        with self._pull.activate():
+            while True:
+                yield self._pull.recv()
+
+
+class MPCustomDataFlow(SimpleDataFlowBase):
+    def __init__(self, target=None, nr_workers=2, mode='tcp', send_qsize=10):
+        self._nr_workers = nr_workers
+        self._mode = mode
+        self._send_qsize = send_qsize
+        self._pull = None
+        self._pushs = None
+
+    def run(self, wid, pipe):
+        return self.target(wid, pipe)
+ 
+    def _initialize(self):
+        super()._initialize()
+        self._pull, self._pushs = make_push_pair(str(self), self._nr_workers, mode=self._mode, send_qsize=self._send_qsize)
+        self._procs = [Process(target=self.run, args=(i, self._pushs[i]), daemon=True) for i in range(self._nr_workers)]
         for p in self._procs:
             p.start()
     
