@@ -11,8 +11,8 @@ from .base import ProxyRLEnvironBase
 
 __all__ = ['AutoRestartProxyRLEnviron', 
         'RepeatActionProxyRLEnviron', 'NOPFillProxyRLEnviron',
-        'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron', 
-        'remove_proxies']
+        'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron',
+        'ManipulateRewardProxyRLEnviron', 'remove_proxies']
 
 
 class AutoRestartProxyRLEnviron(ProxyRLEnvironBase):
@@ -88,6 +88,16 @@ class MapStateProxyRLEnviron(ProxyRLEnvironBase):
 
     def _get_current_state(self):
         return self._func(self.proxy.current_state)
+
+
+class ManipulateRewardProxyRLEnviron(ProxyRLEnvironBase):
+    def __init__(self, other, func):
+        super().__init__(other)
+        self._func = func
+
+    def _action(self, action):
+        r, is_over = self.proxy.action(action)
+        return self._func(r), is_over
 
 
 def remove_proxies(environ):
