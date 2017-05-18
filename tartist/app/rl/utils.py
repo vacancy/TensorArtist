@@ -90,6 +90,16 @@ class MapStateProxyRLEnviron(ProxyRLEnvironBase):
         return self._func(self.proxy.current_state)
 
 
+class ManipulateRewardProxyRLEnviron(ProxyRLEnvironBase):
+    def __init__(self, other, func):
+        super().__init__(other)
+        self._func = func
+
+    def _action(self, action):
+        r, is_over = self.proxy.action(action)
+        return self._func(r), is_over
+
+
 def remove_proxies(environ):
     """Remove all wrapped proxy environs"""
     while isinstance(environ, ProxyRLEnvironBase):
