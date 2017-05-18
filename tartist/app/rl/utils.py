@@ -11,8 +11,8 @@ from .base import ProxyRLEnvironBase
 
 __all__ = ['AutoRestartProxyRLEnviron', 
         'RepeatActionProxyRLEnviron', 'NOPFillProxyRLEnviron',
-        'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron', 
-        'remove_proxies']
+        'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron',
+        'ManipulateRewardProxyRLEnviron', 'remove_proxies']
 
 
 class AutoRestartProxyRLEnviron(ProxyRLEnvironBase):
