@@ -71,8 +71,12 @@ class GymRLEnviron(SimpleRLEnvironBase):
             try:
                 action_meanings = self._gym.get_action_meanings()
             except AttributeError:
-                action_meanings = ['action{}'.format(i) for i in range(spc.n)]
-            return DiscreteActionSpace(spc.n)
+                if 'Atari' in self._gym.unwrapped.__class__.__name__:
+                    from gym.envs.atari.atari_env import ACTION_MEANING
+                    action_meanings = [ACTION_MEANING[i] for i in range(spc.n)]
+                else:
+                    action_meanings = ['unknown{}'.format(i) for i in range(spc.n)]
+            return DiscreteActionSpace(spc.n, action_meanings=action_meanings)
         elif isinstance(spc, gym.spaces.box.Box):
             return ContinuousActionSpace(spc.low, spc.high, spc.shape)
         else:

@@ -7,12 +7,17 @@
 # This file is part of TensorArtist
 
 from .base import ProxyRLEnvironBase
+from tartist.core import get_logger 
+import functools
+
+logger = get_logger(__file__)
 
 
 __all__ = ['AutoRestartProxyRLEnviron', 
         'RepeatActionProxyRLEnviron', 'NOPFillProxyRLEnviron',
         'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron',
-        'ManipulateRewardProxyRLEnviron', 'remove_proxies']
+        'ManipulateRewardProxyRLEnviron', 'manipulate_reward', 
+        'remove_proxies']
 
 
 class AutoRestartProxyRLEnviron(ProxyRLEnvironBase):
@@ -92,12 +97,25 @@ class MapStateProxyRLEnviron(ProxyRLEnvironBase):
 
 class ManipulateRewardProxyRLEnviron(ProxyRLEnvironBase):
     def __init__(self, other, func):
+        logger.warn('ManipulateRewardProxyRLEnviron may cause wrong reward history, use manipulate_reward instead')
         super().__init__(other)
         self._func = func
 
     def _action(self, action):
         r, is_over = self.proxy.action(action)
         return self._func(r), is_over
+
+
+def manipulate_reward(player, func):
+    old_func = player._action
+
+    @functools.wraps(old_func)
+    def new_func(action):
+        r, is_over = old_func(action)
+        return func(r), is_over
+
+    player._action = new_func
+    return player
 
 
 def remove_proxies(environ):
