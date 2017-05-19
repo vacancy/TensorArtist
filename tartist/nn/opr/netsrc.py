@@ -16,7 +16,7 @@ from ..graph.node import as_varnode, OprNode, __valid_tensor_types__
 from ..tfutils import assign_variable, fetch_variable, TArtGraphKeys, extend_collection_list
 from ...core.utils.meta import assert_notnone
 
-__all__ = ['placeholder', 'variable', 'scalar', 'constant', 'ensure_variable',
+__all__ = ['placeholder', 'variable', 'scalar', 'constant', 'ensure_variable', 'get_variable',
            'get_scalar', 'get_scalar_value', 'set_scalar_value']
 
 
