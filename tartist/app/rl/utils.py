@@ -96,6 +96,8 @@ class MapStateProxyRLEnviron(ProxyRLEnvironBase):
 
 
 class ManipulateRewardProxyRLEnviron(ProxyRLEnvironBase):
+    """DEPRECATED: (2017-11-20) Use manipulate_reward instaed"""
+
     def __init__(self, other, func):
         logger.warn('ManipulateRewardProxyRLEnviron may cause wrong reward history, use manipulate_reward instead')
         super().__init__(other)
