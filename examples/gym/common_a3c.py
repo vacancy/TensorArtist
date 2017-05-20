@@ -41,15 +41,15 @@ def on_data_func(env, identifier, inp_data):
             data_queue.put({'state': i.state, 'action': i.action, 'future_reward': r})
 
     def callback(action, predict_value):
-        router.send(identifier, action)
         player_history.append(PlayerHistory(state, action, predict_value, None))
-
-    task_queue.put((identifier, inp_data, callback))
+        router.send(identifier, action)
 
     if len(player_history) > 0:
         last = player_history[-1]
         player_history[-1] = PlayerHistory(last[0], last[1], last[2], reward)
         parse_history(player_history, is_over)
+
+    task_queue.put((identifier, inp_data, callback))
 
 
 def inference_on_data_func(env, identifier, inp_data):
