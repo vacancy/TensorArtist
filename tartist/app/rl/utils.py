@@ -109,12 +109,12 @@ class ManipulateRewardProxyRLEnviron(ProxyRLEnvironBase):
 def manipulate_reward(player, func):
     old_func = player._action
 
-    @functools.wraps
+    @functools.wraps(old_func)
     def new_func(action):
         r, is_over = old_func(action)
         return func(r), is_over
 
-    player._actino = new_func
+    player._action = new_func
     return player
 
 
