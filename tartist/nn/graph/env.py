@@ -353,6 +353,21 @@ class Env(object):
         except ValueError:
             return as_varnode(self.graph.get_tensor_by_name(name + ':0'))
 
+    def add_to_collection(self, name, value):
+        return self.graph.add_to_collection(name, value)
+
+    def add_to_collections(self, names, value):
+        return self.graph.add_to_collections(names, value)
+
+    def get_collection(self, name):
+        return self.graph.get_collection(name)
+
+    def get_collection_ref(self, name):
+        return self.graph.get_collection_ref(name)
+
+    def get_all_collection_keys(self):
+        return self.graph.get_all_collection_keys()
+
     def find_in_collection_by_name(self, collection_or_key, name):
         """
         Find a op/tensor by name in a collection.
@@ -373,6 +388,11 @@ class Env(object):
                 return v
         return None
 
+    def name_scope(self, name, default_name=None):
+        if name is None:
+            name = default_name
+        return self.graph.name_scope(name)
+
     def get_name_scope(self, use_name=None):
         """Get current name scope"""
         if use_name:
@@ -384,6 +404,21 @@ class Env(object):
         if len(name) > len(random_str):
             return name[:-(len(random_str) + 1)]
         return ''
+
+    def variable_scope(self, name_or_scope, default_name=None, reuse=None):
+        with self.graph.as_default():
+            return tf.variable_scope(name_or_scope=name_or_scope, default_name=default_name, reuse=reuse)
+
+    def get_variable_scope(self):
+        with self.graph.as_default():
+            return tf.get_variable_scope()
+
+    def reuse_scope(self, activate=True):
+        with self.graph.as_default():
+            return reuse_context(activate)
+
+    def get_unique_name(self, scope_name):
+        return self.graph.unique_name(scope_name, mark_as_used=False)
 
     def get_pure_unique_name(self, scope_name):
         prefix = self.get_name_scope()

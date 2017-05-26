@@ -21,6 +21,7 @@ from .rng import *
 from .shape import *
 from .tensor import *
 
+from .initializer import *
 from .migrate import *
 from .helper import argscope
 

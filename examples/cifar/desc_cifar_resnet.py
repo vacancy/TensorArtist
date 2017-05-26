@@ -8,8 +8,6 @@
 #
 # This file is part of TensorArtist
 
-import tensorflow as tf
-
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
@@ -69,7 +67,7 @@ def make_network(env):
                 if inc_dim:
                     out_channel = in_channel * 2
                     stride = 2
-                with tf.variable_scope(name) as scope:
+                with env.variable_scope(name):
                     _ = x if first else O.bn_relu(x)
                     _ = conv_bn_relu('conv1', _, out_channel, stride=stride)
                     _ = conv2d('conv2', _, out_channel)
@@ -106,12 +104,12 @@ def make_network(env):
         _ = O.fc('linear', _, nr_classes)
 
         prob = O.softmax(_, name='prob')
-        pred = _.argmax(axis=1).astype(tf.int32, name='pred')
+        pred = _.argmax(axis=1).astype('int32', name='pred')
         net.add_output(prob)
         net.add_output(pred)
 
         if env.phase is env.Phase.TRAIN:
-            label = O.placeholder('label', shape=(None, ), dtype=tf.int32)
+            label = O.placeholder('label', shape=(None, ), dtype='int32')
             loss = O.sparse_softmax_cross_entropy_with_logits(logits=_, labels=label).mean()
             loss = O.identity(loss, name='loss')
             net.set_loss(loss)

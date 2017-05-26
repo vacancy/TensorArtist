@@ -7,4 +7,5 @@
 # This file is part of TensorArtist
 
 
+from .opr import *
 from .train import *
