@@ -18,7 +18,6 @@ import queue
 import threading
 
 import numpy as np
-import tensorflow as tf
 
 from tartist import random, image
 from tartist.app import rl
@@ -132,18 +131,18 @@ def make_network(env):
         net.add_output(value, name='value')
 
         if env.phase is env.Phase.TRAIN:
-            action = O.placeholder('action', shape=(None, ), dtype=tf.int64)
+            action = O.placeholder('action', shape=(None, ), dtype='int64')
             future_reward = O.placeholder('future_reward', shape=(None, ))
 
             log_policy = O.log(policy + 1e-6)
-            log_pi_a_given_s = (log_policy * tf.one_hot(action, get_player_nr_actions())).sum(axis=1)
+            log_pi_a_given_s = (log_policy * O.one_hot(action, get_player_nr_actions())).sum(axis=1)
             advantage = future_reward - O.zero_grad(value, name='advantage')
             policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
             xentropy_cost = (-policy * log_policy).sum(axis=1).mean(name='xentropy_cost')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
             # value_loss = O.truediv(value_loss, future_reward.shape[0].astype('float32'), name='value_loss')
             entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
-            loss = tf.add_n([-policy_cost, -xentropy_cost * entropy_beta, value_loss], name='loss')
+            loss = O.add_n([-policy_cost, -xentropy_cost * entropy_beta, value_loss], name='loss')
 
             net.set_loss(loss)
 

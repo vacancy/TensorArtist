@@ -10,8 +10,6 @@ from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
 
-import tensorflow as tf
-
 logger = get_logger(__file__)
 
 __envs__ = {
@@ -51,7 +49,7 @@ def make_network(env):
 
             def forward(x):
                 if is_reconstruct or env.phase is env.Phase.TRAIN:
-                    with tf.variable_scope('encoder'):
+                    with env.variable_scope('encoder'):
                         _ = x
                         _ = O.fc('fc1', _, 500, nonlin=O.tanh)
                         _ = O.fc('fc2', _, 500, nonlin=O.tanh)
@@ -64,7 +62,7 @@ def make_network(env):
                 else:
                     z_given_x = O.random_normal([1, code_length])
 
-                with tf.variable_scope('decoder'):
+                with env.variable_scope('decoder'):
                     _ = z_given_x
                     _ = O.fc('fc1', _, 500, nonlin=O.tanh)
                     _ = O.fc('fc2', _, 500, nonlin=O.tanh)
@@ -73,7 +71,7 @@ def make_network(env):
                     x_given_z = _
 
                 if env.phase is env.Phase.TRAIN:
-                    with tf.variable_scope('loss'):
+                    with env.variable_scope('loss'):
                         content_loss = O.raw_cross_entropy_prob('raw_content', x_given_z.flatten2(), x.flatten2())
                         content_loss = content_loss.sum(axis=1).mean(name='content')
                         # distrib_loss = 0.5 * (O.sqr(mu) + O.sqr(std) - 2. * O.log(std + 1e-8) - 1.0).sum(axis=1)

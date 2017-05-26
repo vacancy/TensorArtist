@@ -74,7 +74,7 @@ def main():
         new_env = Env(master_dev='/cpu:0', flags=env.flags, dpflags=env.dpflags, graph=env.graph)
         with new_env.as_default():
             with tf.name_scope('predictor/{}'.format(i)):
-                with tf.variable_scope(tf.get_variable_scope(), reuse=True):
+                with env.variable_scope(tf.get_variable_scope(), reuse=True):
                     make_network(new_env)
             f = new_env.make_func()
             f.compile(outputs=new_env.network.outputs)

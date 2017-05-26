@@ -359,8 +359,8 @@ class Env(object):
     def add_to_collections(self, names, value):
         return self.graph.add_to_collections(names, value)
 
-    def get_collection(self, name):
-        return self.graph.get_collection(name)
+    def get_collection(self, name, scope=None):
+        return self.graph.get_collection(name, scope=scope)
 
     def get_collection_ref(self, name):
         return self.graph.get_collection_ref(name)

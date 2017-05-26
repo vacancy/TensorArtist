@@ -6,9 +6,9 @@
 # 
 # This file is part of TensorArtist
 
-from tartist.nn import opr as O
 import numpy as np
-import tensorflow as tf
+
+from tartist.nn import opr as O
 
 
 def get_content_loss(p, x):
@@ -25,10 +25,9 @@ def get_style_loss(a, x):
     x = x.reshape(-1, c)
 
     ga = np.dot(a.T, a)
-    gx = tf.matmul(x.dimshuffle(1, 0), x)
+    gx = O.matmul(x.dimshuffle(1, 0), x)
 
-    a = 1. / ((4. * a.shape[0] * c ** 2.) * tf.cast(c, 'float32'))
+    a = 1. / ((4. * a.shape[0] * c ** 2.) * O.cast(c, 'float32'))
 
-    loss = a * tf.reduce_sum((gx - ga) ** 2)
+    loss = a * O.reduce_sum((gx - ga) ** 2)
     return O.as_varnode(loss)
-
