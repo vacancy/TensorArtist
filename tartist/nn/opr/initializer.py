@@ -7,7 +7,7 @@
 # This file is part of TensorArtist
 
 
-import tensorflow as tf
+from tensorflow.python.ops import init_ops
 
 __all__ = [
     'zeros_initializer', 'ones_initializer', 'constant_initializer',
@@ -16,12 +16,12 @@ __all__ = [
     'orthogonal_initializer'
 ]
 
-zeros_initializer = tf.zeros_initializer
-ones_initializer = tf.ones_initializer
-constant_initializer = tf.constant_initializer
-random_uniform_initializer = tf.random_uniform_initializer
-random_normal_initializer = tf.random_normal_initializer
-truncated_normal_initializer = tf.truncated_normal_initializer
-uniform_unit_scaling_initializer = tf.uniform_unit_scaling_initializer
-variance_scaling_initializer = tf.variance_scaling_initializer
-orthogonal_initializer = tf.orthogonal_initializer
+zeros_initializer = init_ops.zeros_initializer
+ones_initializer = init_ops.ones_initializer
+constant_initializer = init_ops.constant_initializer
+random_uniform_initializer = init_ops.random_uniform_initializer
+random_normal_initializer = init_ops.random_normal_initializer
+truncated_normal_initializer = init_ops.truncated_normal_initializer
+uniform_unit_scaling_initializer = init_ops.uniform_unit_scaling_initializer
+variance_scaling_initializer = init_ops.variance_scaling_initializer
+orthogonal_initializer = init_ops.orthogonal_initializer

@@ -7,6 +7,7 @@
 # This file is part of TensorArtist
 
 from tartist.nn import opr as O
+import tensorflow as tf
 
 
 def image_diff(origin, canvas_logits):
@@ -36,7 +37,7 @@ def filterbank(img_h, img_w, att_dim, center_x, center_y, delta, var):
     :return: filter_x, filter_y
     """
 
-    with env.name_scope('filterbank'):
+    with tf.name_scope('filterbank'):
         rng = O.range(1, att_dim+1, dtype='float32') - att_dim / 2 + 0.5
         mu_x = center_x + rng * delta
         mu_y = center_y + rng * delta
@@ -67,7 +68,7 @@ def split_att_params(img_h, img_w, att_dim, value):
     :return: center_x, center_y, delta, variance, gamma
     """
 
-    with env.name_scope('split_att_params'):
+    with tf.name_scope('split_att_params'):
         center_x, center_y, log_delta, log_var, log_gamma = O.split(value, 5, axis=1)
 
         delta, var, gamma = map(lambda x: O.exp(x).reshape(-1, 1), [log_delta, log_var, log_gamma])
@@ -93,7 +94,7 @@ def apply_filterbank(inpvar, fx, fy, dir):
     def add_channel(x, c):
         return O.tile(x, [c, 1, 1])
 
-    with env.name_scope('apply_filterbank'):
+    with tf.name_scope('apply_filterbank'):
         h, w, c = inpvar.static_shape[1:4]
         img_h, img_w = fy.static_shape[2], fx.static_shape[2]
         att_dim = fx.static_shape[1]
@@ -122,7 +123,7 @@ def att_read(att_dim, image, center_x, center_y, delta, var):
     :return: attention window: batch_size x att_dim x att_dim x channel
     """
 
-    with env.name_scope('att_read'):
+    with tf.name_scope('att_read'):
         fx, fy = filterbank(image.static_shape[1], image.static_shape[2], att_dim, center_x, center_y, delta, var)
         return apply_filterbank(image, fx, fy, dir='i2w')
 
@@ -140,7 +141,7 @@ def att_write(img_h, img_w, window, center_x, center_y, delta, var):
     :param var: variance (sigma^2): batch_size x 1
     :return: a delta canvas
     """
-    with env.name_scope('att_write'):
+    with tf.name_scope('att_write'):
         fx, fy = filterbank(img_h, img_w, window.static_shape[1], center_x, center_y, delta, var)
         return apply_filterbank(window, fx, fy, dir='w2i')
 

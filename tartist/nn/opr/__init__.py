@@ -18,6 +18,7 @@ from .loss import *
 from .netsrc import *
 from .nonlin import *
 from .rng import *
+from .rnn_cell import *
 from .shape import *
 from .tensor import *
 

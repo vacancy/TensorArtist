@@ -21,7 +21,6 @@ from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
 
-import tensorflow as tf
 import draw_opr
 
 logger = get_logger(__file__)
@@ -71,8 +70,8 @@ def make_network(env):
                 return []
 
             def forward(img=None):
-                encoder = tf.contrib.rnn.BasicLSTMCell(256)
-                decoder = tf.contrib.rnn.BasicLSTMCell(256)
+                encoder = O.BasicLSTMCell(256)
+                decoder = O.BasicLSTMCell(256)
 
                 batch_size = img.shape[0] if is_train else 1
 
@@ -83,11 +82,11 @@ def make_network(env):
 
                 def encode(x, state, reuse):
                     with env.variable_scope('read_encoder', reuse=reuse):
-                        return encoder(O.as_tftensor(x), state)
+                        return encoder(x, state)
 
                 def decode(x, state, reuse):
                     with env.variable_scope('write_decoder', reuse=reuse):
-                        return decoder(O.as_tftensor(x), state)
+                        return decoder(x, state)
 
                 all_sqr_mus, all_vars, all_log_vars = 0., 0., 0.
 

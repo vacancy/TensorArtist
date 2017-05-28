@@ -9,11 +9,10 @@
 from tartist.nn.train.trainer import TrainerBase
 from tartist.nn import summary
 from tartist.nn.train.env import TrainerEnvBase
-from tartist.nn.graph.node import as_tftensor
 from tartist.data.flow.base import SimpleDataFlowBase
 from tartist.data.flow.collections import EmptyDictDataFlow
-
 from tartist.core.utils.meta import notnone_property
+
 import tensorflow as tf
 
 
@@ -56,8 +55,8 @@ class GANTrainerEnv(TrainerEnvBase):
     def make_optimizable_func(self, d_loss=None, g_loss=None):
         # need to access collections
         with self.as_default():
-            d_loss = as_tftensor(d_loss or self.d_loss)
-            g_loss = as_tftensor(g_loss or self.g_loss)
+            d_loss = d_loss or self.d_loss
+            g_loss = g_loss or self.g_loss
 
             g_func = self.make_func()
             scope = GANGraphKeys.GENERATOR_VARIABLES + '/.*'
