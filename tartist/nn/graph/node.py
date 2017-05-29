@@ -245,6 +245,12 @@ class VarNode(VarNodeOpDecl):
     def static_shape(self, new_shape):
         self.__impl.set_shape(new_shape)
 
+    def get_shape(self):
+        return self.__impl.get_shape()
+
+    def set_shape(self, shape):
+        return self.__impl.set_shape(shape)
+
     @property
     def ndims(self):
         return self.__impl.get_shape().ndims

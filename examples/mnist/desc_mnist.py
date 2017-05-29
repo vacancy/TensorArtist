@@ -6,8 +6,6 @@
 #
 # This file is part of TensorArtist
 
-import tensorflow as tf
-
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
@@ -64,12 +62,12 @@ def make_network(env):
 
         # it's safe to use tf.xxx and O.xx together
         prob = O.softmax(_, name='prob')
-        pred = _.argmax(axis=1).astype(tf.int32, name='pred')
+        pred = _.argmax(axis=1).astype('int32', name='pred')
         net.add_output(prob)
         net.add_output(pred)
 
         if env.phase is env.Phase.TRAIN:
-            label = O.placeholder('label', shape=(None, ), dtype=tf.int32)
+            label = O.placeholder('label', shape=(None, ), dtype='int32')
             loss = O.sparse_softmax_cross_entropy_with_logits(logits=_, labels=label).mean()
             loss = O.identity(loss, name='loss')
             net.set_loss(loss)

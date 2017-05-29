@@ -6,8 +6,6 @@
 # 
 # This file is part of TensorArtist
 
-import tensorflow as tf
-
 from tartist.app import gan
 from tartist.app.gan import GANGraphKeys
 from tartist.core import get_env, get_logger
@@ -54,7 +52,7 @@ def make_network(env):
             def forward(img):
                 g_batch_size = get_env('trainer.batch_size') if env.phase is env.Phase.TRAIN else 1
                 z = O.as_varnode(tf.random_normal([g_batch_size, code_length]))
-                with tf.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
+                with env.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
                     _ = z
                     with O.argscope(O.fc, nonlin=O.tanh):
                         _ = O.fc('fc1', _, 500)
@@ -70,17 +68,17 @@ def make_network(env):
                     return logits
 
                 if is_train:
-                    with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES):
+                    with env.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES):
                         logits_real = discriminator(img).flatten()
                         score_real = O.sigmoid(logits_real)
 
-                with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=is_train):
+                with env.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=is_train):
                     logits_fake = discriminator(x_given_z).flatten()
                     score_fake = O.sigmoid(logits_fake)
 
                 if is_train:
                     # build loss
-                    with tf.variable_scope('loss'):
+                    with env.variable_scope('loss'):
                         d_loss_real = O.sigmoid_cross_entropy_with_logits(
                             logits=logits_real, labels=O.ones_like(logits_real)).mean()
                         d_loss_fake = O.sigmoid_cross_entropy_with_logits(

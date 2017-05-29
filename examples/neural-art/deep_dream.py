@@ -6,16 +6,17 @@
 # 
 # This file is part of TensorArtist
 
+import argparse
+import os
+
+import numpy as np
+
 from tartist import image
-from tartist.core import load_env, get_env, get_logger
 from tartist.core import io
+from tartist.core import load_env, get_env, get_logger
 from tartist.core.utils.cli import parse_devices
 from tartist.nn import Env
 from tartist.nn import opr as O
-
-import argparse
-import os
-import numpy as np
 
 logger = get_logger(__file__)
 

@@ -6,8 +6,8 @@
 # 
 # This file is part of TensorArtist
 
-import tensorflow as tf
 from tartist.nn import opr as O
+import tensorflow as tf
 
 
 def image_diff(origin, canvas_logits):
