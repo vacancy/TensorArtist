@@ -13,11 +13,18 @@ import functools
 logger = get_logger(__file__)
 
 
-__all__ = ['AutoRestartProxyRLEnviron', 
+__all__ = [
+        'TransparentAttributeProxyRLEnviron',
+        'AutoRestartProxyRLEnviron', 
         'RepeatActionProxyRLEnviron', 'NOPFillProxyRLEnviron',
         'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron',
         'ManipulateRewardProxyRLEnviron', 'manipulate_reward', 
         'remove_proxies']
+
+
+class TransparentAttributeProxyRLEnviron(ProxyRLEnvironBase):
+    def __getattr__(self, name):
+        return getattr(remove_proxies(self), name)
 
 
 class AutoRestartProxyRLEnviron(ProxyRLEnvironBase):
