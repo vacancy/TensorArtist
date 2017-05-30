@@ -101,6 +101,7 @@ __all_migrated_oprs__.extend([
 
 # array ops: creation
 __all_migrated_oprs__.extend([
+    ('cast', tf.cast),
     ('zeros', tf.zeros),
     ('ones', tf.ones),
     ('zeros_like', tf.zeros_like),
