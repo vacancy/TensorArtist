@@ -95,7 +95,7 @@ def main_inference_play_multithread(trainer, make_player):
         if mgr is not None:
             mgr.put_async_scalar('async/inference/score', score)
 
-    nr_players = get_env('a3c.inference.nr_players')
+    nr_players = get_env('a3c.inference.nr_plays')
     pool = [threading.Thread(target=runner) for _ in range(nr_players)]
     for p in pool:
         p.start()

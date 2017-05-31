@@ -36,6 +36,8 @@ __envs__ = {
 
     'a3c': {
         'env_name': 'Breakout-v0',
+
+        'input_shape': (84, 84),
         'frame_history': 4,
         'limit_length': 40000,
 
@@ -43,24 +45,21 @@ __envs__ = {
         'gamma': 0.99,
         'acc_step': 5,
 
+        # async training data collector
         'nr_players': 50,
         'nr_predictors': 2,
-
         'predictor': {
             'batch_size': 16,
             'outputs_name': ['value', 'policy_explore']
         },
+
         'inference': {
-            'nr_players': 20,
+            'nr_plays': 20,
             'max_stuck_repeat': 30
         },
         'demo': {
             'nr_plays': 5
         }
-    },
-
-    'dataset': {
-        'input_shape': (84, 84)
     },
 
     'trainer': {
@@ -156,7 +155,7 @@ def make_network(env):
 
 def make_player(is_train=True, dump_dir=None):
     def resize_state(s):
-        return image.resize(s, get_env('dataset.input_shape'))
+        return image.resize(s, get_env('a3c.input_shape'), interpolation='NEAREST')
 
     p = rl.GymRLEnviron(get_env('a3c.env_name'), dump_dir=dump_dir)
     p = rl.MapStateProxyRLEnviron(p, resize_state)
@@ -204,7 +203,7 @@ def get_player_nr_actions():
 
 @cached_result
 def get_input_shape():
-    input_shape = get_env('dataset.input_shape')
+    input_shape = get_env('a3c.input_shape')
     frame_history = get_env('a3c.frame_history')
     h, w, c = input_shape[0], input_shape[1], 3 * frame_history
     return h, w, c
@@ -275,12 +274,9 @@ def _predictor_func(pid, router, task_queue, func, is_inference=False):
             callbacks[i](action, out['value'][i])
 
 
-predictor_func = functools.partial(_predictor_func, is_inference=False)
-inference_predictor_func = functools.partial(_predictor_func, is_inference=True)
-
-
 def make_a3c_configs(env):
-    from common_a3c import on_data_func, on_stat_func, inference_on_data_func, inference_on_stat_func
+    from common_a3c import on_data_func, on_stat_func
+    predictor_func = functools.partial(_predictor_func, is_inference=False)
 
     env.player_master.player_func = player_func
     env.player_master.predictor_func = predictor_func
@@ -288,10 +284,14 @@ def make_a3c_configs(env):
     env.player_master.on_stat_func = on_stat_func
 
     # currently we don't use multi-proc inference, so these settings are not used at all
-    env.inference_player_master.player_func = inference_player_func
-    env.inference_player_master.predictor_func = inference_predictor_func
-    env.inference_player_master.on_data_func = inference_on_data_func
-    env.inference_player_master.on_stat_func = inference_on_stat_func
+    if False:
+        from common_a3c import inference_on_data_func, inference_on_stat_func
+        inference_predictor_func = functools.partial(_predictor_func, is_inference=True)
+
+        env.inference_player_master.player_func = inference_player_func
+        env.inference_player_master.predictor_func = inference_predictor_func
+        env.inference_player_master.on_data_func = inference_on_data_func
+        env.inference_player_master.on_stat_func = inference_on_stat_func
 
     env.players_history = collections.defaultdict(list)
     env.players_history_lock = threading.Lock()
