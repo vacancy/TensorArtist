@@ -84,7 +84,7 @@ class LimitLengthProxyRLEnviron(ProxyRLEnvironBase):
     def _action(self, action):
         r, is_over = self.proxy.action(action)
         self._cnt += 1
-        if self._cnt >= self._limit:
+        if self._limit is not None and self._cnt >= self._limit:
             is_over = True
         return r, is_over
 
