@@ -68,12 +68,6 @@ __envs__ = {
         'batch_size': 128,
         'epoch_size': 1000,
         'nr_epochs': 200,
-
-        'gamma': 0.99,
-
-        'env_flags': {
-            'log_device_placement': False
-        }
     },
     'demo': {
         'customized': True
@@ -319,8 +313,7 @@ def main_train(trainer):
 
     def on_epoch_after(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
-            # main_inference_play(trainer, epoch=trainer.epoch)
-            main_inference_play_multithread(trainer, make_player = make_player)
+            main_inference_play_multithread(trainer, make_player=make_player)
 
     # this one should run before monitor
     register_event(trainer, 'epoch:after', on_epoch_after, priority=5)
@@ -341,5 +334,3 @@ def main_demo(env, func):
     for i in range(repeat_time):
         player.play_one_episode(get_action)
         logger.info('#{} play score={}'.format(i, player.stats['score'][-1]))
-
-
