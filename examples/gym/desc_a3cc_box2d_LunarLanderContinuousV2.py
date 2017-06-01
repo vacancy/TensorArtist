@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : desc_a3cc_lunar_lander.py
+# File   : desc_a3cc_box2d_LunarLanderContinuousV2.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 5/31/17

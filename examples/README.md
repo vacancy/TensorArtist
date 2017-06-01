@@ -27,6 +27,7 @@ that example.
 + Deep Dream: `neural-art/deep_dream.py`
 
 #### Deep Reinforcement learning:
-+ Basic A3C on Atari games: `gym/desc_a3c_atari.py`
++ Basic A3C on Atari games: `gym/desc_a3c_atari_BreakoutV0.py`
++ Basic A3C on Box2D environment: `gym/desc_a3cc_box2d_LunarLanderContinuousV2.py`
 + RL Environment Simulator: `rl-sim/README.md`
 

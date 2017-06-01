@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : desc_a3c_atari.py
+# File   : desc_a3c_atari_BreakoutV0.py
 # Author : Jiayuan Mao
 #          Honghua Dong
 # Email  : maojiayuan@gmail.com
