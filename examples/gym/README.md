@@ -17,6 +17,7 @@ This model does not follows the original settings in DeepMind's paper, which use
 1. LSTM model.
 2. Episode-as-a-batch update.
 3. Gaussian distribution.
+
 In this model, we included several tricks for the training:
 1. Truncated Laplacian distribution for policy.
 2. Positive advantage only update.
