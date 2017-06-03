@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/18/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import ProxyRLEnvironBase
 from tartist.core import get_logger 
@@ -132,4 +132,3 @@ def remove_proxies(environ):
     while isinstance(environ, ProxyRLEnvironBase):
         environ = environ.proxy
     return environ
-

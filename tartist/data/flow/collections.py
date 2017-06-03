@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/23/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import SimpleDataFlowBase
 from ...core.utils.meta import UniqueValueGetter
@@ -65,4 +65,3 @@ def DictOfArrayDataFlow(doa):
     keys = doa.keys()
     values = [doa[k] for k in keys]
     return DictDataFlowProxy(keys, ListOfArrayDataFlow(values))
-

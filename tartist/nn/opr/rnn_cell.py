@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 5/25/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.nn.graph.node import as_tftensor
 from tartist.nn.opr.helper import wrap_varnode_func
@@ -37,4 +37,3 @@ LSTMCell = migrate_cell(tf_rnn.LSTMCell)
 GRUCell = migrate_cell(tf_rnn.GRUCell)
 
 __all__ = ['BasicRNNCell', 'BasicLSTMCell', 'RNNCell', 'LSTMCell', 'GRUCell']
-

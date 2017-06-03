@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/27/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .helper import wrap_varnode_func, wrap_simple_named_op
 from .helper import lazy_O as O

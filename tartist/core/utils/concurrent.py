@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/23/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import threading
 import multiprocessing
@@ -115,4 +115,3 @@ def OrEvent(*events, mplib=threading):
 
 MTOrEvent = functools.partial(OrEvent, mplib=threading)
 MPOrEvent = functools.partial(OrEvent, mplib=multiprocessing)
-

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 02/24/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .helper import wrap_varnode_func
 
@@ -150,4 +150,3 @@ __all__.extend(list(__all_migrated_oprs__.keys()))
 
 for k, v in __all_migrated_oprs__.items():
     globals()[k] = migrate_opr(k, v)
-

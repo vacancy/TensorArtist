@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/31/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import numpy as np
 import tensorflow as tf
@@ -120,4 +120,3 @@ def ensure_variable(name, value_or_intializer, *args, **kwargs):
     if not isinstance(value_or_intializer, __valid_tensor_types__):
         return variable(name, value_or_intializer, *args, **kwargs)
     return value_or_intializer
-

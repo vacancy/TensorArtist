@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/25/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .. import io, get_env
 import functools
@@ -66,5 +66,3 @@ def fs_cached_result(cache_key):
             return computed_value
         return wrapped_func
     return wrapper
-
-

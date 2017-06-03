@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/23/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import SimpleDataFlowBase
 from itertools import repeat, cycle as cached_cycle
@@ -64,5 +64,3 @@ class MapDataFlow(SimpleDataFlowBase):
     def _gen(self):
         for data in self.proxy:
             yield self._map(data)
-
-

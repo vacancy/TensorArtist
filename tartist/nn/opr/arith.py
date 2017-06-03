@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/27/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .helper import as_varnode, wrap_varnode_func, wrap_simple_named_op
 from .helper import lazy_O as O
@@ -37,4 +37,3 @@ def atanh(inpvar, name='atanh', eps=1e-6):
 def logit(inpvar, name='logit', eps=1e-6):
     inpvar = as_varnode(inpvar)
     return O.identity(0.5 * O.log(inpvar / (1. - inpvar + eps) + eps), name='out')
-

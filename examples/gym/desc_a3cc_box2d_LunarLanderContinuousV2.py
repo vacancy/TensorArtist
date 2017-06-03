@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 5/31/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """
 A3C-Continuous reproduction on Lunar Lander game. (OpenAI.Gym.Box2D.LunarLander)

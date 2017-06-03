@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from .. import TArtGraphKeys, opr as O
@@ -44,4 +44,3 @@ AdamOptimizer = _migrate_lr_based_optimizer(tf.train.AdamOptimizer)
 
 AdagradOptimizer = _migrate_lr_based_optimizer(tf.train.AdagradOptimizer)
 RMSPropOptimizer = _migrate_lr_based_optimizer(tf.train.RMSPropOptimizer)
-

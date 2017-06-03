@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/11/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ..core.logger import get_logger
 import time
@@ -105,4 +105,3 @@ def resize(image, dsize, interpolation='LINEAR'):
         image = pil_nd2img(image)
         image = image.resize(dsize, resample=interpolation)
         return pil_img2nd(image)
-

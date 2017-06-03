@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 01/17/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from ._defaults import __default_dtype__, __default_nonlin__
@@ -91,4 +91,3 @@ def broadcast(inpvar, tshape, name='broadcast'):
     tshape = canonize_sym_shape(tshape)
     multiples = tshape // sshape 
     return tf.tile(inpvar, multiples, name='out')
-

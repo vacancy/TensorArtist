@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/26/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.core import get_env, get_logger
 from tartist.core.utils.cli import load_desc, parse_devices, parse_args
@@ -84,4 +84,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

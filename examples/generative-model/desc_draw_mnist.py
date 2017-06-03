@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/22/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """
 Implementation of paper: Deep Recurrent Attentive Writer (DRAW) network architecture introduced by

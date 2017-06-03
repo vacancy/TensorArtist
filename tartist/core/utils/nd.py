@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/30/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import collections
 import numpy
@@ -64,4 +64,3 @@ def size_split_n(full_size, n):
     if rest != 0:
         result[-1] += rest
     return result
-

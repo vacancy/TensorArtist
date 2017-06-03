@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/17/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """
 This file follows the design of tensorpack by ppwwyyxx
@@ -256,4 +256,3 @@ class GaussianDistributionWithUniformSample(GaussianDistribution):
     def _get_numerical_sample(self, theta):
         assert self._size == 1
         return np.linspace(self._num_min_val, self._num_max_val, self._nr_num_samples).reshape(-1, 1)
-

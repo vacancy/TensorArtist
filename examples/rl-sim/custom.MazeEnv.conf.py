@@ -17,4 +17,3 @@ quit_action_key = 113
 default_winsize = (600, 800)
 # ignore no-action (action=0) in logging
 mute_noaction = True
-

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from . import configs, utils
 from ...core.logger import get_logger

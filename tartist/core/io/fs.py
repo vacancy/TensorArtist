@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/19/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 import pickle
@@ -183,4 +183,3 @@ def make_env_dir(key, path):
     from ..environ import set_env
     make_dir(path)
     set_env(key, path)
-

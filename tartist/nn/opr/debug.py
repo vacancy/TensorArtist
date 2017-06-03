@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/23/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .helper import wrap_varnode_func, wrap_simple_named_op
 from ...core import get_logger
@@ -47,4 +47,3 @@ def callback_injector(tensor, callback='log', name='callback_injector'):
     with tf.control_dependencies([tf_op]):
         out = tf.identity(tensor, name='out')
     return out
-

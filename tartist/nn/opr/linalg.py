@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/22/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from ..graph.node import as_tftensor
@@ -19,4 +19,3 @@ __all__ = ['batch_matmul']
 def batch_matmul(a, b, name='batch_matmul'):
     with tf.name_scope(name):
         return tf.einsum('aij,ajk->aik', as_tftensor(a), as_tftensor(b))
-

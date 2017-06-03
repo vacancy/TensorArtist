@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/31/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ...core.utils.meta import assert_instance, assert_notnone, AttrObject
 
@@ -349,4 +349,3 @@ def as_tftensor(tensor):
         return tensor
     assert_instance(tensor, VarNode)
     return tensor.impl
-

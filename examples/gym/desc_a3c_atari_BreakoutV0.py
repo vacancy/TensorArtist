@@ -6,7 +6,7 @@
 #          dhh19951@gmail.com
 # Date   : 3/18/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """This reproduction of A3C is based on ppwwyyxx's reproduction in his TensorPack framework.
 Credit to : https://github.com/ppwwyyxx/tensorpack/tree/master/examples/A3C-Gym"""

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 5/4/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.core import get_env, get_logger
 from tartist.core.utils.imp import load_module_filename
@@ -50,4 +50,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

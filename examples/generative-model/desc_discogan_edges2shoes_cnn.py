@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 4/2/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import re
 
@@ -201,4 +201,3 @@ def main_train(trainer):
     snapshot.enable_snapshot_saver(trainer)
 
     trainer.train()
-

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ._defaults import __default_dtype__, __default_nonlin__
 from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op, StaticDynamicDim
@@ -236,4 +236,3 @@ def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
     _ = nonlin(_, name='nonlin')
 
     return tf.identity(_, name='out')
-

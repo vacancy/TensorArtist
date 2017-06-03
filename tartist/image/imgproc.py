@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com 
 # Date   : 01/22/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from . import _backend
 from ..core.utils.shape import get_2dshape
@@ -206,4 +206,3 @@ def saturation(img, alpha):
     gs = grayscale(img)
     img = img * alpha + gs * (1 - alpha)
     return img
-

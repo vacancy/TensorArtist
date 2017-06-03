@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/14/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ... import random
 import functools
@@ -52,4 +52,3 @@ class ImageCoordAugmentorExecutor(AugmentorExecutorBase):
         if original_coord is None:
             return img
         return img, coord
-

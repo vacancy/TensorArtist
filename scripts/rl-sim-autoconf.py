@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 4/22/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import argparse
 import threading

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 5/4/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ..base import SimpleRLEnvironBase
 from .maze import MazeEnv, CustomLavaWorldEnv
@@ -109,4 +109,3 @@ class CustomLavaWorldTaxiEnv(CustomTaxiEnv):
             self.append_stat('success', 1)
         else:
             self.append_stat('success', 0)
-

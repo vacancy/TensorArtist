@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/29/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ...core import get_logger
 from ...core.event import EventManager, register_event, trigger_event

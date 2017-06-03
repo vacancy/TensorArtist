@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/31/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 __all__ = ['EmptyContext']
 
@@ -15,4 +15,3 @@ class EmptyContext(object):
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         return
-

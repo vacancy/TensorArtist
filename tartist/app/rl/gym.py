@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/18/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import SimpleRLEnvironBase, ProxyRLEnvironBase
 from .base import DiscreteActionSpace, ContinuousActionSpace
@@ -153,4 +153,3 @@ class GymPreventStuckProxyRLEnviron(ProxyRLEnvironBase):
     def _restart(self):
         self.proxy.restart()
         self._action_list.clear()
-

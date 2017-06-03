@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/29/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .tfutils import TArtGraphKeys
 from .graph import *
@@ -20,4 +20,3 @@ def varnode_to_tftensor(varnode, *args, **kwargs):
     return v
 
 tf.register_tensor_conversion_function(VarNode, varnode_to_tftensor)
-

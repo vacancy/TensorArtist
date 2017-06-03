@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/21/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import collections
 import threading
@@ -111,4 +111,3 @@ def main_inference_play_multithread(trainer, make_player, inpkey='state', policy
         p.start()
     for p in pool:
         p.join()
-

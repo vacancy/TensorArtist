@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 4/13/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from .helper import lazy_O as O
@@ -48,4 +48,3 @@ def preserve_gradient_unary(func):
         return out
     
     return new_func
-

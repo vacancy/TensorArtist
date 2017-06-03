@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/31/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .. import TArtGraphKeys
 from ..graph.env import get_default_env, reuse_context
@@ -207,5 +207,3 @@ def auto_reuse(func):
             return func(*args, **kwargs)
 
     return wrapped
-
-

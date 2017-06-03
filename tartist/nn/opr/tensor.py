@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 01/17/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from .helper import as_varnode, wrap_varnode_func, wrap_simple_named_op

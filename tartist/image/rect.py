@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 01/22/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 def ltwh2tblr(l, t, w, h):
@@ -50,4 +50,3 @@ def nms(rect_list, threshold, sort_key_func=lambda x: x[1]):
         if not ignored[i]:
             result.append(rect_list[i])
     return result
-

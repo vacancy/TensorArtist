@@ -4,11 +4,10 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/21/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from .codecs import *
 from .imgproc import *
 from .visualize import *
 from . import aug, rect
-

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/19/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from . import configs, utils
@@ -169,4 +169,3 @@ class QueryReqPipe(object):
         if do_recv:
             out = loadb(self._frsock.recv(copy=False).bytes)
             return out
-
