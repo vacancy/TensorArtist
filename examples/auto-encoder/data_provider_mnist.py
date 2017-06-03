@@ -78,4 +78,3 @@ def demo(feed_dict, result, extra_info):
     img = image.resize_minmax(img, 256)
 
     image.imshow('demo', img)
-

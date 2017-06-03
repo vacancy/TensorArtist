@@ -18,6 +18,11 @@ from tartist.app.rl.simulator import Controller, automake
 
 logger = get_logger(__file__)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('gamename')
+parser.add_argument('-o', '--output', dest='output', help='A conf.py file.', default=None)
+parser.add_argument('-winsize', '--window-size', dest='winsize', default=(600, 800), type=int, nargs=2)
+
 
 __automake_format__ = """
 def make():
@@ -85,11 +90,6 @@ def main(args, controller):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('gamename')
-    parser.add_argument('-o', '--output', dest='output', help='A conf.py file.', default=None)
-    parser.add_argument('-winsize', '--window-size', dest='winsize', default=(600, 800), type=int, nargs=2)
-
     controller = Controller()
     thread = threading.Thread(target=main, args=(parser.parse_args(), controller))
 

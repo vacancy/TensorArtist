@@ -20,6 +20,15 @@ from tartist.core.utils.imp import load_source
 
 logger = get_logger(__file__)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('cfg')
+parser.add_argument('-fps', '--fps', dest='fps', default=24, type=int, help='Controller fps, 0 if wait-keyboard')
+parser.add_argument('-rfps', '--render-fps', dest='rfps', default=100, type=int, help='Render fps')
+parser.add_argument('-winsize', '--window-size', dest='winsize', default=None, type=int, nargs=2,
+                    help='Window size, of format (min_dim, max_dim)')
+parser.add_argument('-record', '--record', dest='record', action='store_true', help='Whether to record the play')
+args = parser.parse_args()
+
 
 def vis_and_action(args, cfg, controller, observation):
     # here, the observation is actually a state
@@ -106,15 +115,6 @@ def main(args, controller):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('cfg')
-    parser.add_argument('-fps', '--fps', dest='fps', default=24, type=int, help='Controller fps, 0 if wait-keyboard')
-    parser.add_argument('-rfps', '--render-fps', dest='rfps', default=100, type=int, help='Render fps')
-    parser.add_argument('-winsize', '--window-size', dest='winsize', default=None, type=int, nargs=2,
-                        help='Window size, of format (min_dim, max_dim)')
-    parser.add_argument('-record', '--record', dest='record', action='store_true', help='Whether to record the play')
-    args = parser.parse_args()
-
     controller = Controller(fps=args.rfps)
     thread = threading.Thread(target=main, args=(args, controller))
 

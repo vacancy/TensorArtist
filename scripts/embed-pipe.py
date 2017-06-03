@@ -7,11 +7,9 @@
 # This file is part of TensorArtist
 
 from tartist import cao
-from tartist.cao import pprint, imshow, batch_show, stprint
+from tartist.cao import *
 from tartist.core import get_logger
-from tartist.core.utils.cli import load_desc
 from tartist.data.rflow import control, InputPipe
-from tartist.nn import Env
 
 import argparse
 

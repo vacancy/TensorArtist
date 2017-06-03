@@ -100,4 +100,3 @@ def main_train(trainer):
     inference.enable_inference_runner(trainer, make_dataflow_inference)
 
     trainer.train()
-

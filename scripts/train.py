@@ -7,7 +7,7 @@
 # This file is part of TensorArtist
 
 from tartist.core import get_env, get_logger
-from tartist.core.utils.cli import load_desc, parse_devices
+from tartist.core.utils.cli import load_desc, parse_devices, parse_args
 from tartist.nn import Env, train
 
 import os
@@ -30,7 +30,7 @@ parser.add_argument('--continue-from', dest='continue_from', default=-1, type=in
                     help='Continue from the given epoch')
 parser.add_argument('--quiet', dest='quiet', default=False, action='store_true', help='Quiet run')
 parser.add_argument('--queue', dest='use_queue', default=False, action='store_true', help='Use input queues')
-args = parser.parse_args()
+args = parse_args(parser)
 
 
 def main():

@@ -7,7 +7,7 @@
 # This file is part of TensorArtist
 
 from .imp import load_module_filename
-from ..environ import load_env
+from ..environ import load_env as load_env_
 
 import os
 import sys
@@ -31,9 +31,10 @@ def parse_devices(devs):
     return devs
 
 
-def load_desc(desc_filename):
+def load_desc(desc_filename, load_env=True):
     module = load_module_filename(desc_filename)
-    load_env(module)
+    if load_env:
+        load_env_(module)
     return module
 
 
@@ -78,3 +79,10 @@ def maybe_mkdir(dirname):
             mkdir(dirname)
     return dirname
 
+
+def parse_args(parser):
+    args, argv = parser.parse_known_args()
+    if argv:
+        print(sys.argv)
+        sys.argv = argv
+    return args

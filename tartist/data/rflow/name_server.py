@@ -87,8 +87,9 @@ class NameServerControllerStorage(object):
 
 
 class NameServer(object):
-    def __init__(self):
+    def __init__(self, host=configs.NS_CTL_HOST, port=configs.NS_CTL_PORT, protocal=configs.NS_CTL_PROTOCAL):
         self.storage = NameServerControllerStorage()
+        self._addr = '{}://{}:{}'.format(protocal, host, port)
         self._context_lock = threading.Lock()
         self._context = zmq.Context()
         self._router = self._context.socket(zmq.ROUTER)
@@ -109,8 +110,7 @@ class NameServer(object):
             self.finalize()
 
     def initialize(self):
-        addr = '{}://{}:{}'.format(configs.NS_CTL_PROTOCAL, configs.NS_CTL_HOST, configs.NS_CTL_PORT)
-        self._router.bind(addr)
+        self._router.bind(self._addr)
         self._poller.register(self._router, zmq.POLLIN)
 
         self._dispatcher.register(configs.Actions.NS_REGISTER_CTL_REQ, self._on_ns_register_controller_req)
