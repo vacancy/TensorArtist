@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 from ._defaults import __default_dtype__
-from .helper import device_context, wrap_varnode_func, wrap_named_op, unique_opr_name
+from .helper import device_context, wrap_varnode_func, unique_opr_name
 from ..graph.env import get_default_env
 from ..graph.node import as_varnode, OprNode, __valid_tensor_types__
 from ..tfutils import assign_variable, fetch_variable, TArtGraphKeys, extend_collection_list
@@ -80,6 +80,7 @@ def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, de
     return var
 
 
+@wrap_varnode_func
 def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False,
            collections=None, summary=False):
 
@@ -92,20 +93,24 @@ def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False,
     return var
 
 
+@wrap_varnode_func
 def get_variable(name, env=None, collection=TArtGraphKeys.TART_VARIABLES):
     env = env or get_default_env()
     sym = env.find_in_collection_by_name(collection, name)
     return sym.taop
 
 
+@wrap_varnode_func
 def get_scalar(name, env=None, collection=TArtGraphKeys.SCALAR_VARIABLES):
     return get_variable(name, env=env, collection=collection)
 
 
+@wrap_varnode_func
 def get_scalar_value(name, env=None, collection=TArtGraphKeys.SCALAR_VARIABLES):
     return get_scalar(name, env=env, collection=collection).get_value()
 
 
+@wrap_varnode_func
 def set_scalar_value(name, value, env=None, collection=TArtGraphKeys.SCALAR_VARIABLES):
     return get_scalar(name, env=env, collection=collection).set_value(value)
 
@@ -116,6 +121,7 @@ def constant(value, shape=None, dtype=None, name='const', device=None, verify_sh
         return tf.constant(value, dtype=dtype, shape=shape, name=name, verify_shape=verify_shape)
 
 
+@wrap_varnode_func
 def ensure_variable(name, value_or_intializer, *args, **kwargs):
     if not isinstance(value_or_intializer, __valid_tensor_types__):
         return variable(name, value_or_intializer, *args, **kwargs)

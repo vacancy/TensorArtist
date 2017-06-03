@@ -23,7 +23,7 @@ __all__ = [
     'device_context', 
     'as_varnode', 'as_tftensor',
     'get_2dshape', 'get_4dshape', 
-    'wrap_varnode_func', 'wrap_simple_named_op', 'wrap_named_op', 'wrap_named_class_func',
+    'wrap_varnode_func', 'wrap_named_op', 'wrap_force_named_op', 'wrap_named_class_func',
     'unique_opr_name', 'StaticDynamicDim', 'lazy_O', 'auto_reuse'
 ]
 
@@ -45,7 +45,7 @@ def wrap_varnode_func(func):
     return new_func
 
 
-def wrap_simple_named_op(*args, use_scope=True, default_name=None):
+def wrap_named_op(*args, use_scope=True, default_name=None):
     # do instant-binding
     def wrapper(func, default_name=default_name):
         if default_name is None:
@@ -53,6 +53,7 @@ def wrap_simple_named_op(*args, use_scope=True, default_name=None):
             default_name = sig.parameters['name'].default
 
         @functools.wraps(func)
+        @wrap_varnode_func
         def new_func(*args, name=default_name, **kwargs):
             if name is None:
                 name = default_name
@@ -67,9 +68,10 @@ def wrap_simple_named_op(*args, use_scope=True, default_name=None):
     return wrapper
 
 
-def wrap_named_op(*args, use_scope=True):
+def wrap_force_named_op(*args, use_scope=True):
     def wrapper(func):
         @functools.wraps(func)
+        @wrap_varnode_func
         def new_func(name, *args, **kwargs):
             opr_name = unique_opr_name(name) 
             if use_scope:

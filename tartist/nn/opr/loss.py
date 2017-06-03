@@ -8,7 +8,7 @@
 
 import tensorflow as tf
 
-from .helper import wrap_varnode_func, wrap_named_op
+from .helper import wrap_varnode_func, wrap_force_named_op
 from .helper import lazy_O as O
 
 __all__ = [
@@ -30,15 +30,13 @@ def grad(ys, xs, grad_ys=None, name='gradients'):
     return outs
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def raw_l2_loss(name, pred, label):
     loss = 0.5 * O.sqr(pred - label)
     return tf.identity(loss, name='out')
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def raw_smooth_l1_loss(name, pred, label, sigma=1.):
     delta = O.abs(pred - label)
     mask = (delta > float(sigma)).astype('float32')
@@ -47,29 +45,25 @@ def raw_smooth_l1_loss(name, pred, label, sigma=1.):
     return loss
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def raw_cross_entropy(name, pred, label, is_onehot=False):
     raise NotImplementedError()
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def raw_cross_entropy_prob(name, pred, label, eps=1e-4):
     loss = -label * O.log(pred + eps) - (1. - label) * O.log(1. - pred + eps)
     return tf.identity(loss, name='out')
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def get_masked_loss(name, loss, mask, eps=1e-3):
     loss *= mask
     loss = loss.sum() / (mask.sum() + eps)
     return tf.identity(loss, 'out')
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def get_pn_balanced_loss(name, loss, label, mask=None, eps=1e-3):
     neg_mask = (label < 0.5).astype('float32')
     pos_mask = (1. - neg_mask)

@@ -7,17 +7,15 @@
 # This file is part of TensorArtist.
 
 
-from .helper import lazy_O as O
-from .helper import as_varnode, as_tftensor, wrap_varnode_func, wrap_simple_named_op
+from .helper import as_tftensor, wrap_varnode_func, wrap_named_op
 from tensorflow.python.framework import function
 
 import tensorflow as tf
-import functools
 
 __all__ = ['clip_gradient', 'preserve_gradient_unary']
 
 
-@wrap_varnode_func
+@wrap_named_op
 def clip_gradient(inpvar, clip_value_min, clip_value_max, name='clip_gradient'):
     def _clip_gradient_backward(unused_op, grad):
         return tf.clip_by_value(grad, clip_value_min, clip_value_max)
@@ -29,7 +27,7 @@ def clip_gradient(inpvar, clip_value_min, clip_value_max, name='clip_gradient'):
     with tf.name_scope(name, values=[inpvar]):
         out = _clip_gradient_forward(inpvar)
         as_tftensor(out).set_shape(as_tftensor(inpvar).get_shape())
-    return output
+    return out
 
 
 def preserve_gradient_unary(func):

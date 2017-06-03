@@ -7,7 +7,7 @@
 # This file is part of TensorArtist.
 
 from ._defaults import __default_dtype__, __default_nonlin__
-from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_named_op, StaticDynamicDim
+from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_force_named_op, StaticDynamicDim
 from .helper import lazy_O as O
 from ..graph.env import Env, get_default_env
 
@@ -16,12 +16,12 @@ import functools
 
 __all__ = ['conv2d', 'pooling2d', 'max_pooling2d', 'avg_pooling2d', 'fc', 'ntn', 'dropout', 'batch_norm', 'deconv2d']
 
-@wrap_named_op
-@wrap_varnode_func
+
+@wrap_force_named_op
 def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
-        use_bias=True, bias_is_shared_in_channel=True,
-        nonlin=__default_nonlin__,
-        W=None, b=None, param_dtype=__default_dtype__):
+           use_bias=True, bias_is_shared_in_channel=True,
+           nonlin=__default_nonlin__,
+           W=None, b=None, param_dtype=__default_dtype__):
 
     inpvar = as_varnode(inpvar)
     kernel = get_2dshape(kernel)
@@ -57,8 +57,7 @@ def conv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME',
     return tf.identity(_, name='out')
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def pooling2d(name, inpvar, kernel, stride=None, padding='VALID', method='MAX'):
     inpvar = as_varnode(inpvar)
     kernel = get_4dshape(kernel)
@@ -79,8 +78,7 @@ max_pooling2d = functools.partial(pooling2d, method='MAX')
 avg_pooling2d = functools.partial(pooling2d, method='AVG')
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def fc(name, inpvar, nr_output_channels,
         use_bias=True, nonlin=__default_nonlin__,
         W=None, b=None, param_dtype=__default_dtype__):
@@ -103,8 +101,7 @@ def fc(name, inpvar, nr_output_channels,
     return tf.identity(out, name='out')
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def ntn(name, lhs, rhs, nr_output_channels,
         use_bias=True, nonlin=__default_nonlin__,
         W=None, b=None, param_dtype=__default_dtype__):
@@ -131,8 +128,7 @@ def ntn(name, lhs, rhs, nr_output_channels,
     return tf.identity(out, name='out')
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def dropout(name, inpvar, keep_prob, keep_prob_sym=None, noise_shape=None, seed=None):
     env = get_default_env()
     if env.flags.compute_enable_dropout(name):
@@ -143,10 +139,18 @@ def dropout(name, inpvar, keep_prob, keep_prob_sym=None, noise_shape=None, seed=
     return tf.identity(out, name='out')
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def batch_norm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dtype=__default_dtype__):
-    ''' inpvar should be of data_format NHWC'''
+    """
+    Batch normalization.
+    :param name: operator name
+    :param inpvar: input tensor, of data type NHWC
+    :param decay: decay for moving average
+    :param epsilon: epsilon
+    :param use_affine: add affine transformation after the normalization (to preserve the bias and scale)
+    :param param_dtype: param dtype
+    :return: output tensor
+    """
     from tensorflow.python.training import moving_averages
     assign_moving_average = moving_averages.assign_moving_average
 
@@ -186,12 +190,11 @@ def batch_norm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dty
         return tf.identity(xn, name='out')
 
 
-@wrap_named_op
-@wrap_varnode_func
+@wrap_force_named_op
 def deconv2d(name, inpvar, nr_output_channels, kernel, stride=1, padding='SAME', out_shape=None,
-        use_bias=True, bias_is_shared_in_channel=True,
-        nonlin=__default_nonlin__,
-        W=None, b=None, param_dtype=__default_dtype__):
+             use_bias=True, bias_is_shared_in_channel=True,
+             nonlin=__default_nonlin__,
+             W=None, b=None, param_dtype=__default_dtype__):
 
     inpvar = as_varnode(inpvar)
     in_shape = inpvar.static_shape

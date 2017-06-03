@@ -10,7 +10,6 @@ from tartist.nn.graph.node import as_tftensor
 from tartist.nn.opr.helper import wrap_varnode_func
 
 import functools
-import tensorflow as tf
 import tensorflow.contrib.rnn as tf_rnn
 
 
@@ -20,8 +19,6 @@ def migrate_cell(cell_cls):
         @wrap_varnode_func
         def __call__(self, inputs, state, *args, **kwargs):
             inputs = as_tftensor(inputs)
-            print(inputs, state)
-            # state = as_tftensor(state)
             res = super().__call__(self, inputs, state, *args, **kwargs)
             return res
 

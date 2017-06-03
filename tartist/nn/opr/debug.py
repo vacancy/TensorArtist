@@ -6,7 +6,7 @@
 # 
 # This file is part of TensorArtist.
 
-from .helper import wrap_varnode_func, wrap_simple_named_op
+from .helper import wrap_named_op
 from ...core import get_logger
 import numpy as np
 import tensorflow as tf
@@ -16,22 +16,22 @@ logger = get_logger(__file__)
 __all__ = ['callback_injector']
 
 
-def _rms(var):
+def _np_rms(var):
     return np.sqrt((var ** 2).mean())
 
 
 def _default_log_callback(tensor, var):
-    logger.info('log for {} (shape = {}): mean={}, std={}, rms={}, min={}, max={}'.format(tensor.name, var.shape,
-          var.mean(), var.std(), _rms(var), var.min(), var.max()))
+    logger.info('log for {} (shape = {}): mean={}, std={}, rms={}, min={}, max={}'.format(
+        tensor.name, var.shape, var.mean(), var.std(), _np_rms(var), var.min(), var.max()))
 
 
 def _default_embed_callback(tensor, var):
     logger.info('embed for {}, access by tensor and var'.format(tensor.name))
-    from IPython import embed; embed()
+    from IPython import embed
+    embed()
 
 
-@wrap_simple_named_op
-@wrap_varnode_func
+@wrap_named_op
 def callback_injector(tensor, callback='log', name='callback_injector'):
     if callback == 'log':
         callback = _default_log_callback

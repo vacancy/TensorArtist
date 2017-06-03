@@ -3,7 +3,7 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 02/24/17
-# 
+#
 # This file is part of TensorArtist.
 
 from .helper import wrap_varnode_func
@@ -22,131 +22,101 @@ def migrate_opr(name, tf_func):
     return new_func
 
 
-__all_migrated_oprs__ = []
-
 # unary arith
-__all_migrated_oprs__.extend([
-    ('identity', tf.identity),
+identity = migrate_opr('identity', tf.identity)
 
-    ('neg', tf.negative),
-    ('abs', tf.abs),
-    ('log', tf.log),
-    ('exp', tf.exp),
-    ('reciprocal', tf.reciprocal),
-    ('sqr', tf.square),
-    ('sqrt', tf.sqrt),
-    ('rsqrt', tf.rsqrt),
-    ('floor', tf.floor),
-    ('ceil', tf.ceil),
-    ('round', tf.round),
-    ('sin', tf.sin),
-    ('cos', tf.cos),
-    ('tan', tf.tan),
-    ('asin', tf.asin),
-    ('acos', tf.acos),
-    ('atan', tf.atan),
-    ('tanh', tf.tanh),
-])
+neg = migrate_opr('neg', tf.negative)
+abs = migrate_opr('abs', tf.abs)
+log = migrate_opr('log', tf.log)
+exp = migrate_opr('exp', tf.exp)
+reciprocal = migrate_opr('reciprocal', tf.reciprocal)
+sqr = migrate_opr('sqr', tf.square)
+sqrt = migrate_opr('sqrt', tf.sqrt)
+rsqrt = migrate_opr('rsqrt', tf.rsqrt)
+floor = migrate_opr('floor', tf.floor)
+ceil = migrate_opr('ceil', tf.ceil)
+round = migrate_opr('round', tf.round)
+sin = migrate_opr('sin', tf.sin)
+cos = migrate_opr('cos', tf.cos)
+tan = migrate_opr('tan', tf.tan)
+asin = migrate_opr('asin', tf.asin)
+acos = migrate_opr('acos', tf.acos)
+atan = migrate_opr('atan', tf.atan)
+tanh = migrate_opr('tanh', tf.tanh)
 
 # unary arith: advanced
-__all_migrated_oprs__.extend([
-    ('sigmoid', tf.sigmoid),
-    ('relu', tf.nn.relu),
-])
+sigmoid = migrate_opr('sigmoid', tf.sigmoid)
+relu = migrate_opr('relu', tf.nn.relu)
 
 # binary arith
-__all_migrated_oprs__.extend([
-    ('add', tf.add),
-    ('sub', tf.subtract),
-    ('mul', tf.multiply),
-    ('truediv', tf.truediv),
-    ('floordiv', tf.floordiv),
-    ('mod', tf.mod),
-    ('cross', tf.cross),
-    ('matmul', tf.matmul),
-    ('bias_add', tf.nn.bias_add),
-    ('max', tf.maximum),
-    ('min', tf.minimum),
-    ('argmax', tf.maximum),
-    ('argmin', tf.minimum),
-    ('pow', tf.pow),
+add = migrate_opr('add', tf.add)
+sub = migrate_opr('sub', tf.subtract)
+mul = migrate_opr('mul', tf.multiply)
+truediv = migrate_opr('truediv', tf.truediv)
+floordiv = migrate_opr('floordiv', tf.floordiv)
+mod = migrate_opr('mod', tf.mod)
+cross = migrate_opr('cross', tf.cross)
+matmul = migrate_opr('matmul', tf.matmul)
+bias_add = migrate_opr('bias_add', tf.nn.bias_add)
+max = migrate_opr('max', tf.maximum)
+min = migrate_opr('min', tf.minimum)
+argmax = migrate_opr('argmax', tf.maximum)
+argmin = migrate_opr('argmin', tf.minimum)
+pow = migrate_opr('pow', tf.pow)
 
-    ('eq', tf.equal),
-    ('neq', tf.not_equal),
-    ('gt', tf.greater),
-    ('ge', tf.greater_equal),
-    ('lt', tf.less),
-    ('le', tf.less_equal),
+eq = migrate_opr('eq', tf.equal)
+neq = migrate_opr('neq', tf.not_equal)
+gt = migrate_opr('gt', tf.greater)
+ge = migrate_opr('ge', tf.greater_equal)
+lt = migrate_opr('lt', tf.less)
+le = migrate_opr('le', tf.less_equal)
 
-    ('add_n', tf.add_n)
-])
+add_n = migrate_opr('add_n', tf.add_n)
 
-__all_migrated_oprs__.extend([
-    ('reduce_sum', tf.reduce_sum),
-    ('reduce_prod', tf.reduce_prod),
-    ('reduce_mean', tf.reduce_mean),
-    ('reduce_max', tf.reduce_max),
-    ('reduce_min', tf.reduce_min),
-    ('reduce_all', tf.reduce_all),
-    ('reduce_any', tf.reduce_any)
-])
+reduce_sum = migrate_opr('reduce_sum', tf.reduce_sum)
+reduce_prod = migrate_opr('reduce_prod', tf.reduce_prod)
+reduce_mean = migrate_opr('reduce_mean', tf.reduce_mean)
+reduce_max = migrate_opr('reduce_max', tf.reduce_max)
+reduce_min = migrate_opr('reduce_min', tf.reduce_min)
+reduce_all = migrate_opr('reduce_all', tf.reduce_all)
+reduce_any = migrate_opr('reduce_any', tf.reduce_any)
 
-__all_migrated_oprs__.extend([
-    ('slice', tf.slice),
-    ('strided_slice', tf.strided_slice),
-    ('split', tf.split),
-    ('pad', tf.pad),
-    ('reverse', tf.reverse),
-])
+slice = migrate_opr('slice', tf.slice)
+strided_slice = migrate_opr('strided_slice', tf.strided_slice)
+split = migrate_opr('split', tf.split)
+pad = migrate_opr('pad', tf.pad)
+reverse = migrate_opr('reverse', tf.reverse)
 
 # array ops: creation
-__all_migrated_oprs__.extend([
-    ('cast', tf.cast),
-    ('zeros', tf.zeros),
-    ('ones', tf.ones),
-    ('zeros_like', tf.zeros_like),
-    ('ones_like', tf.ones_like),
-    ('one_hot', tf.one_hot),
-    ('range', tf.range)
-])
+cast = migrate_opr('cast', tf.cast)
+zeros = migrate_opr('zeros', tf.zeros)
+ones = migrate_opr('ones', tf.ones)
+zeros_like = migrate_opr('zeros_like', tf.zeros_like)
+ones_like = migrate_opr('ones_like', tf.ones_like)
+one_hot = migrate_opr('one_hot', tf.one_hot)
+range = migrate_opr('range', tf.range)
 
 # array ops: advanced
-__all_migrated_oprs__.extend([
-    ('where', tf.where),
-    ('meshgrid', tf.meshgrid),
-])
+where = migrate_opr('where', tf.where)
+meshgrid = migrate_opr('meshgrid', tf.meshgrid)
 
 # condition, loop
-__all_migrated_oprs__.extend([
-    ('cond', tf.cond),
-])
+cond = migrate_opr('cond', tf.cond)
 
 # control
-__all_migrated_oprs__.extend([
-    ('zero_grad', tf.stop_gradient)
-])
+zero_grad = migrate_opr('zero_grad', tf.stop_gradient)
 
 # softmax related
-__all_migrated_oprs__.extend([
-    ('softmax', tf.nn.softmax),
-    ('softmax_cross_entropy_with_logits', tf.nn.softmax_cross_entropy_with_logits),
-    ('sparse_softmax_cross_entropy_with_logits', tf.nn.sparse_softmax_cross_entropy_with_logits),
-    ('softmax_cross_entropy_with_logits', tf.nn.softmax),
-    ('sigmoid_cross_entropy_with_logits', tf.nn.sigmoid_cross_entropy_with_logits),
-])
+softmax = migrate_opr('softmax', tf.nn.softmax)
+softmax_cross_entropy_with_logits = migrate_opr('softmax_cross_entropy_with_logits', tf.nn.softmax_cross_entropy_with_logits)
+sparse_softmax_cross_entropy_with_logits = migrate_opr('sparse_softmax_cross_entropy_with_logits', tf.nn.sparse_softmax_cross_entropy_with_logits)
+sigmoid_cross_entropy_with_logits = migrate_opr('sigmoid_cross_entropy_with_logits', tf.nn.sigmoid_cross_entropy_with_logits)
 
 # clipping
-__all_migrated_oprs__.extend([
-    ('clip_by_value', tf.clip_by_value),
-    ('clip_by_norm', tf.clip_by_norm),
-    ('clip_by_global_norm', tf.clip_by_global_norm),
-    ('clip_by_average_norm', tf.clip_by_average_norm)
-])
+clip_by_value = migrate_opr('clip_by_value', tf.clip_by_value)
+clip_by_norm = migrate_opr('clip_by_norm', tf.clip_by_norm)
+clip_by_global_norm = migrate_opr('clip_by_global_norm', tf.clip_by_global_norm)
+clip_by_average_norm = migrate_opr('clip_by_average_norm', tf.clip_by_average_norm)
 
-__all_migrated_oprs__ = dict(__all_migrated_oprs__)
-
-__all__ = []
-__all__.extend(list(__all_migrated_oprs__.keys()))
-
-for k, v in __all_migrated_oprs__.items():
-    globals()[k] = migrate_opr(k, v)
+del functools
+del tf
