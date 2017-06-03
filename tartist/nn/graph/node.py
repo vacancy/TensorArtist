@@ -13,7 +13,8 @@ import tensorflow as tf
 
 __all__ = [
     '__valid_tensor_types__', '__valid_tf_tensor_types__',
-    'VarNode', 'OprNode', 'as_varnode', 'as_tftensor'
+    'VarNode', 'OprNode',
+    'as_varnode', 'as_varnode_or_register', 'as_tftensor'
 ]
 
 
@@ -27,6 +28,11 @@ class VarNodeStore(object):
         v = self._make(tensor)
         self.__kv[tensor] = v
         return v
+
+    def register(self, varnode):
+        assert isinstance(varnode, VarNode)
+        tensor = varnode.impl
+        self.__kv[tensor] = varnode
 
     def _make(self, tensor):
         return VarNode(tensor)
@@ -271,13 +277,14 @@ class VarNode(VarNodeOpDecl):
     def op(self):
         return self.__impl.op
 
-    @property
-    def taop(self):
-        return self.__taop
+    if False:
+        @property
+        def taop(self):
+            return self.__taop
 
-    def set_taop(self, op):
-        self.__taop = op
-        assert_instance(op, OprNode)
+        def set_taop(self, op):
+            self.__taop = op
+            assert_instance(op, OprNode)
 
 
 class OprNode(object):
@@ -342,6 +349,13 @@ def as_varnode(tensor, dtype=None):
         return constant(tensor, dtype=dtype)
 
     return varnode_store.get(tensor)
+
+
+def as_varnode_or_register(tensor, dtype=None):
+    if isinstance(tensor, VarNode):
+        varnode_store.register(tensor)
+        return tensor
+    return as_varnode(tensor, dtype=dtype)
 
 
 def as_tftensor(tensor):

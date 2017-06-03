@@ -24,7 +24,6 @@ from .tensor import *
 
 from .initializer import *
 from .migrate import *
-from .helper import argscope
 
 from . import distrib
 

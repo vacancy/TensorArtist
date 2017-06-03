@@ -108,7 +108,7 @@ def main():
         make_network(env, h, w)
 
     net = env.network
-    netin = net.outputs['img'].taop
+    netin = net.outputs['img']
 
     with env.as_default():
         outputs = net.outputs

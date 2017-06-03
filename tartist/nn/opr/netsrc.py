@@ -10,9 +10,9 @@ import numpy as np
 import tensorflow as tf
 
 from ._defaults import __default_dtype__
-from .helper import device_context, wrap_varnode_func, unique_opr_name
+from .helper import device_context, wrap_varnode_func
 from ..graph.env import get_default_env
-from ..graph.node import as_varnode, OprNode, __valid_tensor_types__
+from ..graph.node import as_varnode, VarNode, __valid_tensor_types__
 from ..tfutils import assign_variable, fetch_variable, TArtGraphKeys, extend_collection_list
 from ...core.utils.meta import assert_notnone
 
@@ -28,18 +28,16 @@ def placeholder(name, shape=None, dtype=__default_dtype__, device=None):
         return var
 
 
-class VariableOp(OprNode):
-    def __init__(self, name, output, owner_env):
-        super().__init__(name, [], [output])
+class MutableVarNode(VarNode):
+    def __init__(self, impl, owner_env):
+        super().__init__(impl)
         self._owner_env = owner_env
 
     def get_value(self):
-        var = self.outputs[0].impl
-        return fetch_variable(var, self._owner_env.session)
+        return fetch_variable(self.tft, self._owner_env.session)
 
     def set_value(self, value, use_locking=False):
-        var = self.outputs[0].impl
-        assign_variable(var, value, self._owner_env.session, use_locking=use_locking)
+        assign_variable(self.tft, value, self._owner_env.session, use_locking=use_locking)
         return self
 
 
@@ -47,7 +45,6 @@ class VariableOp(OprNode):
 def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, device=None, trainable=True,
              collections=None):
 
-    opr_name = unique_opr_name(name)
     collections = extend_collection_list(collections, TArtGraphKeys.TART_VARIABLES)
 
     if tf.get_variable_scope().reuse:
@@ -70,12 +67,8 @@ def variable(name, value_or_initializer, shape=None, dtype=__default_dtype__, de
                 assert_notnone(shape, name='shape')
                 var = tf.get_variable(name, shape=shape, dtype=dtype, initializer=value_or_initializer,
                                       trainable=trainable, collections=None)
-            var = as_varnode(var)
 
-    op = VariableOp(opr_name, var, get_default_env())
-    var = op.outputs[0]
-
-    tf.add_to_collection(TArtGraphKeys.TART_OPERATORS, op)
+    var = MutableVarNode(var, get_default_env())
     tf.get_default_graph().add_to_collections(collections, var)
     return var
 

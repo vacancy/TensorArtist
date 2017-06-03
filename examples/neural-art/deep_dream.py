@@ -75,7 +75,7 @@ def make_step(net):
 
     imgvar = net.outputs['img']
     target = net.outputs['end']
-    netin = imgvar.taop
+    netin = imgvar
 
     # random draw ox, oy
     jitter = get_env('deep_dream.jitter')
@@ -122,7 +122,7 @@ def main():
         snapshot.load_weights_file(env, args.weight_path)
 
         net = env.network
-        netin = net.outputs['img'].taop
+        netin = net.outputs['img']
         netin.set_value(as_netin(img))
 
         io.makedir(args.output_path)

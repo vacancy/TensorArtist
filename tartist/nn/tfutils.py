@@ -13,10 +13,12 @@ import tensorflow as tf
 class TArtGraphKeys:
     PLACEHOLDERS = 'placeholders'
     TART_VARIABLES = 'tart_variables'
-    TART_OPERATORS = 'tart_operators'
     INFERENCE_SUMMARIES = 'inference_summaries'
     SCALAR_VARIABLES = 'scalar_variables'
     OPTIMIZER_VARIABLES = 'optimizer_variables'
+
+    # DEPRECATED: (2017-12-02)
+    TART_OPERATORS = 'tart_operators'
 
 
 def clean_name(tensor, suffix=':0'):
