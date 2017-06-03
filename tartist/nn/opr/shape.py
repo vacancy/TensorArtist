@@ -27,7 +27,7 @@ def canonize_sym_shape(shape, name='canonize_shape'):
     if not isinstance(shape, (tuple, list)):
         return shape
     if all(map(lambda x: type(x) is int, shape)):
-        return shape
+        return np.array(shape, dtype='int32')
     return tf.stack(shape)
 
 
@@ -73,7 +73,7 @@ def remove_axis(inpvar, axis, name='remove_axis'):
 sqeeze = remove_axis
 
 
-@wrap_named_op
+@wrap_named_op(use_scope=False)
 def tile(inpvar, multiples, name='tile'):
     return tf.tile(inpvar, canonize_sym_shape(multiples), name=name)
 

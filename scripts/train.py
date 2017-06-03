@@ -58,12 +58,6 @@ def main():
             desc.make_network(env)
         desc.make_optimizer(env)
 
-        # debug outputs
-        for k in tf.get_default_graph().get_all_collection_keys():
-            s = tf.get_collection(k)
-            names = ['Collection ' + k] + sorted(['\t{}'.format(v.name) for v in s])
-            logger.info('\n'.join(names))
-
     nr_iters = get_env('trainer.nr_iters', get_env('trainer.epoch_size', 1) * get_env('trainer.nr_epochs', 0))
     trainer_cls = getattr(desc, '__trainer_cls__', train.SimpleTrainer)
     trainer = trainer_cls(nr_iters, env=env, data_provider=desc.make_dataflow_train, desc=desc)

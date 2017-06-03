@@ -54,12 +54,6 @@ def main():
     with env.as_default():
         desc.make_network(env)
 
-        # debug outputs
-        for k in tf.get_default_graph().get_all_collection_keys():
-            s = tf.get_collection(k)
-            names = ['Collection ' + k] + sorted(['\t{}'.format(v.name) for v in s])
-            logger.info('\n'.join(names))
-
         func = env.make_func()
         func.compile(env.network.outputs)
 
