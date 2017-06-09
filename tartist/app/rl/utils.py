@@ -88,8 +88,8 @@ class LimitLengthProxyRLEnviron(ProxyRLEnvironBase):
             is_over = True
         return r, is_over
 
-    def _restart(self):
-        super()._restart()
+    def _restart(self, *args, **kwargs):
+        super()._restart(*args, **kwargs)
         self._cnt = 0
 
 
