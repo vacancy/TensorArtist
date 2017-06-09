@@ -23,6 +23,7 @@ __all__ = [
     'as_varnode', 'as_tftensor',
     'get_2dshape', 'get_4dshape', 
     'wrap_varnode_func', 'wrap_named_op', 'wrap_named_op_method', 'wrap_force_named_op',
+    'argscope',
     'StaticDynamicDim', 'lazy_O', 'auto_reuse'
 ]
 

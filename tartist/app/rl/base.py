@@ -53,7 +53,7 @@ class RLEnvironBase(object):
     def play_one_episode(self, func, ret_states=False, restart_kwargs=None, finish_kwargs=None):
         states = []
 
-        self.restart(restart_kwargs or {})
+        self.restart(**(restart_kwargs or {}))
         while True:
             state = self.current_state
             action = func(state)
@@ -61,7 +61,7 @@ class RLEnvironBase(object):
             if ret_states:
                 states.append(state)
             if is_over:
-                self.finish(finish_kwargs or {})
+                self.finish(**(finish_kwargs or {}))
                 break
 
         if ret_states:
