@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/21/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from copy import deepcopy
 from .utils.meta import dict_deep_update, dict_deep_keys

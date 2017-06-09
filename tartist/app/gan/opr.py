@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 5/25/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from tartist.nn import opr as O

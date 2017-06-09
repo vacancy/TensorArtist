@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/2/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from tartist.data.rflow import control, InputPipe

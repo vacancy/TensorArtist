@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 5/9/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .maze import MazeEnv
 
@@ -67,4 +67,3 @@ class MazeVisualizer(object):
 
 _visualizer = MazeVisualizer()
 render_maze = _visualizer.render
-

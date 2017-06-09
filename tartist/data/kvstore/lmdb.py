@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/30/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import KVStoreBase
 from ...core.utils.cache import cached_property
@@ -74,4 +74,3 @@ class LMDBKVStore(KVStoreBase):
             assert self._lmdb_keys is not None, 'LMDBKVStore does not support __keys__ access' 
             self._lmdb_keys = _loads(self._lmdb_keys)
         return self._lmdb_keys
-

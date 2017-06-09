@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/18/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist import random
 from tartist.core.utils.cache import cached_property
@@ -246,4 +246,3 @@ class ContinuousActionSpace(ActionSpaceBase):
             mu, std = theta
             return self.rng.randn(*self.shape) * std + mu
         return self.rng.uniform(self._low, self._high)
-

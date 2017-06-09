@@ -4,9 +4,9 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/27/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
-from .helper import wrap_varnode_func, wrap_simple_named_op
+from .helper import wrap_named_op
 from .helper import lazy_O as O
 from ..graph.node import as_varnode, __valid_tensor_types__
 import tensorflow as tf
@@ -36,8 +36,7 @@ def get_vi_2dshape(shape):
     return v, v
 
 
-@wrap_simple_named_op
-@wrap_varnode_func
+@wrap_named_op
 def _crop(inpvar, shape, method='center', name='crop'):
     assert method in ('center', 'leftup')
     assert inpvar.partial_shape is None or len(inpvar.static_shape) == 4
@@ -54,8 +53,7 @@ crop_center = functools.partial(_crop, method='center')
 crop_lu = functools.partial(_crop, method='leftup')
 
 
-@wrap_simple_named_op
-@wrap_varnode_func
+@wrap_named_op
 def _pad(inpvar, shape, method='center', mode='CONSTANT', name='pad'):
     assert method in ('center', 'rightbottom')
     assert inpvar.static_shape is not None and len(inpvar.static_shape) == 4
@@ -77,8 +75,7 @@ pad_center = functools.partial(_pad, method='center')
 pad_rb = functools.partial(_pad, method='rightbottom')
 
 
-@wrap_simple_named_op
-@wrap_varnode_func
+@wrap_named_op
 def pad_rb_multiple_of(inpvar, multiple, val=0, name='pad_rb_multiple_of'):
     assert inpvar.static_shape is None or len(inpvar.static_shape) == 4
 
@@ -111,14 +108,12 @@ def pad_rb_multiple_of(inpvar, multiple, val=0, name='pad_rb_multiple_of'):
 #     return opr.outputs[0]
 
 
-@wrap_simple_named_op
-@wrap_varnode_func
+@wrap_named_op
 def img_inverse(inpvar, name='img_inverse'):
-    return 255 -inpvar
+    return 255 - inpvar
 
 
-@wrap_simple_named_op
-@wrap_varnode_func
+@wrap_named_op
 def img_flip(inpvar, axis=2, name='img_flip'):
     assert inpvar.static_shape is None or len(inpvar.static_shape) == 4
     assert axis in (1, 2)

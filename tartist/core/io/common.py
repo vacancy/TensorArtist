@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/19/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from math import log
 
@@ -26,4 +26,3 @@ def fsize_format(num):
     unit, num_decimals = unit_list[exponent]
     format_string = '{:.%sf} {}' % (num_decimals)
     return format_string.format(quotient, unit)
-

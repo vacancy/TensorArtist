@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/3/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ...core.utils.meta import notnone_property
 import queue
@@ -68,5 +68,3 @@ class InputPipe(PipeBase):
 class OutputPipe(PipeBase):
     def __init__(self, name, bufsize=10):
         super().__init__('OUT', name, bufsize)
-
-

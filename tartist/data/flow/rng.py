@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/23/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import SimpleDataFlowBase
 from ...random import gen_rng
@@ -78,4 +78,3 @@ class RandomRepeatDataFlow(RandomizedDataFlowBase):
             for i in range(nr_repeat * self._cache_size):
                 idx = self._rng.randint(len(data))
                 yield data[idx]
-

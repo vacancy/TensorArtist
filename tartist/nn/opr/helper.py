@@ -4,11 +4,10 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/31/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
-from .. import TArtGraphKeys
 from ..graph.env import get_default_env, reuse_context
-from ..graph.node import OprNode, as_varnode, as_tftensor
+from ..graph.node import as_varnode, as_varnode_or_register, as_tftensor
 from ...core.logger import get_logger
 from ...core.utils.context import EmptyContext
 from ...core.utils.shape import get_2dshape, get_4dshape
@@ -23,8 +22,8 @@ __all__ = [
     'device_context', 
     'as_varnode', 'as_tftensor',
     'get_2dshape', 'get_4dshape', 
-    'wrap_varnode_func', 'wrap_simple_named_op', 'wrap_named_op', 'wrap_named_class_func',
-    'unique_opr_name', 'StaticDynamicDim', 'lazy_O', 'auto_reuse'
+    'wrap_varnode_func', 'wrap_named_op', 'wrap_named_op_method', 'wrap_force_named_op',
+    'StaticDynamicDim', 'lazy_O', 'auto_reuse'
 ]
 
 
@@ -40,19 +39,22 @@ def wrap_varnode_func(func):
     def new_func(*args, **kwargs):
         outputs = func(*args, **kwargs)
         if isinstance(outputs, (tuple, list)):
-            return tuple(map(as_varnode, outputs))
-        return as_varnode(outputs)
+            return tuple(map(as_varnode_or_register, outputs))
+        return as_varnode_or_register(outputs)
     return new_func
 
 
-def wrap_simple_named_op(*args, use_scope=True, default_name=None):
+def wrap_named_op(*args, use_scope=True, default_name=None):
     # do instant-binding
-    def wrapper(func, default_name=default_name):
+    def wrapper(func):
+        nonlocal default_name
+
         if default_name is None:
             sig = inspect.signature(func)
             default_name = sig.parameters['name'].default
 
         @functools.wraps(func)
+        @wrap_varnode_func
         def new_func(*args, name=default_name, **kwargs):
             if name is None:
                 name = default_name
@@ -62,59 +64,45 @@ def wrap_simple_named_op(*args, use_scope=True, default_name=None):
             else:
                 return func(*args, name=name, **kwargs)
         return new_func
+
     if len(args) == 1 and callable(args[0]):
         return wrapper(args[0])
     return wrapper
 
 
-def wrap_named_op(*args, use_scope=True):
+def wrap_named_op_method(*args):
     def wrapper(func):
         @functools.wraps(func)
-        def new_func(name, *args, **kwargs):
-            opr_name = unique_opr_name(name) 
-            if use_scope:
-                with tf.variable_scope(name):
-                    outputs = func(name, *args, **kwargs)
-            else:
-                outputs = func(name, *args, **kwargs)
-            
-            opr = OprNode(opr_name)
-            if isinstance(outputs, (tuple, list)):
-                outputs = tuple(map(as_varnode, outputs))
-                for o in outputs:
-                    if o.taop is None:
-                        o.set_taop(opr)
-                tf.add_to_collection(TArtGraphKeys.TART_OPERATORS, outputs[0].taop)
-            else:
-                outputs = as_varnode(outputs)
-                if outputs.taop is None:
-                    outputs.set_taop(opr)
-                tf.add_to_collection(TArtGraphKeys.TART_OPERATORS, outputs.taop)
-            return outputs
-        return new_func
-    if len(args) == 1 and callable(args[0]):
-        return wrapper(args[0])
-    return wrapper
-
-
-def wrap_named_class_func(*args, in_class=True):
-    def wrapper(func):
-        @functools.wraps(func)
+        @wrap_varnode_func
         def new_func(self, *args, **kwargs):
-            opr_name = unique_opr_name(self.name)
+            opr_name = get_default_env().get_unique_name(self.name)
             if opr_name not in get_default_env().get_name_scope():
-                with tf.variable_scope(opr_name + '/' + func.__name__):
+                with tf.name_scope(opr_name + '/' + func.__name__):
                     return func(self, *args, **kwargs)
             else:
                 return func(self, *args, **kwargs)
         return new_func
+
     if len(args) == 1 and callable(args[0]):
         return wrapper(args[0])
     return wrapper
 
 
-def unique_opr_name(name):
-    return tf.get_default_graph().unique_name(name, mark_as_used=False)
+def wrap_force_named_op(*args, use_scope=True):
+    def wrapper(func):
+        @functools.wraps(func)
+        @wrap_varnode_func
+        def new_func(name, *args, **kwargs):
+            if use_scope:
+                with tf.variable_scope(name):
+                    return func(name, *args, **kwargs)
+            else:
+                return func(name, *args, **kwargs)
+        return new_func
+
+    if len(args) == 1 and callable(args[0]):
+        return wrapper(args[0])
+    return wrapper
 
 
 class StaticDynamicDim(object):
@@ -207,5 +195,3 @@ def auto_reuse(func):
             return func(*args, **kwargs)
 
     return wrapped
-
-

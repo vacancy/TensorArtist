@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/23/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 # This file is part of NeuArtist2
 
 from .rng import rng, reset_rng, gen_seed, gen_rng, shuffle_multiarray
@@ -95,4 +95,3 @@ def list_choice(l, rng=None):
     return l[rng.choice(len(l))]
     
 __all__.append('list_choice')
-

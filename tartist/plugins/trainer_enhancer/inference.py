@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/1/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from .summary import put_summary_history

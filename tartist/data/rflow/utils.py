@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import zmq
 import socket
@@ -119,4 +119,3 @@ def graceful_close(sock):
         return
     sock.setsockopt(zmq.LINGER, 0)
     sock.close()
-

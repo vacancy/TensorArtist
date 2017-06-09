@@ -4,14 +4,14 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/17/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """
 This file follows the design of tensorpack by ppwwyyxx
 See https://github.com/ppwwyyxx/tensorpack/blob/master/tensorpack/tfutils/distributions.py
 """
 
-from .helper import wrap_named_class_func, lazy_O as O
+from .helper import wrap_named_op_method, lazy_O as O
 import numpy as np
 
 __all__ = [
@@ -29,7 +29,7 @@ class DistributionBase(object):
     def name(self):
         return self._name
 
-    @wrap_named_class_func
+    @wrap_named_op_method
     def log_likelihood(self, x, theta, process_theta=False):
         assert x.ndims == 2 and x.static_shape[1] == self.sample_size, x.static_shape
         assert theta.ndims == 2 and theta.static_shape[1] == self.param_size, theta.static_shape
@@ -41,7 +41,7 @@ class DistributionBase(object):
         assert logl.ndims == 1, logl.static_shape
         return O.identity(logl, name='out')
 
-    @wrap_named_class_func
+    @wrap_named_op_method
     def entropy(self, theta, process_theta=False):
         assert theta.ndims == 2 and theta.static_shape[1] == self.param_size, theta.static_shape
 
@@ -49,12 +49,12 @@ class DistributionBase(object):
             theta = self._get_true_theta(theta)
         return O.identity(self._get_entropy(theta), name='out')
 
-    @wrap_named_class_func
+    @wrap_named_op_method
     def cross_entropy(self, x, theta, process_theta=False):
         log_likelihood = self.log_likelihood(x, theta, process_theta=process_theta)
         return -log_likelihood.mean(name='out')
 
-    @wrap_named_class_func
+    @wrap_named_op_method
     def sample(self, batch_size, theta, process_theta=False):
         shape = theta.static_shape
         assert len(shape) in [1, 2] and shape[-1] == self.param_size , shape
@@ -256,4 +256,3 @@ class GaussianDistributionWithUniformSample(GaussianDistribution):
     def _get_numerical_sample(self, theta):
         assert self._size == 1
         return np.linspace(self._num_min_val, self._num_max_val, self._nr_num_samples).reshape(-1, 1)
-

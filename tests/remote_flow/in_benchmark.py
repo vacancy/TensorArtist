@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 5/2/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from tartist.data.rflow import control, InputPipe
@@ -35,4 +35,3 @@ while True:
     pps = nr_packs / prob_interval
     print('RFlow benchmark: timestamp={}, pps={}.'.format(now, pps))
     time.sleep(prob_interval)
-

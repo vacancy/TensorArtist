@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import get_optimizer_variable
 from ..graph.env import get_default_env
@@ -66,4 +66,3 @@ class OptimizerWrapper(object):
         for f in self._grad_modifiers:
             all_gradients = f(all_gradients)
         return all_gradients
-

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/27/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 import argparse
@@ -108,7 +108,7 @@ def main():
         make_network(env, h, w)
 
     net = env.network
-    netin = net.outputs['img'].taop
+    netin = net.outputs['img']
 
     with env.as_default():
         outputs = net.outputs
@@ -158,4 +158,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

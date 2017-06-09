@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/18/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import ProxyRLEnvironBase
 from tartist.core import get_logger 
@@ -84,7 +84,7 @@ class LimitLengthProxyRLEnviron(ProxyRLEnvironBase):
     def _action(self, action):
         r, is_over = self.proxy.action(action)
         self._cnt += 1
-        if self._cnt >= self._limit:
+        if self._limit is not None and self._cnt >= self._limit:
             is_over = True
         return r, is_over
 
@@ -132,4 +132,3 @@ def remove_proxies(environ):
     while isinstance(environ, ProxyRLEnvironBase):
         environ = environ.proxy
     return environ
-

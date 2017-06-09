@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist import image
 from tartist.core import get_env
@@ -86,4 +86,3 @@ def demo(feed_dict, result, extra_info):
     print(text)
 
     image.imshow('demo', outputs)
-

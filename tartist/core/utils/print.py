@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 5/4/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import numpy as np
 
@@ -62,4 +62,3 @@ def stprint(data, key=None, indent=0):
         _indent_print('ndarray{}, dtype={}'.format(data.shape, data.dtype), indent, prefix=key)
     else:
         _indent_print(data, indent, prefix=key)
-

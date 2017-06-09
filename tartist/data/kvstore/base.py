@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/30/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 __all__ = ['KVStoreBase', 'MemKVStore']
 
@@ -64,4 +64,3 @@ class MemKVStore(KVStoreBase):
     
     def _keys(self):
         return self._store.keys()
-

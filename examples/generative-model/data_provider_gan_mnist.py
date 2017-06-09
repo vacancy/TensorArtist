@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import numpy as np
 import tqdm

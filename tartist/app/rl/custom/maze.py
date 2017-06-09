@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 4/22/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ..base import SimpleRLEnvironBase, DiscreteActionSpace
 from .... import random
@@ -501,4 +501,3 @@ class CustomLavaWorldEnv(MazeEnv):
             self._origin_canvas = self._canvas.copy()
             self._refresh_view()
             self._clear_distance_info()
-

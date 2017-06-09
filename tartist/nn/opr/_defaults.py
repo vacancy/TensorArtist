@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/31/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import tensorflow as tf
 

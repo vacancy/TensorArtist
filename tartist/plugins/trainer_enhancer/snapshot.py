@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/26/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.core import get_env, register_event, get_logger
 from tartist.core import io
@@ -117,4 +117,3 @@ def enable_weights_loading_after_intialization(trainer, weights_fpath):
             trainer.runtime['restore_weights'] = weights_fpath
 
     trainer.register_event('initialization:after', load_weights_on_initialization_after, priority=25)
-

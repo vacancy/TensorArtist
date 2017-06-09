@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/14/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .. import imgproc
 from ... import random
@@ -67,5 +67,3 @@ def lighting_augment(img, std, eigval=None, eigvec=None):
     img = img + bgr
 
     return img
-
-

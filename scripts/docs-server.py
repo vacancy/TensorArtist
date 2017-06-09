@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/25/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import http.server
 import socketserver
@@ -34,4 +34,3 @@ if __name__ == '__main__':
     print('Serving at port {}.'.format(port))
     httpd = socketserver.TCPServer(("", port), Handler)
     httpd.serve_forever()
-

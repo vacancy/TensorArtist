@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/23/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import io as _io
 import numpy as np
@@ -84,4 +84,3 @@ def pyplot2img(plt):
     im = cv2.imdecode(rawbuf, cv2.IMREAD_COLOR)
     buf.close()
     return im
-

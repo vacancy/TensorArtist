@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/14/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist import image
 from tartist.image.aug import cblk
@@ -15,4 +15,3 @@ if __name__ == '__main__':
     a = image.imread(sys.argv[1])
     b = cblk.fbaug(a)
     image.imshow('fbaug', b)
-

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 4/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from .. import image
@@ -36,4 +36,3 @@ __all__ = [
     'Function', 'VarNode', 'OprNode', 'as_tftensor', 'as_varnode',
     'np', 'tf'
 ]
-

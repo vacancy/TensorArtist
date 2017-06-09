@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 4/1/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 try:

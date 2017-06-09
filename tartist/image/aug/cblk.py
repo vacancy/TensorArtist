@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/14/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .. import imgproc
 from . import shape as shape_augment
@@ -28,4 +28,3 @@ def fbaug(img, target_shape=(224, 224), is_training=True):
 
         # 2. center crop 224x244 patch from the image
         return imgproc.center_crop(img, target_shape)
-

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/19/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .common import fsize_format
 from ..utils.cli import maybe_mkdir
@@ -53,4 +53,3 @@ def download(url, dir, filename=None):
     assert size > 0, "Download an empty file!"
     logger.critical('Succesfully downloaded ' + filename + " " + fsize_format(size) + '.')
     return fpath
-

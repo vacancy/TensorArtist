@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/29/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import importlib
 import os
@@ -84,4 +84,3 @@ def module_vars_as_dict(module):
         if not k.startswith('__'):
             res[k] = getattr(module, k)
     return res
-

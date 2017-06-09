@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/31/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .env import SimpleTrainerEnv
 from .. import summary
@@ -200,4 +200,3 @@ class SimpleTrainer(TrainerBase):
             summaries = tf.Summary.FromString(out['summaries'])
             self.runtime['summaries'] = summaries
         return out
-

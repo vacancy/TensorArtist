@@ -47,4 +47,3 @@ class Pack(object):
             steps=self.steps,
             is_ended=self.is_ended
         )
-

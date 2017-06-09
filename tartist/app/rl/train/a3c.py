@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/19/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.core import EnvBox, get_env, get_logger
 from tartist.data.rflow.query_pipe import QueryReqPipe, QueryRepPipe
@@ -159,4 +159,3 @@ class A3CTrainer(SimpleTrainer):
     def finalize(self):
         self.env.finalize_all_peers()
         super().finalize()
-

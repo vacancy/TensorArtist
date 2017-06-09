@@ -4,12 +4,13 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/16/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.core import get_env, get_logger
-from tartist.core.utils.cli import load_desc, parse_devices
+from tartist.core.utils.cli import load_desc, parse_devices, parse_args
 from tartist.nn import Env
 
+import sys
 import argparse
 import os.path as osp
 import tensorflow as tf
@@ -22,7 +23,7 @@ parser.add_argument('-w', '--weights', dest='weights_path', help='The pickle con
 parser.add_argument('-e', '--epoch', dest='epoch_num', help='Epoch number')
 parser.add_argument('-d', '--dev', dest='devices', default=[], nargs='+',
                     help='The devices trainer will use, default value can be set in env')
-args = parser.parse_args()
+args = parse_args(parser)
 
 
 def get_weights_path():
@@ -65,9 +66,10 @@ def main():
         env.initialize_all_variables()
         snapshot.load_weights_file(env, get_weights_path())
 
-    if get_env('demo.customized'):
+    if get_env('demo.customized', True):
         desc.main_demo(env, func)
     else:
+        logger.warn('Non-customized demo has been deprecated. Use main_demo instead')
         assert hasattr(desc, 'make_dataflow_demo') and hasattr(desc, 'demo')
 
         it = iter(desc.make_dataflow_demo(env))
@@ -82,4 +84,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

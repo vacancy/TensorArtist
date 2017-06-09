@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ..graph.node import as_varnode, as_tftensor, as_varnode
 from .arith import *
@@ -24,9 +24,7 @@ from .tensor import *
 
 from .initializer import *
 from .migrate import *
-from .helper import argscope
 
 from . import distrib
 
 var = as_varnode
-

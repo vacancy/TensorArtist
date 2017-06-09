@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/17/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.nn.train.trainer import TrainerBase
 from tartist.nn import summary

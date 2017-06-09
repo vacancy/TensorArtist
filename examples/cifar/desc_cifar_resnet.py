@@ -6,7 +6,7 @@
 #          dhh19951@gmail,com
 # Date   : 2/27/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
@@ -151,4 +151,3 @@ def main_train(trainer):
     inference.enable_inference_runner(trainer, make_dataflow_inference)
 
     trainer.train()
-

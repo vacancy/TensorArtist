@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/31/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .node import __valid_tensor_types__, as_tftensor, as_varnode
 from ...core.logger import get_logger
@@ -190,4 +190,3 @@ class Function(object):
                 k += ':0'
             res[k] = v
         return res
-

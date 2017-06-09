@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/21/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import collections
 import threading
@@ -12,6 +12,7 @@ import threading
 import numpy as np
 
 from tartist.core import get_env
+from tartist.app import rl
 
 PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward'))
 
@@ -78,14 +79,23 @@ def main_inference_play(trainer, epoch):
     trainer.env.inference_player_master.start(nr_players, name=name, daemon=False)
 
 
-def main_inference_play_multithread(trainer, make_player):
+def main_inference_play_multithread(trainer, make_player, inpkey='state', policykey='policy'):
     def runner():
         func = trainer.env.make_func()
-        func.compile(trainer.env.network.outputs)
+        func.compile(trainer.env.network.outputs[policykey])
         player = make_player(is_train=False)
 
+        if isinstance(player.action_space, rl.DiscreteActionSpace):
+            is_continuous = False
+        elif isinstance(player.action_space, rl.ContinuousActionSpace):
+            is_continuous = True
+        else:
+            raise AttributeError('Unknown action space: {}'.format(player.action_space))
+
         def get_action(inp, func=func):
-            action = func(state=inp[np.newaxis])['policy'][0].argmax()
+            action = func(**{inpkey: inp[np.newaxis]})[0]
+            if not is_continuous:
+                return action.argmax()
             return action
 
         player.play_one_episode(get_action)
@@ -95,10 +105,9 @@ def main_inference_play_multithread(trainer, make_player):
         if mgr is not None:
             mgr.put_async_scalar('async/inference/score', score)
 
-    nr_players = get_env('a3c.inference.nr_players')
+    nr_players = get_env('a3c.inference.nr_plays')
     pool = [threading.Thread(target=runner) for _ in range(nr_players)]
     for p in pool:
         p.start()
     for p in pool:
         p.join()
-

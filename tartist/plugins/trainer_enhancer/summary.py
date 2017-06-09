@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/26/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import collections
 import json
@@ -308,4 +308,3 @@ def set_error_summary_key(trainer, key):
     if not key.startswith('train/'):
         key = 'train/' + key
     trainer.runtime['error_summary_key'] = key
-
