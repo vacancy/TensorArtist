@@ -73,7 +73,7 @@ def remove_axis(inpvar, axis, name='remove_axis'):
 sqeeze = remove_axis
 
 
-@wrap_named_op(use_scope=False)
+@wrap_named_op
 def tile(inpvar, multiples, name='tile'):
     return tf.tile(inpvar, canonize_sym_shape(multiples), name=name)
 
