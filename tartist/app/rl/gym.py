@@ -129,8 +129,8 @@ class GymHistoryProxyRLEnviron(ProxyRLEnvironBase):
         self._set_current_state(self.proxy.current_state)
         return r, is_over
 
-    def _restart(self):
-        self.proxy.restart()
+    def _restart(self, *args, **kwargs):
+        super()._restart(*args, **kwargs)
         self._history.clear()
         self._set_current_state(self.proxy.current_state)
 
@@ -150,6 +150,6 @@ class GymPreventStuckProxyRLEnviron(ProxyRLEnvironBase):
             self._action_list.clear()
         return r, is_over
 
-    def _restart(self):
-        self.proxy.restart()
+    def _restart(self, *args, **kwargs):
+        super()._restart(*args, **kwargs)
         self._action_list.clear()
