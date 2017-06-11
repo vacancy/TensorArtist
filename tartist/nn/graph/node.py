@@ -142,6 +142,9 @@ class VarNodeOpDecl(object):
     def __iter__(self):
         raise ValueError('iterating over {} is not allowed'.format(type(self).__name__))
 
+    def rename(self, name):
+        return as_varnode(tf.identity(self, name=name))
+
     def astype(self, dtype, name='astype'):
         return as_varnode(tf.cast(self, dtype, name=name))
 

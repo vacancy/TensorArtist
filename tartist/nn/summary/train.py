@@ -19,6 +19,7 @@ def _migrate_summary(tf_func):
 
         if hasattr(name, 'name'):
             name, tensor = name.name, name
+            name = name.split('/')[-1]
             name = name_prefix + name
             return tf_func(name, tensor, *args, **kwargs)
         name = name_prefix + name
