@@ -182,7 +182,7 @@ def make_network(env):
             # Since we discretized the action space, use cross entropy here.
             log_policy = O.log(policy_explore + 1e-4)
             log_pi_a_given_s = (log_policy * O.one_hot(action, nr_bins)).sum(axis=2).sum(axis=1)
-            advantage = future_reward - O.zero_grad(value, name='advantage')
+            advantage = (future_reward - O.zero_grad(value)).rename('advantage')
 
             # Important trick: using only positive advantage to perform gradient assent. This stabilizes the training.
             advantage = advantage * O.zero_grad((advantage > 0.).astype('float32'))

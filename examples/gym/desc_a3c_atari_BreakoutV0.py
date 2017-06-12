@@ -129,7 +129,7 @@ def make_network(env):
 
             log_policy = O.log(policy + 1e-6)
             log_pi_a_given_s = (log_policy * O.one_hot(action, get_player_nr_actions())).sum(axis=1)
-            advantage = future_reward - O.zero_grad(value, name='advantage')
+            advantage = (future_reward - O.zero_grad(value)).rename('advantage')
             policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
             xentropy_cost = (-policy * log_policy).sum(axis=1).mean(name='xentropy_cost')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
