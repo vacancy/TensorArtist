@@ -17,7 +17,7 @@ __all__ = ['load_mnist']
 
 def load_mnist(data_dir, 
         data_file='mnist.pkl.gz',
-        origin = 'http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'):
+        origin='http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'):
 
     dataset = os.path.join(data_dir, data_file)
 

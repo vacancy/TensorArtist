@@ -62,7 +62,7 @@ def make_network(env):
 
             def encoder(x, nonlin):
                 w_init = O.truncated_normal_initializer(stddev=0.02)
-                with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),jjjj
+                with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.leaky_relu, alpha=0.2):
 
                     _ = x
@@ -97,7 +97,7 @@ def make_network(env):
             def discriminator(x, name, reuse):
                 with env.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=reuse):
                     with env.variable_scope(name):
-                        z = encoder(x, nonlin=O.bn_leaky_relu)
+                        z = encoder(x, nonlin=bn_leaky_relu)
                         logit = O.fc('fccls', z, 1)
                 return logit
 

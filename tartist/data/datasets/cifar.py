@@ -33,12 +33,11 @@ def _read_cifar(filenames, cls):
             x = x.reshape(3, 32, 32)
             x = np.transpose(x, [1, 2, 0])
             image.append(x)
-    #from IPython import embed; embed()
     return np.array(image), np.array(label)
 
-def load_cifar(data_dir, cls = 10):
+
+def load_cifar(data_dir, cls=10):
     assert cls in [10, 100]
-    cls = int(cls)
 
     data_file = 'cifar-{}-python.tar.gz'.format(cls)
     origin = cifar_web_address + data_file
