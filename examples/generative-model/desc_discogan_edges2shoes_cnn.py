@@ -34,10 +34,9 @@ __envs__ = {
         'nr_epochs': 200,
         'nr_g_per_iter': 1,
         'nr_d_per_iter': 1,
-
-        'env_flags': {
-            'log_device_placement': False
-        }
+    },
+    'demo': {
+        'customized': False
     }
 }
 

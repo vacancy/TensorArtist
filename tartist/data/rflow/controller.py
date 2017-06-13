@@ -166,7 +166,7 @@ class Controller(object):
             'ipipes': list(self._imanager.names)
         })
         assert response['action'] == configs.Actions.NS_QUERY_OPIPE_REP
-        logger.info('ipipes query {}'.format(response['results']))
+        logger.info('IPipes query {}.'.format(response['results']))
 
         self._initialize_ipipe_peers(response['results'])
 
@@ -335,7 +335,7 @@ class Controller(object):
             'ipipes': list(self._imanager.names)
         }, countdown=configs.CTL_CTL_SND_COUNTDOWN))
         self._controller_peers[uid] = ControllerPeer(info, sock)
-        logger.info('Connecting to {}'.format(uid))
+        logger.info('Connecting to {}.'.format(uid))
 
     def _on_ctl_connect_req(self, identifier, msg):
         uid, pipes = msg['uid'], msg['ipipes']
@@ -351,7 +351,7 @@ class Controller(object):
                 sock = self.socket(zmq.PUSH)
                 port = sock.bind_to_random_port('{}://{}'.format(configs.CTL_DAT_PROTOCAL, configs.CTL_DAT_HOST))
                 peers[uid] = PipePeer(self._addr, port, sock)
-                logger.info('Connection opened for {}: pipe={}, port={}'.format(uid, name, port))
+                logger.info('Connection opened for {}: pipe={}, port={}.'.format(uid, name, port))
 
             if port > 0:
                 response[name] = {
@@ -374,7 +374,7 @@ class Controller(object):
             sock.connect('{}://{}:{}'.format(info['dat_protocal'], info['dat_addr'], info['dat_port']))
             self._poller.register(sock, zmq.POLLIN)
             self._ipipe_peers.setdefault(name, {})[uid] = PipePeer(info['dat_addr'], info['dat_port'], sock)
-            logger.info('Connection established to {}: pipe={}, remote_port={}'.format(uid, name, info['dat_port']))
+            logger.info('Connection established to {}: pipe={}, remote_port={}.'.format(uid, name, info['dat_port']))
 
         self._control_mqueue.put(ControlMessage(self._controller_peers[uid].csock, None, {
             'action': configs.Actions.CTL_CONNECTED_REQ,
@@ -386,7 +386,7 @@ class Controller(object):
             'action': configs.Actions.CTL_CONNECTED_REP,
             'uid': self._uid
         }, countdown=configs.CTL_CTL_SND_COUNTDOWN))
-        logger.info('Connection established for {}'.format(msg['uid']))
+        logger.info('Connection established for {}.'.format(msg['uid']))
 
     # END:: Connection
 
@@ -399,7 +399,7 @@ class Controller(object):
             'action': configs.Actions.CTL_NOTIFY_OPEN_REP,
             'uid': self._uid
         }, countdown=configs.CTL_CTL_SND_COUNTDOWN))
-        logger.info('Found new controller {}'.format(uid))
+        logger.info('Found new controller {}.'.format(uid))
 
     def _on_ctl_notify_close_req(self, identifier, msg):
         uid = msg['uid']
@@ -420,7 +420,7 @@ class Controller(object):
             'action': configs.Actions.CTL_NOTIFY_CLOSE_REP,
             'uid': self._uid
         }, countdown=configs.CTL_CTL_SND_COUNTDOWN))
-        logger.info('Close timeout controller {}'.format(uid))
+        logger.info('Close timeout controller {}.'.format(uid))
 
 
 @contextlib.contextmanager

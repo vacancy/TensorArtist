@@ -26,13 +26,13 @@ class _Environ(object):
 
     def __get_envs_from_spec(self, env_spec):
         if isinstance(env_spec, str) and env_spec.endswith(self.__env_ext__):
-            raise NotImplementedError('Not implemented loading method')
+            raise NotImplementedError('Not implemented loading method.')
         elif isinstance(env_spec, dict):
             return env_spec
         elif isinstance(env_spec, object) and (hasattr(env_spec, 'envs') or hasattr(env_spec, '__envs__')):
             return getattr(env_spec, 'envs', None) or getattr(env_spec, '__envs__')
         else:
-            raise TypeError('unsupported env spec: {}'.format(env_spec))
+            raise TypeError('unsupported env spec: {}.'.format(env_spec))
 
     def load(self, env_spec, override=False):
         new_envs = self.__get_envs_from_spec(env_spec)
@@ -46,7 +46,7 @@ class _Environ(object):
         return self.load(env_spec, override=False)
 
     def dump(self, path, prefix=None):
-        raise NotImplementedError('not supported yet: Env.dump')
+        raise NotImplementedError('not supported yet: Env.dump.')
 
     def as_dict(self):
         return deepcopy(self.envs)
@@ -165,7 +165,7 @@ class EnvBox(multiprocessing.Process):
         random.reset_rng(self.__seed)
         from . import get_logger
         logger = get_logger(__file__)
-        logger.critical('EnvBox pid={} (ppid={}) rng_seed={}'.format(
+        logger.critical('EnvBox pid={} (ppid={}) rng_seed={}.'.format(
             os.getpid(), os.getppid(), self.__seed))
 
         super().run()

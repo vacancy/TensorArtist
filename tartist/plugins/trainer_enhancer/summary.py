@@ -253,7 +253,7 @@ def enable_echo_summary_scalar(trainer, summary_spec=None,
             js_path = osp.join(get_env('dir.root'), 'summary.json')
         restored = 'restore_snapshot' in trainer.runtime
         if osp.exists(js_path) and not restored:
-            logger.warning('Removing old summary json: {}'.format(js_path))
+            logger.warn('Removing old summary json: {}.'.format(js_path))
             os.remove(js_path)
         trainer.runtime['json_summary_path'] = js_path
 
@@ -263,13 +263,13 @@ def enable_echo_summary_scalar(trainer, summary_spec=None,
             tb_path = osp.join(get_env('dir.root'), 'tensorboard')
         restored = 'restore_snapshot' in trainer.runtime
         if osp.exists(tb_path) and not restored:
-            logger.warning('Removing old tensorboard directory: {}'.format(tb_path))
+            logger.warn('Removing old tensorboard directory: {}.'.format(tb_path))
             shutil.rmtree(tb_path)
         io.mkdir(tb_path)
         trainer.runtime['tensorboard_summary_path'] = tb_path
         trainer._tensorboard_writer = tf.summary.FileWriter(tb_path, graph=trainer.env.graph)
         if enable_tensorboard_web:
-            port = random.randrange(49152, 65536)
+            port = random.randrange(49152, 65536.)
             port = trainer.runtime.get('tensorboard_web_port', port)
             trainer._tensorboard_webserver = threading.Thread(
                     target=_tensorboard_webserver_thread, args=['tensorboard', '--logdir', tb_path, '--port', str(port)],

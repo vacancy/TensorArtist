@@ -688,7 +688,7 @@ class Network(object):
             value = all_variables.get(clean_name(v), None)
             if value is not None:
                 if verbose:
-                    logger.info('Assign variable from external dict: {}'.format(clean_name(v)))
+                    logger.info('Assign variable from external dict: {}.'.format(clean_name(v)))
                 assign_variable(v, value, self.owner_env.session)
         return self
 

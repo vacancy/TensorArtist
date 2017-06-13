@@ -63,7 +63,7 @@ class BatchDataFlow(SimpleDataFlowBase):
                 self._cond[current].set_true()
                 current = 1 - current
         except Exception as e:
-            logger.warn('{} got exception {} in filler thread: {}'.format(type(self), type(e), e))
+            logger.warn('{} got exception {} in filler thread: {}.'.format(type(self), type(e), e))
             traceback.print_exc()
             self._cond[current].set_true()
             self._stop_event.set()

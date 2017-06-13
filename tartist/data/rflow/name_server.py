@@ -162,7 +162,7 @@ class NameServer(object):
                                     'uid': k
                                 },
                             })
-                        logger.info('Unregister timeout controller {}'.format(k))
+                        logger.info('Unregister timeout controller {}.'.format(k))
             time.sleep(configs.NS_CLEANUP_WAIT)
 
     def main(self):
@@ -200,7 +200,7 @@ class NameServer(object):
         self._req_socks.add(req_sock)
         self._poller.register(req_sock, zmq.POLLIN)
         utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_CTL_REP})
-        logger.info('Controller registered: {}'.format(msg['uid']))
+        logger.info('Controller registered: {}.'.format(msg['uid']))
 
     def _on_ns_register_pipe_req(self, identifier, msg):
         self.storage.register_pipes(msg)
@@ -222,7 +222,7 @@ class NameServer(object):
             })
         utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_PIPE_REP})
 
-        logger.info('Controller pipes registered: in={}, out={} (controller-uid={})'.format(
+        logger.info('Controller pipes registered: in={}, out={} (controller-uid={}).'.format(
             msg['ipipes'], msg['opipes'], msg['uid']))
 
     def _on_ns_query_opipe_req(self, identifier, msg):

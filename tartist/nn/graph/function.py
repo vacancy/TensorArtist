@@ -44,7 +44,7 @@ class Function(object):
                 syms = [outputs[k] for k in names]
                 return cls(Function.OutputResultType.DICT, len(outputs), names), syms
             else:
-                raise ValueError('unsupported output type')
+                raise ValueError('Unsupported output type.')
 
         def format(self, outputs):
             outputs = outputs[:self._nr_outputs]
@@ -132,7 +132,7 @@ class Function(object):
 
     def compile(self, outputs, inputs=None):
         if self.__compiled:
-            logger.warn('function {} already compiled'.format(self))
+            logger.warn('Function {} already compiled.'.format(self))
 
         if len(self._extra_kwoutputs):
             assert isinstance(outputs, (dict, collections.OrderedDict))

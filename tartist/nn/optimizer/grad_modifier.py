@@ -57,8 +57,8 @@ class NameBasedGradModifierBase(GradModifierBase):
             log_msgs.insert(0, 'Log grad modification for {}:'.format(self.__class__.__name__))
             logger.info('\n'.join(log_msgs))
         if len(unused) > 0:
-            log_msg = 'Log grad modification for {}: unused patterns are {}'.format(self.__class__.__name__, unused)
-            logger.warning(log_msg)
+            log_msg = 'Log grad modification for {}: unused patterns are {}.'.format(self.__class__.__name__, unused)
+            logger.warn(log_msg)
 
         return res
 

@@ -49,7 +49,7 @@ def download(url, dir, filename=None, md5=None):
         statinfo = os.stat(fpath)
         size = statinfo.st_size
     except:
-        logger.error("Failed to download {}".format(url))
+        logger.error('Failed to download {}.'.format(url))
         raise
     assert size > 0, "Download an empty file!"
     logger.critical('Succesfully downloaded ' + filename + " " + fsize_format(size) + '.')

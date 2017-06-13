@@ -104,7 +104,7 @@ class QueryRepPipe(object):
             pass
         except zmq.ZMQError as e:
             if self._tosock.closed:
-                logger.warn('Recv socket closed unexpectedly')
+                logger.warn('Recv socket closed unexpectedly.')
             else:
                 raise e
 
@@ -121,7 +121,7 @@ class QueryRepPipe(object):
             pass
         except zmq.ZMQError as e:
             if self._tosock.closed:
-                logger.warn('Send socket closed unexpectedly')
+                logger.warn('Send socket closed unexpectedly.')
             else:
                 raise e
 

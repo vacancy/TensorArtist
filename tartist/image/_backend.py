@@ -19,10 +19,10 @@ except ImportError:
     cv2 = None
     try:
         from PIL import Image
-        logger.warn('Fail to import OpenCV, use PIL library.')
+        logger.warn('Fail to import OpenCV; use PIL library.')
     except ImportError:
         Image = None
-        logger.error('Can not find either PIL or OpenCV, you can not use most function in tartist.image.')
+        logger.error('Can not find either PIL or OpenCV; you can not use most function in tartist.image.')
 
 
 def opencv_or_pil(func):

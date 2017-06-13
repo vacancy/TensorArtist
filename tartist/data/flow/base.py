@@ -53,7 +53,7 @@ class SimpleDataFlowBase(DataFlowBase):
             for v in self._gen():
                 yield v
         except Exception as e:
-            logger.warn('{} got exception {} during iter: {}'.format(type(self), type(e), e))
+            logger.warn('{} got exception {} during iter: {}.'.format(type(self), type(e), e))
             traceback.print_exc()
         finally:
             self._finalize()

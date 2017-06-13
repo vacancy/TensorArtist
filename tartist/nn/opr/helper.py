@@ -150,7 +150,7 @@ def _argscope_wrapped(f, **default_kwargs):
                 if k not in used_default_kwargs:
                     kwargs[k] = default_kwargs[k]
                 else:
-                    logger.warn('Overwrite argscope binded kwargs using args: func_name={}, param_name={}'.format(
+                    logger.warn('Overwrite argscope binded kwargs using args: func_name={}, param_name={}.'.format(
                         f.__name__, k
                     ))
         return f(*args, **kwargs)
