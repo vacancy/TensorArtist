@@ -13,11 +13,18 @@ import functools
 logger = get_logger(__file__)
 
 
-__all__ = ['AutoRestartProxyRLEnviron', 
+__all__ = [
+        'TransparentAttributeProxyRLEnviron',
+        'AutoRestartProxyRLEnviron', 
         'RepeatActionProxyRLEnviron', 'NOPFillProxyRLEnviron',
         'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron',
         'ManipulateRewardProxyRLEnviron', 'manipulate_reward', 
         'remove_proxies']
+
+
+class TransparentAttributeProxyRLEnviron(ProxyRLEnvironBase):
+    def __getattr__(self, name):
+        return getattr(remove_proxies(self), name)
 
 
 class AutoRestartProxyRLEnviron(ProxyRLEnvironBase):
@@ -77,7 +84,7 @@ class LimitLengthProxyRLEnviron(ProxyRLEnvironBase):
     def _action(self, action):
         r, is_over = self.proxy.action(action)
         self._cnt += 1
-        if self._cnt >= self._limit:
+        if self._limit is not None and self._cnt >= self._limit:
             is_over = True
         return r, is_over
 
@@ -96,6 +103,8 @@ class MapStateProxyRLEnviron(ProxyRLEnvironBase):
 
 
 class ManipulateRewardProxyRLEnviron(ProxyRLEnvironBase):
+    """DEPRECATED: (2017-11-20) Use manipulate_reward instaed"""
+
     def __init__(self, other, func):
         logger.warn('ManipulateRewardProxyRLEnviron may cause wrong reward history, use manipulate_reward instead')
         super().__init__(other)

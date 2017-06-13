@@ -13,7 +13,7 @@ import tensorflow as tf
 from .helper import as_varnode, get_4dshape, get_2dshape, wrap_varnode_func, wrap_simple_named_op
 from .helper import lazy_O as O
 
-__all__ = ['p_relu', 'leaky_relu', 'bn_relu', 'bn_tanh', 'bn_leaky_relu', 'bn_nonlin']
+__all__ = ['p_relu', 'leaky_relu', 'bn_relu', 'bn_tanh', 'bn_leaky_relu', 'bn_nonlin', 'softplus']
 
 
 @wrap_simple_named_op
@@ -60,3 +60,9 @@ def bn_nonlin(inpvar, name='bn_nonlin'):
     _ = O.batch_norm('bn', inpvar)
     return O.identity(_, 'out')
 
+
+@wrap_simple_named_op
+@wrap_varnode_func
+def softplus(inpvar, name='softplus'):
+    _ = O.log(1. + O.exp(inpvar))
+    return O.identity(_, 'out')

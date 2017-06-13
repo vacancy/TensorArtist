@@ -9,12 +9,10 @@
 import os.path as osp
 
 import numpy as np
-import tqdm
 
 from tartist import image
 from tartist.app import gan
 from tartist.core import get_env
-from tartist.core.utils.thirdparty import get_tqdm_defaults
 from tartist.data import flow, kvstore
 
 
@@ -34,10 +32,7 @@ class DiscoGANSplitDataFlow(flow.SimpleDataFlowBase):
         ita = iter(self._kva)
         itb = iter(self._kvb)
         while True:
-            res = dict(
-                img_a=self._crop_and_resize(next(ita)),
-                img_b=self._crop_and_resize(next(itb))
-            )
+            res = dict(img_a=self._crop_and_resize(next(ita)), img_b=self._crop_and_resize(next(itb)))
             yield res
 
 
@@ -54,22 +49,19 @@ def _make_dataflow(batch_size=1, use_prefetch=False):
     df = DiscoGANSplitDataFlow(dfa, dfb)
     df = flow.BatchDataFlow(df, batch_size, sample_dict={
         'img_a': np.empty(shape=(batch_size, img_shape[0], img_shape[1], 3), dtype='float32'),
-        'img_b': np.empty(shape=(batch_size, img_shape[0], img_shape[1], 3), dtype='float32'),
-    })
+        'img_b': np.empty(shape=(batch_size, img_shape[0], img_shape[1], 3), dtype='float32'), })
     if use_prefetch:
         df = flow.MPPrefetchDataFlow(df, nr_workers=2)
     return df
 
-    df = gan.GANDataFlow(dfs[0], dfs[1],
-                                     get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
+    df = gan.GANDataFlow(dfs[0], dfs[1], get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
 
 
 def make_dataflow_train(env):
     batch_size = get_env('trainer.batch_size')
     dfs = [_make_dataflow(batch_size, use_prefetch=True) for i in range(2)]
 
-    df = gan.GANDataFlow(dfs[0], dfs[1], 
-            get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
+    df = gan.GANDataFlow(dfs[0], dfs[1], get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
 
     return df
 
@@ -83,12 +75,8 @@ def demo(feed_dict, results, extra_info):
     img_ab, img_ba = results['img_ab'][0] * 255, results['img_ba'][0] * 255
     img_aba, img_bab = results['img_aba'][0] * 255, results['img_bab'][0] * 255
 
-    img = np.vstack([
-        np.hstack([img_a, img_ab, img_aba]), 
-        np.hstack([img_b, img_ba, img_bab])
-    ])
+    img = np.vstack([np.hstack([img_a, img_ab, img_aba]), np.hstack([img_b, img_ba, img_bab])])
     img = img.astype('uint8')
     img = image.resize_minmax(img, 512, 2048)
 
     image.imshow('demo', img)
-

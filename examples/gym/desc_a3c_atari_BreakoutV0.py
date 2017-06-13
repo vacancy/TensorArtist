@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : desc_a3c_atari.py
+# File   : desc_a3c_atari_BreakoutV0.py
 # Author : Jiayuan Mao
 #          Honghua Dong
 # Email  : maojiayuan@gmail.com
@@ -18,7 +18,6 @@ import queue
 import threading
 
 import numpy as np
-import tensorflow as tf
 
 from tartist import random, image
 from tartist.app import rl
@@ -37,6 +36,8 @@ __envs__ = {
 
     'a3c': {
         'env_name': 'Breakout-v0',
+
+        'input_shape': (84, 84),
         'frame_history': 4,
         'limit_length': 40000,
 
@@ -44,24 +45,21 @@ __envs__ = {
         'gamma': 0.99,
         'acc_step': 5,
 
+        # async training data collector
         'nr_players': 50,
         'nr_predictors': 2,
-
         'predictor': {
             'batch_size': 16,
             'outputs_name': ['value', 'policy_explore']
         },
+
         'inference': {
-            'nr_players': 20,
+            'nr_plays': 20,
             'max_stuck_repeat': 30
         },
         'demo': {
             'nr_plays': 5
         }
-    },
-
-    'dataset': {
-        'input_shape': (84, 84)
     },
 
     'trainer': {
@@ -70,12 +68,6 @@ __envs__ = {
         'batch_size': 128,
         'epoch_size': 1000,
         'nr_epochs': 200,
-
-        'gamma': 0.99,
-
-        'env_flags': {
-            'log_device_placement': False
-        }
     },
     'demo': {
         'customized': True
@@ -132,18 +124,17 @@ def make_network(env):
         net.add_output(value, name='value')
 
         if env.phase is env.Phase.TRAIN:
-            action = O.placeholder('action', shape=(None, ), dtype=tf.int64)
+            action = O.placeholder('action', shape=(None, ), dtype='int64')
             future_reward = O.placeholder('future_reward', shape=(None, ))
 
             log_policy = O.log(policy + 1e-6)
-            log_pi_a_given_s = (log_policy * tf.one_hot(action, get_player_nr_actions())).sum(axis=1)
+            log_pi_a_given_s = (log_policy * O.one_hot(action, get_player_nr_actions())).sum(axis=1)
             advantage = future_reward - O.zero_grad(value, name='advantage')
             policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
             xentropy_cost = (-policy * log_policy).sum(axis=1).mean(name='xentropy_cost')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
-            # value_loss = O.truediv(value_loss, future_reward.shape[0].astype('float32'), name='value_loss')
             entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
-            loss = tf.add_n([-policy_cost, -xentropy_cost * entropy_beta, value_loss], name='loss')
+            loss = O.add_n([-policy_cost, -xentropy_cost * entropy_beta, value_loss], name='loss')
 
             net.set_loss(loss)
 
@@ -157,7 +148,7 @@ def make_network(env):
 
 def make_player(is_train=True, dump_dir=None):
     def resize_state(s):
-        return image.resize(s, get_env('dataset.input_shape'))
+        return image.resize(s, get_env('a3c.input_shape'), interpolation='NEAREST')
 
     p = rl.GymRLEnviron(get_env('a3c.env_name'), dump_dir=dump_dir)
     p = rl.MapStateProxyRLEnviron(p, resize_state)
@@ -205,7 +196,7 @@ def get_player_nr_actions():
 
 @cached_result
 def get_input_shape():
-    input_shape = get_env('dataset.input_shape')
+    input_shape = get_env('a3c.input_shape')
     frame_history = get_env('a3c.frame_history')
     h, w, c = input_shape[0], input_shape[1], 3 * frame_history
     return h, w, c
@@ -276,12 +267,9 @@ def _predictor_func(pid, router, task_queue, func, is_inference=False):
             callbacks[i](action, out['value'][i])
 
 
-predictor_func = functools.partial(_predictor_func, is_inference=False)
-inference_predictor_func = functools.partial(_predictor_func, is_inference=True)
-
-
 def make_a3c_configs(env):
-    from common_a3c import on_data_func, on_stat_func, inference_on_data_func, inference_on_stat_func
+    from common_a3c import on_data_func, on_stat_func
+    predictor_func = functools.partial(_predictor_func, is_inference=False)
 
     env.player_master.player_func = player_func
     env.player_master.predictor_func = predictor_func
@@ -289,10 +277,14 @@ def make_a3c_configs(env):
     env.player_master.on_stat_func = on_stat_func
 
     # currently we don't use multi-proc inference, so these settings are not used at all
-    env.inference_player_master.player_func = inference_player_func
-    env.inference_player_master.predictor_func = inference_predictor_func
-    env.inference_player_master.on_data_func = inference_on_data_func
-    env.inference_player_master.on_stat_func = inference_on_stat_func
+    if False:
+        from common_a3c import inference_on_data_func, inference_on_stat_func
+        inference_predictor_func = functools.partial(_predictor_func, is_inference=True)
+
+        env.inference_player_master.player_func = inference_player_func
+        env.inference_player_master.predictor_func = inference_predictor_func
+        env.inference_player_master.on_data_func = inference_on_data_func
+        env.inference_player_master.on_stat_func = inference_on_stat_func
 
     env.players_history = collections.defaultdict(list)
     env.players_history_lock = threading.Lock()
@@ -320,8 +312,7 @@ def main_train(trainer):
 
     def on_epoch_after(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
-            # main_inference_play(trainer, epoch=trainer.epoch)
-            main_inference_play_multithread(trainer, make_player = make_player)
+            main_inference_play_multithread(trainer, make_player=make_player)
 
     # this one should run before monitor
     register_event(trainer, 'epoch:after', on_epoch_after, priority=5)
@@ -342,5 +333,3 @@ def main_demo(env, func):
     for i in range(repeat_time):
         player.play_one_episode(get_action)
         logger.info('#{} play score={}'.format(i, player.stats['score'][-1]))
-
-

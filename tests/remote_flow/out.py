@@ -15,6 +15,6 @@ q = OutputPipe('tart.pipe.test')
 with control(pipes=[q]):
     while True:
         data = {'msg': 'hello', 'current': time.time(), 'data': numpy.zeros(shape=(128, 224, 224, 3), dtype='float32')}
-        print('generate', data['current'])
+        print('RFlow sending', data['current'])
         q.put(data)
 

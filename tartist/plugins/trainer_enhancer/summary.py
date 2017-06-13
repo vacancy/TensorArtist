@@ -1,4 +1,4 @@
-#pmt -*- coding:utf8 -*-
+# -*- coding:utf8 -*-
 # File   : summary.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
@@ -6,19 +6,21 @@
 # 
 # This file is part of TensorArtist
 
-from tartist.core import get_logger, get_env, set_env, io
-from tartist.data.rflow.utils import get_addr
-from tartist.nn.tfutils import format_summary_name, clean_summary_suffix
-import math
-import random
 import collections
-import threading
+import json
+import math
 import os
 import os.path as osp
-import json
+import random
 import shutil
 import subprocess
+import threading
+
 import tensorflow as tf
+
+from tartist.core import get_logger, get_env, io
+from tartist.data.rflow.utils import get_addr
+from tartist.nn.tfutils import format_summary_name, clean_summary_suffix
 
 logger = get_logger()
 

@@ -7,14 +7,12 @@
 # This file is part of TensorArtist
 
 from tartist.core import EnvBox, get_env, get_logger
-from tartist.core.utils.meta import notnone_property
 from tartist.data.rflow.query_pipe import QueryReqPipe, QueryRepPipe
-from tartist.nn.graph import select_device, reuse_context, Env
-from tartist.nn.train import TrainerBase, SimpleTrainerEnv, SimpleTrainer
+from tartist.nn.graph import reuse_context, Env
+from tartist.nn.train import SimpleTrainerEnv, SimpleTrainer
 
 import queue
 import threading
-import tensorflow as tf
 
 logger = get_logger(__file__)
 
@@ -138,7 +136,7 @@ class A3CTrainerEnv(SimpleTrainerEnv):
         outputs_name = get_env('a3c.predictor.outputs_name')
         new_env = Env(master_dev=dev, flags=self.flags, dpflags=self.dpflags, graph=self.graph, session=self.session)
         with new_env.as_default():
-            with tf.name_scope('predictor/{}'.format(i)), reuse_context(True):
+            with new_env.name_scope('predictor/{}'.format(i)), reuse_context(True):
                 self.network_maker(new_env)
             outs = {k: new_env.network.outputs[k] for k in outputs_name}
             f = new_env.make_func()

@@ -6,15 +6,13 @@
 #
 # This file is part of TensorArtist
 
-import tensorflow as tf
+import re
 
 from tartist.app import gan
 from tartist.app.gan import GANGraphKeys
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
-from tartist.nn import opr as O, optimizer, summary, train
-
-import re
+from tartist.nn import opr as O, optimizer, summary
 
 logger = get_logger(__file__)
 
@@ -51,7 +49,7 @@ def make_network(env):
         h, w, c = 64, 64, 3
 
         def bn_leaky_relu(x, name='bn_leaky_relu'):
-            with tf.name_scope(name):
+            with env.name_scope(name):
                 return O.leaky_relu(O.bn_nonlin(x))
 
         dpc = env.create_dpcontroller()
@@ -62,12 +60,12 @@ def make_network(env):
                 return [img_a, img_b]
 
             def encoder(x):
-                w_init = tf.truncated_normal_initializer(stddev=0.02)
+                w_init = O.truncated_normal_initializer(stddev=0.02)
                 with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.fc, W=w_init),\
                      O.argscope(O.leaky_relu, alpha=0.2):
 
-                    _ = x 
+                    _ = x
                     _ = O.conv2d('conv1', _, 64, nonlin=O.leaky_relu)
                     _ = O.conv2d('conv2', _, 128, nonlin=bn_leaky_relu, use_bias=False)
                     _ = O.conv2d('conv3', _, 256, nonlin=bn_leaky_relu, use_bias=False)
@@ -76,10 +74,10 @@ def make_network(env):
                 return z
 
             def decoder(z):
-                w_init = tf.truncated_normal_initializer(stddev=0.02)
+                w_init = O.truncated_normal_initializer(stddev=0.02)
                 with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.fc, W=w_init):
-                    
+
                     _ = z
                     _ = O.deconv2d('deconv1', _, 256, nonlin=O.bn_relu)
                     _ = O.deconv2d('deconv2', _, 128, nonlin=O.bn_relu)
@@ -90,15 +88,15 @@ def make_network(env):
                 return x
 
             def generator(x, name, reuse):
-                with tf.variable_scope(GANGraphKeys.GENERATOR_VARIABLES, reuse=reuse):
-                    with tf.variable_scope(name):
+                with env.variable_scope(GANGraphKeys.GENERATOR_VARIABLES, reuse=reuse):
+                    with env.variable_scope(name):
                         z = encoder(x)
                         y = decoder(z)
                 return y
 
             def discriminator(x, name, reuse):
-                with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=reuse):
-                    with tf.variable_scope(name):
+                with env.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=reuse):
+                    with env.variable_scope(name):
                         z = encoder(x)
                         logit = O.fc('fc', z, 1)
                 return logit
@@ -134,14 +132,14 @@ def make_network(env):
                     for pair_name, (real, fake), (logit_real, logit_fake), (score_real, score_fake) in zip(
                             ['lossa', 'lossb'],
                             [(img_a, img_aba), (img_b, img_bab)],
-                            [(logit_real_a, logit_fake_a), (logit_real_b, logit_fake_b)], 
+                            [(logit_real_a, logit_fake_a), (logit_real_b, logit_fake_b)],
                             [(score_real_a, score_fake_a), (score_real_b, score_fake_b)]):
-                        
-                        with tf.name_scope(pair_name):
+
+                        with env.name_scope(pair_name):
                             d_loss_real = O.sigmoid_cross_entropy_with_logits(logits=logit_real, labels=O.ones_like(logit_real)).mean(name='d_loss_real')
                             d_loss_fake = O.sigmoid_cross_entropy_with_logits(logits=logit_fake, labels=O.zeros_like(logit_fake)).mean(name='d_loss_fake')
                             g_loss = O.sigmoid_cross_entropy_with_logits(logits=logit_fake, labels=O.ones_like(logit_fake)).mean(name='g_loss')
-                            
+
                             d_acc_real = (score_real > 0.5).astype('float32').mean(name='d_acc_real')
                             d_acc_fake = (score_fake < 0.5).astype('float32').mean(name='d_acc_fake')
                             g_accuracy = (score_fake > 0.5).astype('float32').mean(name='g_accuracy')
@@ -158,7 +156,7 @@ def make_network(env):
 
                         for v in [d_loss_real, d_loss_fake, g_loss, d_acc_real, d_acc_fake, g_accuracy, d_accuracy, d_loss, r_loss]:
                             dpc.add_output(v, name=re.sub('^tower/\d+/', '', v.name)[:-2], reduce_method='sum')
-                    
+
                     dpc.add_output(all_g_loss, name='g_loss', reduce_method='sum')
                     dpc.add_output(all_d_loss, name='d_loss', reduce_method='sum')
 
@@ -169,7 +167,7 @@ def make_network(env):
                 for v in ['d_loss_real', 'd_loss_fake', 'd_acc_real', 'd_acc_fake', 'd_accuracy', 'd_loss']:
                     name = p + '/' + v
                     summary.scalar(name, dpc.outputs[name], collections=[GANGraphKeys.DISCRIMINATOR_SUMMARIES])
-                for v in ['g_loss', 'g_accuracy', 'r_loss']: 
+                for v in ['g_loss', 'g_accuracy', 'r_loss']:
                     name = p + '/' + v
                     summary.scalar(name, dpc.outputs[name], collections=[GANGraphKeys.GENERATOR_SUMMARIES])
 
