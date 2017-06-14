@@ -114,6 +114,7 @@ class SimpleRLEnvironBase(RLEnvironBase):
     def finish(self, *args, **kwargs):
         rc = self._finish(*args, **kwargs)
         self.append_stat('score', sum(self._reward_history))
+        self.append_stat('length', len(self._reward_history))
         return rc
 
 
