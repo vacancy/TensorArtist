@@ -264,8 +264,8 @@ def get_input_shape():
     p.restart()
     input_shape = p.current_state.shape
     del p
-    
-    return input_shape[:-1] + (input_shape[-1] * get_env('a3c.frame_history'), )
+
+    return input_shape
 
 
 def sample_action(policy):
