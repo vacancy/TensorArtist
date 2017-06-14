@@ -23,7 +23,6 @@ import collections
 import functools
 import os
 import queue
-import threading
 
 import numpy as np
 
@@ -334,7 +333,6 @@ def make_a3c_configs(env):
     env.player_master.on_stat_func = on_stat_func
 
     env.players_history = collections.defaultdict(list)
-    env.players_history_lock = threading.Lock()
 
 
 def main_train(trainer):

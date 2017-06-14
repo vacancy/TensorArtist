@@ -53,6 +53,7 @@ def on_data_func(env, identifier, inp_data):
     task_queue.put((identifier, inp_data, callback))
 
 
+# Not used.
 def inference_on_data_func(env, identifier, inp_data):
     router, task_queue = env.inference_player_master.router, env.inference_player_master.queue
 
@@ -70,9 +71,11 @@ def on_stat_func(env, identifier, inp_data):
                 mgr.put_async_scalar(k, v)
 
 
+# Not used.
 inference_on_stat_func = on_stat_func
 
 
+# Not used.
 def main_inference_play(trainer, epoch):
     nr_players = get_env('a3c.inference.nr_players')
     name = 'a3c-inference-player-epoch-{}'.format(epoch)
