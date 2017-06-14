@@ -90,7 +90,7 @@ def scalar(name, value, dtype=__default_dtype__, device=None, trainable=False,
 def get_variable(name, env=None, collection=TArtGraphKeys.TART_VARIABLES):
     env = env or get_default_env()
     sym = env.find_in_collection_by_name(collection, name)
-    return sym.taop
+    return sym
 
 
 @wrap_varnode_func
