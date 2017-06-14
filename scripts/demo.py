@@ -6,7 +6,7 @@
 # 
 # This file is part of TensorArtist.
 
-from tartist.core import get_env, get_logger
+from tartist.core import get_env, get_logger, set_env
 from tartist.core.utils.cli import load_desc, parse_devices, parse_args
 from tartist.nn import Env
 
@@ -59,6 +59,10 @@ def main():
 
         env.initialize_all_variables()
         snapshot.load_weights_file(env, get_weights_path())
+
+    if not hasattr(desc, 'main_demo'):
+        logger.warn('Function main_demo not found in desc {}; fallback to old-style demo.'.format(desc))
+        set_env('demo.customized', False)
 
     if get_env('demo.customized', True):
         desc.main_demo(env, func)
