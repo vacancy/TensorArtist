@@ -57,7 +57,7 @@ def yes_or_no(question, default="yes"):
     elif default == "no":
         prompt = " [y/N] "
     else:
-        raise ValueError("invalid default answer: '%s'" % default)
+        raise ValueError("invalid default answer: '%s'." % default)
 
     while True:
         sys.stdout.write(question + prompt)
@@ -75,7 +75,7 @@ def maybe_mkdir(dirname):
     from ..io.fs import mkdir
 
     if not os.path.isdir(dirname):
-        if yes_or_no('dir {} does not exist, do you want to create?'.format(dirname)):
+        if yes_or_no('Directory {} does not exist, do you want to create?'.format(dirname)):
             mkdir(dirname)
     return dirname
 
@@ -83,6 +83,7 @@ def maybe_mkdir(dirname):
 def parse_args(parser):
     args, argv = parser.parse_known_args()
     if argv:
-        print(sys.argv)
+        argv = sys.argv[:1] + argv
+        print('Partial parsed argv:\n\tBefore: {}\n\tAfter: {}\t'.format(sys.argv, argv))
         sys.argv = argv
     return args

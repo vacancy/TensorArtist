@@ -47,8 +47,8 @@ def load_source(filename, name=None):
 
 
 def tuple_to_classname(t):
-    assert len(t) == 2, 'Only tuple with length 2 (module name, class name) can be converted to classname, got {}, {}' \
-        .format(t, len(t))
+    assert len(t) == 2, ('Only tuple with length 2 (module name, class name) can be converted to classname, '
+            'got {}, {}.'.format(t, len(t)))
 
     return '.'.join(t)
 
@@ -65,14 +65,14 @@ def load_class(classname, exit_on_error=True):
     if isinstance(classname, str):
         classname = classname_to_tuple(classname)
     elif isinstance(classname, tuple):
-        assert len(classname) == 2, 'Classname should be tuple of length 2 or a single string'
+        assert len(classname) == 2, 'Classname should be tuple of length 2 or a single string.'
     module_name, clz_name = classname
     try:
         module = load_module(module_name)
         clz = getattr(module, clz_name)
         return clz
     except ImportError as e:
-        print('Cannot import {}.{}, with original error message: {}'.format(module_name, clz_name, str(e)))
+        print('Cannot import {}.{}, with original error message: {}.'.format(module_name, clz_name, str(e)))
         if exit_on_error:
             exit(1)
     return None
