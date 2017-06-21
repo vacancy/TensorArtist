@@ -45,7 +45,6 @@ __envs__ = {
     'a3c': {
         'env_name': 'LunarLanderContinuous-v2',
 
-        'input_shape': (8,),
         'frame_history': 4,
         'limit_length': None, # no limit length
 
@@ -261,7 +260,12 @@ def get_action_range():
 
 @cached_result
 def get_input_shape():
-    return get_env('a3c.input_shape')[0] * get_env('a3c.frame_history'),
+    p = make_player()
+    p.restart()
+    input_shape = p.current_state.shape
+    del p
+
+    return input_shape
 
 
 def sample_action(policy):
