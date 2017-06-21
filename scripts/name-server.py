@@ -11,7 +11,7 @@ from tartist.data.rflow import configs
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-h', '--host', dest='host', default=configs.NS_CTL_HOST)
+parser.add_argument('-s', '--host', dest='host', default=configs.NS_CTL_HOST)
 parser.add_argument('-p', '--port', dest='port', default=configs.NS_CTL_PORT)
 parser.add_argument('--protocal', dest='protocal', default=configs.NS_CTL_PROTOCAL)
 args = parser.parse_args()

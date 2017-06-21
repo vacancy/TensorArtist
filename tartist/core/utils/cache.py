@@ -48,7 +48,7 @@ def cached_result(func):
     return f
 
 
-def fs_cached_result(cache_key):
+def fs_cached_result(cache_key, force_update=False):
     def wrapper(func):
         @functools.wraps(func)
         def wrapped_func(*args, **kwargs):
@@ -58,9 +58,12 @@ def fs_cached_result(cache_key):
             nonlocal cache_key
             cache_key = io.assert_extension(cache_key, '.cache.pkl')
             cache_file = osp.join(get_env('dir.cache'), cache_key)
-            cached_value = io.load(cache_file)
-            if cached_value is not None:
-                return cached_value
+
+            if not force_update:
+                cached_value = io.load(cache_file)
+                if cached_value is not None:
+                    return cached_value
+
             computed_value = func(*args, **kwargs)
             io.dump(cache_file, computed_value)
             return computed_value
