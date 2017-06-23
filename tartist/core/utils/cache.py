@@ -6,9 +6,11 @@
 # 
 # This file is part of TensorArtist.
 
+from .meta import synchronized
 from .. import io, get_env
 import functools
 import os.path as osp
+import threading
 
 __all__ = ['cached_property', 'cached_result', 'fs_cached_result']
 
@@ -21,17 +23,19 @@ class cached_property:
         self.__doc__ = fget.__doc__
         self.__cache_key = '__result_cache_{}_{}'.format(
             fget.__name__, id(fget))
+        self.__mutex = threading.Lock()
 
     def __get__(self, instance, owner):
-        if instance is None:
-            return self.fget
-        v = getattr(instance, self.__cache_key, None)
-        if v is not None:
+        with self.__mutex:
+            if instance is None:
+                return self.fget
+            v = getattr(instance, self.__cache_key, None)
+            if v is not None:
+                return v
+            v = self.fget(instance)
+            assert v is not None
+            setattr(instance, self.__cache_key, v)
             return v
-        v = self.fget(instance)
-        assert v is not None
-        setattr(instance, self.__cache_key, v)
-        return v
 
 
 def cached_result(func):
@@ -41,6 +45,7 @@ def cached_result(func):
         impl = lambda: ret
         return ret
 
+    @synchronized()
     @functools.wraps(func)
     def f():
         return impl()
@@ -50,6 +55,7 @@ def cached_result(func):
 
 def fs_cached_result(cache_key, force_update=False):
     def wrapper(func):
+        @synchronized()
         @functools.wraps(func)
         def wrapped_func(*args, **kwargs):
             if get_env('dir.cache') is None:

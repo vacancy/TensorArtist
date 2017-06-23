@@ -9,6 +9,7 @@
 
 import functools
 import collections
+import threading
 
 import numpy
 
@@ -19,7 +20,8 @@ __all__ = ['iter_kv', 'merge_iterable',
            'assert_instance', 'assert_none', 'assert_notnone',
            'notnone_property',
            'UniqueValueGetter', 'AttrObject',
-           'run_once']
+           'run_once',
+           'synchronized']
 
 
 def iter_kv(v):
@@ -178,6 +180,7 @@ class notnone_property:
 def run_once(func):
     has_run = False
 
+    @synchronized()
     @functools.wraps(func)
     def new_func(*args, **kwargs):
         nonlocal has_run
@@ -187,3 +190,17 @@ def run_once(func):
         else:
             return
     return new_func
+
+
+def synchronized(mutex=None):
+    if mutex is None:
+        mutex = threading.Lock()
+
+    def wrapper(func):
+        @functools.wraps(func)
+        def wrapped_func(*args, **kwargs):
+            with mutex:
+                return func(*args, **kwargs)
+        return wrapped_func
+
+    return wrapper
