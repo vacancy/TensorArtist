@@ -139,13 +139,13 @@ class ProxyRLEnvironBase(RLEnvironBase):
         self.__proxy.clear_stats()
         return self
 
-    @property
-    def action_space(self):
-        return self.__proxy.action_space
-
-    # directly override the action_space to disable cache
-    # def _get_action_space(self):
+    # MJY(20170623): REMOVED. Originally, directly override the action_space to disable cache.
+    # @property
+    # def action_space(self):
     #     return self.__proxy.action_space
+
+    def _get_action_space(self):
+        return self.__proxy.action_space
 
     def _get_current_state(self):
         return self.__proxy.current_state
