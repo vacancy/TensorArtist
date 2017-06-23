@@ -11,6 +11,7 @@ from .. import io, get_env
 import functools
 import os.path as osp
 import threading
+import collections
 
 __all__ = ['cached_property', 'cached_result', 'fs_cached_result']
 
@@ -23,10 +24,10 @@ class cached_property:
         self.__doc__ = fget.__doc__
         self.__cache_key = '__result_cache_{}_{}'.format(
             fget.__name__, id(fget))
-        self.__mutex = threading.Lock()
+        self.__mutex = collections.defaultdict(threading.Lock)
 
-    def __get__(self, instance, owner):
-        with self.__mutex:
+    def __get__(self, instance, owner): 
+        with self.__mutex[instance]:
             if instance is None:
                 return self.fget
             v = getattr(instance, self.__cache_key, None)
