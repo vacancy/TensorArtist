@@ -35,14 +35,14 @@ __envs__ = {
 
     'a3c': {
         'env_name': 'Breakout-v0',
-
         'input_shape': (84, 84),
-        'frame_history': 4,
-        'limit_length': 40000,
 
-        # gamma and acc_step in future_reward
+        'nr_history_frames': 4,
+        'max_nr_steps': 40000,
+
+        # gamma and TD steps in future_reward
         'gamma': 0.99,
-        'acc_step': 5,
+        'nr_td_steps': 5,
 
         # async training data collector
         'nr_players': 50,
@@ -54,7 +54,7 @@ __envs__ = {
 
         'inference': {
             'nr_plays': 20,
-            'max_stuck_repeat': 30
+            'max_antistuck_repeat': 30
         },
         'demo': {
             'nr_plays': 5
@@ -67,9 +67,6 @@ __envs__ = {
         'batch_size': 128,
         'epoch_size': 1000,
         'nr_epochs': 200,
-    },
-    'demo': {
-        'customized': True
     }
 }
 
@@ -151,13 +148,13 @@ def make_player(is_train=True, dump_dir=None):
 
     p = rl.GymRLEnviron(get_env('a3c.env_name'), dump_dir=dump_dir)
     p = rl.MapStateProxyRLEnviron(p, resize_state)
-    p = rl.GymHistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
+    p = rl.HistoryFrameProxyRLEnviron(p, get_env('a3c.nr_history_frames'))
 
-    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
+    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.max_nr_steps'))
     if is_train:
         p = rl.AutoRestartProxyRLEnviron(p)
     else:
-        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('a3c.inference.max_stuck_repeat'), 1)
+        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('a3c.inference.max_antistuck_repeat'), 1)
     return p
 
 
@@ -196,8 +193,8 @@ def get_player_nr_actions():
 @cached_result
 def get_input_shape():
     input_shape = get_env('a3c.input_shape')
-    frame_history = get_env('a3c.frame_history')
-    h, w, c = input_shape[0], input_shape[1], 3 * frame_history
+    nr_history_frames = get_env('a3c.nr_history_frames')
+    h, w, c = input_shape[0], input_shape[1], 3 * nr_history_frames
     return h, w, c
 
 

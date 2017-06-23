@@ -29,7 +29,7 @@ def on_data_func(env, identifier, inp_data):
         if is_over:
             r = 0
             env.players_history[identifier] = []
-        elif num == get_env('a3c.acc_step') + 1:
+        elif num == get_env('a3c.nr_td_steps') + 1:
             history, last = history[:-1], history[-1]
             r = last.value
             env.players_history[identifier] = [last]

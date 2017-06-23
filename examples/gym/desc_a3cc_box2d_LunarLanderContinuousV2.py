@@ -45,8 +45,8 @@ __envs__ = {
     'a3c': {
         'env_name': 'LunarLanderContinuous-v2',
 
-        'frame_history': 4,
-        'limit_length': None, # no limit length
+        'nr_history_frames': 4,
+        'max_nr_steps': None, # no limit length
 
         # Action space used for exploration strategy sampling
         # Instead of sampling from a truncated Laplacian distribution, we perform a simplified version via
@@ -56,9 +56,9 @@ __envs__ = {
             np.linspace(-1, 1, 11)
         ], dtype='float32'),
 
-        # gamma and acc_step in future_reward
+        # gamma and TD steps in future_reward
         'gamma': 0.99,
-        'acc_step': 5,
+        'nr_td_steps': 5,
 
         # async training data collector
         'nr_players': 50,
@@ -70,7 +70,6 @@ __envs__ = {
 
         'inference': {
             'nr_plays': 20,
-            'max_stuck_repeat': 30
         },
         'demo': {
             'nr_plays': 5
@@ -82,9 +81,6 @@ __envs__ = {
         'batch_size': 128,
         'epoch_size': 200,
         'nr_epochs': 100,
-    },
-    'demo': {
-        'customized': True
     }
 }
 
@@ -206,8 +202,8 @@ def make_network(env):
 
 def make_player(is_train=True, dump_dir=None):
     p = rl.GymRLEnviron(get_env('a3c.env_name'), dump_dir=dump_dir)
-    p = rl.GymHistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
-    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
+    p = rl.HistoryFrameProxyRLEnviron(p, get_env('a3c.nr_history_frames'))
+    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.max_nr_steps'))
     if is_train:
         p = rl.AutoRestartProxyRLEnviron(p)
     return p
