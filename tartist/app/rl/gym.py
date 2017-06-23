@@ -9,6 +9,7 @@
 from .base import SimpleRLEnvironBase, ProxyRLEnvironBase
 from .base import DiscreteActionSpace, ContinuousActionSpace
 from tartist.core import io
+from tartist.core import get_logger
 from tartist.core.utils.meta import run_once
 import copy
 import threading
@@ -16,6 +17,8 @@ import numpy as np
 import collections
 import os
 import errno
+
+logger = get_logger(__file__)
 
 try:
     import gym
@@ -30,7 +33,6 @@ def get_env_lock():
     return _ENV_LOCK
 
 __all__ = ['GymRLEnviron', 'GymHistoryProxyRLEnviron', 'GymPreventStuckProxyRLEnviron']
-
 
 
 class GymRLEnviron(SimpleRLEnvironBase):
@@ -99,14 +101,15 @@ class GymRLEnviron(SimpleRLEnvironBase):
     def _finish(self):
         self._gym.close()
 
-class GymHistoryProxyRLEnviron(ProxyRLEnvironBase):
+
+GymHistoryProxyRLEnviron_warning = run_once(lambda: logger.warn('GymHistoryProxyRLEnviron ' + GymHistoryProxyRLEnviron.__doc__))
+from .utils import HistoryFrameProxyRLEnviron as HistoryFrameProxyRLEnviron_
+class GymHistoryProxyRLEnviron(HistoryFrameProxyRLEnviron_):
     """DEPRECATED: (2017-12-23) Use HistoryFrameProxyRLEnviron instead."""
 
-    warning = run_once(lambda :logger.warn('GymHistoryProxyRLEnviron ' + GymHistoryProxyRLEnviron.__doc__))
-
     def __init__(self, *args, **kwargs):
-        self.warning()
-        super().__init__(self, *args, **kwargs)
+        GymHistoryProxyRLEnviron_warning()
+        super().__init__(*args, **kwargs)
 
 
 class GymPreventStuckProxyRLEnviron(ProxyRLEnvironBase):
