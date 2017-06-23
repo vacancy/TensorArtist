@@ -6,19 +6,21 @@
 # 
 # This file is part of TensorArtist.
 
+import io
+import sys
 import numpy as np
 
-__all__ = ['stprint']
+__all__ = ['stprint', 'stformat']
 
 
-def _indent_print(msg, indent, prefix=None, end='\n'):
-    print(*['  '] * indent, end='')
+def _indent_print(msg, indent, prefix=None, end='\n', file=sys.stdout):
+    print(*['  '] * indent, end='', file=file)
     if prefix is not None:
-        print(prefix, end='')
-    print(msg, end=end)
+        print(prefix, end='', file=file)
+    print(msg, end=end, file=file)
 
 
-def stprint(data, key=None, indent=0):
+def stprint(data, key=None, indent=0, file=sys.stdout):
     """
     Structure print. Usage:
 
@@ -43,22 +45,31 @@ def stprint(data, key=None, indent=0):
     t = type(data)
 
     if t is tuple:
-        _indent_print('tuple[', indent, prefix=key)
+        _indent_print('tuple[', indent, prefix=key, file=file)
         for v in data:
-            stprint(v, indent=indent + 1)
-        _indent_print(']', indent)
+            stprint(v, indent=indent + 1, file=file)
+        _indent_print(']', indent, file=file)
     elif t is list:
-        _indent_print('list[', indent, prefix=key)
+        _indent_print('list[', indent, prefix=key, file=file)
         for v in data:
-            stprint(v, indent=indent + 1)
-        _indent_print(']', indent)
+            stprint(v, indent=indent + 1, file=file)
+        _indent_print(']', indent, file=file)
     elif t is dict:
-        _indent_print('dict{', indent, prefix=key)
+        _indent_print('dict{', indent, prefix=key, file=file)
         for k in sorted(data.keys()):
             v = data[k]
-            stprint(v, indent=indent + 1, key='{}: '.format(k))
-        _indent_print('}', indent)
+            stprint(v, indent=indent + 1, key='{}: '.format(k), file=file)
+        _indent_print('}', indent, file=file)
     elif t is np.ndarray:
-        _indent_print('ndarray{}, dtype={}'.format(data.shape, data.dtype), indent, prefix=key)
+        _indent_print('ndarray{}, dtype={}'.format(data.shape, data.dtype), indent, prefix=key, file=file)
     else:
-        _indent_print(data, indent, prefix=key)
+        _indent_print(data, indent, prefix=key, file=file)
+
+
+def stformat(data, key=None, indent=0):
+    f = io.StringIO()
+    stprint(data, key=key, indent=indent, file=f)
+    value = f.getvalue()
+    f.close()
+    return value
+
