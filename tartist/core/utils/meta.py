@@ -7,6 +7,7 @@
 # This file is part of TensorArtist.
 
 
+import functools
 import collections
 
 import numpy
@@ -17,7 +18,8 @@ __all__ = ['iter_kv', 'merge_iterable',
            'canonize_args_list',
            'assert_instance', 'assert_none', 'assert_notnone',
            'notnone_property',
-           'UniqueValueGetter', 'AttrObject']
+           'UniqueValueGetter', 'AttrObject',
+           'run_once']
 
 
 def iter_kv(v):
@@ -171,3 +173,17 @@ class notnone_property:
         assert v is not None, '{}.{} can not be None, maybe not set yet'.format(
                 type(instance).__name__, self.__name__)
         return v
+
+
+def run_once(func):
+    has_run = False
+
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        nonlocal has_run
+        if not has_run:
+            has_run = True
+            return func(*args, **kwargs)
+        else:
+            return
+    return new_func

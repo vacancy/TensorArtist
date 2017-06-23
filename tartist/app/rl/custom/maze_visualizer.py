@@ -6,8 +6,6 @@
 #
 # This file is part of TensorArtist.
 
-from .maze import MazeEnv
-
 import base64
 import numpy as np
 

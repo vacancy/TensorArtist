@@ -9,6 +9,8 @@
 from .base import ProxyRLEnvironBase
 from tartist.core import get_logger 
 import functools
+import collections
+import numpy as np
 
 logger = get_logger(__file__)
 
@@ -17,7 +19,8 @@ __all__ = [
         'TransparentAttributeProxyRLEnviron',
         'AutoRestartProxyRLEnviron', 
         'RepeatActionProxyRLEnviron', 'NOPFillProxyRLEnviron',
-        'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron',
+        'LimitLengthProxyRLEnviron', 
+        'MapStateProxyRLEnviron', 'HistoryFrameProxyRLEnviron',
         'ManipulateRewardProxyRLEnviron', 'manipulate_reward', 
         'remove_proxies']
 
@@ -102,8 +105,44 @@ class MapStateProxyRLEnviron(ProxyRLEnvironBase):
         return self._func(self.proxy.current_state)
 
 
+class HistoryFrameProxyRLEnviron(ProxyRLEnvironBase):
+    def __init__(self, other, history_length):
+        super().__init__(other)
+        self._history = collections.deque(maxlen=history_length)
+
+    def _get_current_state(self):
+        while len(self._history) != self._history.maxlen:
+            assert len(self._history) > 0
+            v = self._history[-1]
+            self._history.appendleft(np.zeros_like(v, dtype=v.dtype))
+        return np.concatenate(self._history, axis=-1)
+
+    def _set_current_state(self, state):
+        if len(self._history) == self._history.maxlen:
+            self._history.popleft()
+        self._history.append(state)
+
+    def _copy_history(self):
+        return copy.copy(self._history)
+
+    def _restore_history(self, history):
+        assert isinstance(history, collections.deque)
+        assert history.maxlen == self._history.maxlen
+        self._history = copy.copy(history)
+
+    def _action(self, action):
+        r, is_over = self.proxy.action(action)
+        self._set_current_state(self.proxy.current_state)
+        return r, is_over
+
+    def _restart(self, *args, **kwargs):
+        super()._restart(*args, **kwargs)
+        self._history.clear()
+        self._set_current_state(self.proxy.current_state)
+
+
 class ManipulateRewardProxyRLEnviron(ProxyRLEnvironBase):
-    """DEPRECATED: (2017-11-20) Use manipulate_reward instaed"""
+    """DEPRECATED: (2017-11-20) Use manipulate_reward instead."""
 
     def __init__(self, other, func):
         logger.warn('ManipulateRewardProxyRLEnviron may cause wrong reward history; use manipulate_reward instead.')
