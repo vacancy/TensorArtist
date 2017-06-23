@@ -22,7 +22,7 @@ __all__ = [
         'LimitLengthProxyRLEnviron', 
         'MapStateProxyRLEnviron', 'HistoryFrameProxyRLEnviron',
         'ManipulateRewardProxyRLEnviron', 'manipulate_reward', 
-        'remove_proxies']
+        'remove_proxies', 'find_proxy']
 
 
 class TransparentAttributeProxyRLEnviron(ProxyRLEnvironBase):
@@ -171,3 +171,11 @@ def remove_proxies(environ):
     while isinstance(environ, ProxyRLEnvironBase):
         environ = environ.proxy
     return environ
+
+
+def find_proxy(environ, proxy_cls):
+    while not isinstance(environ, proxy_cls) and isinstance(environ, ProxyRLEnviron):
+        environ = environ.proxy
+    if isinstance(environ, proxy_cls):
+        return environ
+    return None
