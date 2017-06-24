@@ -8,6 +8,7 @@
 
 from .base import ProxyRLEnvironBase
 from tartist.core import get_logger 
+from tartist.core.utils.meta import run_once
 import functools
 import collections
 import numpy as np
@@ -105,7 +106,23 @@ class MapStateProxyRLEnviron(ProxyRLEnvironBase):
         return self._func(self.proxy.current_state)
 
 
+HistoryFrameProxyRLEnviron_copy_warning = run_once(lambda: logger.warn('HistoryFrameProxyRLEnviron._copy' +
+    HistoryFrameProxyRLEnviron._copy_history.__doc__))
 class HistoryFrameProxyRLEnviron(ProxyRLEnvironBase):
+    @staticmethod
+    def __zeros_like(v):
+        if type(v) is tuple:
+            return tuple(HistoryFrameProxyRLEnviron.__zeros_like(i) for i in v)
+        assert isinstance(v, np.ndarray)
+        return np.zeros_like(v, dtype=v.dtype)
+
+    @staticmethod
+    def __concat(history):
+        last = history[-1]
+        if type(last) is tuple:
+            return tuple(HistoryFrameProxyRLEnviron.__concat(i) for i in zip(*history))
+        return np.concatenate(history, axis=-1)
+
     def __init__(self, other, history_length):
         super().__init__(other)
         self._history = collections.deque(maxlen=history_length)
@@ -114,21 +131,34 @@ class HistoryFrameProxyRLEnviron(ProxyRLEnvironBase):
         while len(self._history) != self._history.maxlen:
             assert len(self._history) > 0
             v = self._history[-1]
-            self._history.appendleft(np.zeros_like(v, dtype=v.dtype))
-        return np.concatenate(self._history, axis=-1)
+            self._history.appendleft(self.__zeros_like(v))
+        return self.__concat(self._history)
 
     def _set_current_state(self, state):
         if len(self._history) == self._history.maxlen:
             self._history.popleft()
         self._history.append(state)
 
-    def _copy_history(self):
+    # Use shallow copy
+    def _copy_history(self, _called_directly=True):
+        """DEPRECATED: (2017-12-23) Use copy_history directly."""
+        if _called_directly:
+            HistoryFrameProxyRLEnviron_copy_warning()
         return copy.copy(self._history)
 
-    def _restore_history(self, history):
+    def _restore_history(self, history, _called_directly=True):
+        """DEPRECATED: (2017-12-23) Use restore_history directly."""
+        if _called_directly:
+            HistoryFrameProxyRLEnviron_copy_warning()
         assert isinstance(history, collections.deque)
         assert history.maxlen == self._history.maxlen
         self._history = copy.copy(history)
+
+    def copy_history(self):
+        return self._copy_history(_called_directly=False)
+
+    def restore_history(self, history):
+        return self._restore_history(history, _called_directly=False)
 
     def _action(self, action):
         r, is_over = self.proxy.action(action)
@@ -174,7 +204,7 @@ def remove_proxies(environ):
 
 
 def find_proxy(environ, proxy_cls):
-    while not isinstance(environ, proxy_cls) and isinstance(environ, ProxyRLEnviron):
+    while not isinstance(environ, proxy_cls) and isinstance(environ, ProxyRLEnvironBase):
         environ = environ.proxy
     if isinstance(environ, proxy_cls):
         return environ
