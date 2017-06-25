@@ -169,7 +169,7 @@ def make_network(env):
         net.add_output(policy_output, name='policy')
         net.add_output(value, name='value')
 
-        if env.phase is env.Phase.TRAIN:
+        if is_train:
             action = O.placeholder('action', shape=(None, action_length), dtype='int64')
             future_reward = O.placeholder('future_reward', shape=(None, ))
 
@@ -288,7 +288,7 @@ def player_func(pid, requester):
 
             if len(player.stats['score']) > 0:
                 score = player.stats['score'][-1]
-                requester.query('stat', {'async/score': score}, do_recv=False)
+                requester.query('stat', {'async/train/score': score}, do_recv=False)
                 player.clear_stats()
             state = player.current_state
 
