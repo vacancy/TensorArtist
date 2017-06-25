@@ -338,11 +338,11 @@ def make_a3c_configs(env):
 def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer, extra_summary_types={
-        'async/score': 'async_scalar',
+        'async/train/score': 'async_scalar',
         'async/inference/score': 'async_scalar',
     })
     summary.enable_echo_summary_scalar(trainer, summary_spec={
-        'async/score': ['avg', 'max'],
+        'async/train/score': ['avg', 'max'],
         'async/inference/score': ['avg', 'max']
     })
 
