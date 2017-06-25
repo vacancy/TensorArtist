@@ -13,6 +13,8 @@ __all__ = ['tensor', 'scalar', 'histogram', 'audio', 'image']
 
 
 def _pure_name(name):
+    if name.endswith(':0'):
+        name = name[:-2]
     names = name.split('/')
     name = names[-1]
     if name == 'out' and len(names) > 1:

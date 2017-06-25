@@ -21,7 +21,8 @@ __all__ = ['iter_kv', 'merge_iterable',
            'notnone_property',
            'UniqueValueGetter', 'AttrObject',
            'run_once',
-           'synchronized']
+           'synchronized', 
+           'try_run']
 
 
 def iter_kv(v):
@@ -204,3 +205,10 @@ def synchronized(mutex=None):
         return wrapped_func
 
     return wrapper
+
+
+def try_run(lambda_):
+    try:
+        return lambda_()
+    except:
+        return None
