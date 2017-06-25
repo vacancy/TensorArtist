@@ -95,11 +95,22 @@ def uid():
 
 
 def get_addrv1():
-    return socket.gethostbyname(socket.gethostname())
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except:
+        return '127.0.0.1'
+
+
+def get_addrv2():
+    try:
+        return _get_addrv2_impl()
+    except:
+        # fallback to addrv1
+        return get_addrv1()
 
 
 # http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
-def get_addrv2():
+def _get_addrv2_impl():
     resolve = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1]
     if len(resolve):
         return resolve[0]

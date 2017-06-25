@@ -12,6 +12,14 @@ import tensorflow as tf
 __all__ = ['tensor', 'scalar', 'histogram', 'audio', 'image']
 
 
+def _pure_name(name):
+    names = name.split('/')
+    name = names[-1]
+    if name == 'out' and len(names) > 1:
+        name = names[-2]
+    return name
+
+
 def _migrate_summary(tf_func):
     @functools.wraps(tf_func)
     def new_func(name, *args, **kwargs):
@@ -19,8 +27,7 @@ def _migrate_summary(tf_func):
 
         if hasattr(name, 'name'):
             name, tensor = name.name, name
-            name = name.split('/')[-1]
-            name = name_prefix + name
+            name = name_prefix + _pure_name(name)
             return tf_func(name, tensor, *args, **kwargs)
         name = name_prefix + name
         return tf_func(name, *args, **kwargs)
