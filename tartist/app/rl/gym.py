@@ -72,7 +72,7 @@ class GymRLEnviron(SimpleRLEnvironBase):
 
         if isinstance(spc, gym.spaces.discrete.Discrete):
             try:
-                action_meanings = self._gym.get_action_meanings()
+                action_meanings = self._gym.unwrapped.get_action_meanings()
             except AttributeError:
                 if 'Atari' in self._gym.unwrapped.__class__.__name__:
                     from gym.envs.atari.atari_env import ACTION_MEANING
