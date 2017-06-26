@@ -216,7 +216,8 @@ def enable_echo_summary_scalar(trainer, summary_spec=None,
                 else:
                     avg = mgr.average(k, trainer.runtime['inference_epoch_size'], meth=meth)
 
-                tag = '{}/{}'.format(k, meth)
+                # MJY(20170623): add stat prefix
+                tag = 'stat/{}/{}'.format(k, meth)
                 if avg != 'N/A':
                     extra_summary.value.add(tag=tag, simple_value=avg)
                 log_strs.append('  {} = {}'.format(tag, avg))
