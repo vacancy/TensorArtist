@@ -50,14 +50,17 @@ class RLEnvironBase(object):
     def finish(self, *args, **kwargs):
         return self._finish(*args, **kwargs)
 
-    def play_one_episode(self, func, ret_states=False, restart_kwargs=None, finish_kwargs=None):
+    def play_one_episode(self, func, ret_states=False, ret_actions=False, restart_kwargs=None, finish_kwargs=None):
         states = []
+        actions = []
 
         self.restart(**(restart_kwargs or {}))
         while True:
             state = self.current_state
             action = func(state)
             r, is_over = self.action(action)
+            if ret_actions:
+                actions.append(action)
             if ret_states:
                 states.append(state)
             if is_over:
@@ -66,7 +69,13 @@ class RLEnvironBase(object):
 
         if ret_states:
             states.append(self.current_state)
-            return states
+
+        returns = []
+        if ret_states:
+            returns.append(states)
+        if ret_actions:
+            returns.append(actions)
+        return tuple(returns)
 
     def _get_action_space(self):
         return None
