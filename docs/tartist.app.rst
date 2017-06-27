@@ -1,5 +1,5 @@
-tartist.app package
-===================
+tartist\.app package
+====================
 
 Subpackages
 -----------

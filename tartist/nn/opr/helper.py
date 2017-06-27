@@ -45,7 +45,7 @@ def wrap_varnode_func(func):
     return new_func
 
 
-def wrap_named_op(*args, use_scope=True, default_name=None):
+def wrap_named_op(*args, use_scope=True, use_variable_scope=False, default_name=None):
     # do instant-binding
     def wrapper(func):
         nonlocal default_name
@@ -60,8 +60,12 @@ def wrap_named_op(*args, use_scope=True, default_name=None):
             if name is None:
                 name = default_name
             if use_scope:
-                with tf.name_scope(name):
-                    return func(*args, name=name, **kwargs)
+                if use_variable_scope:
+                    with tf.variable_scope(name):
+                        return func(*args, name=name, **kwargs)
+                else:
+                    with tf.name_scope(name):
+                        return func(*args, name=name, **kwargs)
             else:
                 return func(*args, name=name, **kwargs)
         return new_func
