@@ -53,7 +53,7 @@ def random_bernoulli(logits, num_samples, seed=None, squeeze=False, name='random
     logits = as_varnode(logits)
 
     shape = logits.shape
-    zeros_parts = logits.flatten().add_axis(1)
+    zeros_parts = -logits.flatten().add_axis(1)
     ones_parts = O.zeros_like(zeros_parts)
     logits = O.concat([zeros_parts, ones_parts], axis=1)
     samples = random_multinomial(logits, num_samples, seed=seed)
