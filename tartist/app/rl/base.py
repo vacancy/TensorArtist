@@ -75,7 +75,7 @@ class RLEnvironBase(object):
             returns.append(states)
         if ret_actions:
             returns.append(actions)
-        return tuple(returns)
+        return returns[0] if len(returns) == 1 else tuple(returns)
 
     def _get_action_space(self):
         return None
