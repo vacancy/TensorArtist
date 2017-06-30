@@ -3,7 +3,7 @@ Pix2Pix datasets download toolkits
 
 ## Original dataset downloading
 
-    $ bash ./data/download_dataset.sh dataset_name
+    $ bash ./download_dataset.sh dataset_name
 
 Available datasets are:
 
@@ -25,3 +25,5 @@ For other datasets (e.g. facescrub), try:
 
     $ tart gen-lmdb-single.py -i DIR_TO_ACTOR_IMGS -o DIR_TO_LMDB/train_actors_db
     $ tart gen-lmdb-single.py -i DIR_TO_ACTRESS_IMGS -o DIR_TO_LMDB/train_actresses_db
+
+You should make sure that the lmdb directories are put inside the `DATA_DIR` for TensorArtist.
