@@ -29,10 +29,15 @@ class RandomizedDataFlowBase(SimpleDataFlowBase):
 
 
 class LOARandomSampleDataFlow(RandomizedDataFlowBase):
+    _loa = None
+    _length = None
+
     def __init__(self, loa, seed=None):
         super().__init__(seed=seed)
-        self._loa = loa
+        self._set_loa(loa)
 
+    def _set_loa(self, loa):
+        self._loa = loa
         uvg = UniqueValueGetter('LOARandomSampleDataFlow length consistency check failed')
         for i in self._loa:
             uvg.set(len(i))

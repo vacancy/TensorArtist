@@ -16,20 +16,20 @@ import threading
 
 logger = get_logger(__file__)
 
-__all__ = ['A3CTrainerEnv', 'A3CTrainer']
+__all__ = ['A3CMaster', 'A3CTrainerEnv', 'A3CTrainer']
 
 
 class A3CMaster(object):
+    on_data_func = None
+    on_stat_func = None
+    player_func = None
+    predictor_func = None
+
     def __init__(self, env, name, nr_predictors):
         self.name = name
         self.env = env
         self.router = QueryRepPipe(name + '-master', send_qsize=12, mode='tcp')
         self.queue = queue.Queue()
-
-        self.on_data_func = None
-        self.on_stat_func = None
-        self.player_func = None
-        self.predictor_func = None
 
         self._nr_predictors = nr_predictors
         self._players = []
@@ -42,6 +42,13 @@ class A3CMaster(object):
         if self.on_stat_func:
             self.on_stat_func(self.env, identifier, inp_data)
 
+    def _make_predictor_thread(self, i, func, daemon=True):
+        return threading.Thread(target=self.predictor_func, daemon=daemon,
+                                args=(i, self.router, self.queue, func))
+
+    def _make_player_proc(self, i, req, daemon=True):
+        return EnvBox(target=self.player_func, args=(i, req), daemon=daemon)
+
     def initialize(self):
         self.router.dispatcher.register('data', self._on_data_func)
         self.router.dispatcher.register('stat', self._on_stat_func)
@@ -51,8 +58,7 @@ class A3CMaster(object):
 
         for i in range(self._nr_predictors):
             func = self.env.net_funcs[i]
-            prc = threading.Thread(target=self.predictor_func, daemon=True,
-                                   args=(i, self.router, self.queue, func))
+            prc = self._make_predictor_thread(i, func, daemon=True)
             self._predictors.append(prc)
         for p in self._predictors:
             p.start()
@@ -62,7 +68,7 @@ class A3CMaster(object):
         self._players = []
         for i in range(nr_players):
             req = QueryReqPipe(name + ('-%d' % i), self.router.conn_info)
-            prc = EnvBox(target=self.player_func, args=(i, req), daemon=daemon)
+            prc = self._make_player_proc(i, req, daemon=daemon)
             self._players.append(prc)
         for p in self._players:
             p.start()
@@ -112,17 +118,23 @@ class A3CTrainerEnv(SimpleTrainerEnv):
             func = self._make_predictor_net_func(i, dev)
             self._net_funcs.append(func)
 
+        self._initialize_a3c_master()
+        self._data_queue = queue.Queue(get_env('trainer.batch_size') * get_env('a3c.data_queue_length_factor', 16))
+
+    def _initialize_a3c_master(self):
+        nr_predictors = get_env('a3c.nr_predictors')
         self._player_master = A3CMaster(self, 'a3c-player', nr_predictors)
         self._inference_player_master = A3CMaster(self, 'a3c-inference-player', nr_predictors)
-        self._data_queue = queue.Queue(get_env('trainer.batch_size') * get_env('a3c.data_queue_length_factor', 16))
 
     def initialize_all_peers(self):
         nr_players = get_env('a3c.nr_players')
 
         self._player_master.initialize()
+        self._inference_player_master.initialize()
+
+        # Must call initialize_all_variables before start any players.
         self.initialize_all_variables()
         self._player_master.start(nr_players, daemon=True)
-        self._inference_player_master.initialize()
 
     def finalize_all_peers(self):
         self.player_master.finalize()

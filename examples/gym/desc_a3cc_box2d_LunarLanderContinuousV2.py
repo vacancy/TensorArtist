@@ -313,7 +313,7 @@ def _predictor_func(pid, router, task_queue, func, is_inference=False):
             callbacks.append(callback)
             nr_total += 1
 
-        out = func(state=batched_state)
+        out = func(state=batched_state[:nr_total])
         for i in range(nr_total):
             if is_inference:
                 action = out['policy'][i]

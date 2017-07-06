@@ -1,15 +1,10 @@
 # -*- coding:utf8 -*-
-# File   : desc_a3c_atari_BreakoutV0.py
+# File   : desc_hp_a3c_atari_BreakoutV0.py
 # Author : Jiayuan Mao
-#          Honghua Dong
 # Email  : maojiayuan@gmail.com
-#          dhh19951@gmail.com
-# Date   : 3/18/17
-#
+# Date   : 05/07/2017
+# 
 # This file is part of TensorArtist.
-
-"""This reproduction of A3C is based on ppwwyyxx's reproduction in his TensorPack framework.
-Credit to : https://github.com/ppwwyyxx/tensorpack/tree/master/examples/A3C-Gym"""
 
 import collections
 import functools
@@ -67,6 +62,13 @@ __envs__ = {
         'batch_size': 128,
         'epoch_size': 1000,
         'nr_epochs': 200,
+    },
+
+    'rpredictor': {
+        'learning_rate': 0.001,
+        'batch_size': 16,
+        'epoch_size': 100,
+        'nr_epochs': 10,
     }
 }
 
@@ -198,40 +200,78 @@ def get_input_shape():
     return h, w, c
 
 
+PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward', 'reward_var'))
+
+
+def on_data_func(env, identifier, inp_data):
+    router, task_queue = env.player_master.router, env.player_master.queue
+    data_queue = env.data_queue
+    player_history = env.players_history[identifier]
+
+    state, is_over = inp_data
+
+    def parse_history(history):
+        num = len(history)
+        if is_over:
+            r = 0
+            env.players_history[identifier] = []
+        elif num == get_env('a3c.nr_td_steps') + 1:
+            history, last = history[:-1], history[-1]
+            r = last.value
+            env.players_history[identifier] = [last]
+        else:
+            return
+
+        gamma = get_env('a3c.gamma')
+        for i in history[::-1]:
+            r = np.clip(i.reward, -1, 1) + gamma * r
+            # r = i.reward + gamma * r
+            data_queue.put({'state': i.state, 'action': i.action, 'future_reward': r})
+
+    def callback(action, reward_info, predict_value):
+        # reward_info is of form (reward, reward_variance)
+        player_history.append(PlayerHistory(state, action, predict_value, reward_info[0], reward_info[1]))
+        router.send(identifier, (action, reward_info[0]))
+
+    if len(player_history) > 0:
+        parse_history(player_history)
+
+    task_queue.put((identifier, inp_data, callback))
+
+
+def on_stat_func(env, identifier, inp_data):
+    if env.owner_trainer is not None:
+        mgr = env.owner_trainer.runtime.get('summary_histories', None)
+        if mgr is not None:
+            for k, v in inp_data.items():
+                mgr.put_async_scalar(k, v)
+
+
 def player_func(pid, requester):
     player = make_player()
     player.restart()
     state = player.current_state
-    reward = 0
     is_over = False
+
     with requester.activate():
         while True:
-            action = requester.query('data', (state, reward, is_over))
-            reward, is_over = player.action(action)
+            action, reward = requester.query('data', (state, is_over))
+            _, is_over = player.action(action)
 
             if len(player.stats['score']) > 0:
                 score = player.stats['score'][-1]
                 requester.query('stat', {'async/train/score': score}, do_recv=False)
                 player.clear_stats()
+
             state = player.current_state
 
 
-def inference_player_func(pid, requester):
-    player = make_player(is_train=False)
-
-    def get_action(o):
-        action = requester.query('data', (o, ))
-        return action
-
-    with requester.activate():
-        player.play_one_episode(get_action)
-        score = player.stats['score'][-1]
-        requester.query('stat', {'async/inference/score': score}, do_recv=False)
-
-
-def _predictor_func(pid, router, task_queue, func, is_inference=False):
+def _predictor_func(pid, rpredictor, router, task_queue, func, is_inference=False):
     batch_size = get_env('a3c.predictor.batch_size')
+
     batched_state = np.empty((batch_size, ) + get_input_shape(), dtype='float32')
+    # assume discrete action space
+    batched_action = np.empty((batch_size, ), dtype='int32')
 
     while True:
         callbacks = []
@@ -260,27 +300,20 @@ def _predictor_func(pid, router, task_queue, func, is_inference=False):
             else:
                 action = random.choice(len(policy), p=policy)
 
-            callbacks[i](action, out['value'][i])
+            batched_action[i] = action
+
+        rewards = rpredictor.predict_batch(batched_state[:nr_total], batched_action[:nr_total], ret_variance=True)
+        for i in range(nr_total):
+            callbacks[i](batched_action[i], rewards[i], out['value'][i])
 
 
 def make_a3c_configs(env):
-    from common_a3c import on_data_func, on_stat_func
     predictor_func = functools.partial(_predictor_func, is_inference=False)
 
     env.player_master.player_func = player_func
     env.player_master.predictor_func = predictor_func
     env.player_master.on_data_func = on_data_func
     env.player_master.on_stat_func = on_stat_func
-
-    # currently we don't use multi-proc inference, so these settings are not used at all
-    if False:
-        from common_a3c import inference_on_data_func, inference_on_stat_func
-        inference_predictor_func = functools.partial(_predictor_func, is_inference=True)
-
-        env.inference_player_master.player_func = inference_player_func
-        env.inference_player_master.predictor_func = inference_predictor_func
-        env.inference_player_master.on_data_func = inference_on_data_func
-        env.inference_player_master.on_stat_func = inference_on_stat_func
 
     env.players_history = collections.defaultdict(list)
 
@@ -303,7 +336,7 @@ def main_train(trainer):
     snapshot.enable_snapshot_saver(trainer)
 
     from tartist.core import register_event
-    from common_a3c import main_inference_play_multithread
+    from common_hp_a3c import main_inference_play_multithread
 
     def on_epoch_after(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:

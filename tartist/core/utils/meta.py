@@ -13,7 +13,7 @@ import threading
 
 import numpy
 
-__all__ = ['iter_kv', 'merge_iterable',
+__all__ = ['iter_kv', 'merge_iterable', 'map_exec', 'filter_exec',
            'dict_deep_update', 'dict_deep_keys',
            'astuple', 'asshape',
            'canonize_args_list',
@@ -39,6 +39,14 @@ def merge_iterable(v1, v2):
         return v
 
     return v1 + v2
+
+
+def map_exec(func, *iterables):
+    return list(map(func, *iterables))
+
+
+def filter_exec(func, iterable):
+    return list(filter(func, iterable))
 
 
 def dict_deep_update(a, b):
