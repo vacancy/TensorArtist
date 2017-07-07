@@ -12,8 +12,9 @@ import os
 import queue
 
 import numpy as np
+import libhpref
 
-from tartist import random, image
+from tartist import random, image, cao
 from tartist.app import rl
 from tartist.core import get_env, get_logger
 from tartist.core.utils.cache import cached_result
@@ -35,11 +36,9 @@ __envs__ = {
         'nr_history_frames': 4,
         'max_nr_steps': 40000,
 
-        # gamma and TD steps in future_reward
         'gamma': 0.99,
         'nr_td_steps': 5,
 
-        # async training data collector
         'nr_players': 50,
         'nr_predictors': 2,
         'predictor': {
@@ -65,6 +64,7 @@ __envs__ = {
     },
 
     'rpredictor': {
+        'nr_ensembles': 3,
         'learning_rate': 0.001,
         'batch_size': 16,
         'epoch_size': 100,
@@ -72,8 +72,8 @@ __envs__ = {
     }
 }
 
-__trainer_cls__ = rl.train.A3CTrainer
-__trainer_env_cls__ = rl.train.A3CTrainerEnv
+__trainer_cls__ = libhpref.HPA3CTrainer
+__trainer_env_cls__ = libhpref.HPA3CTrainerEnv
 
 
 def make_network(env):
@@ -314,6 +314,13 @@ def make_a3c_configs(env):
     env.player_master.predictor_func = predictor_func
     env.player_master.on_data_func = on_data_func
     env.player_master.on_stat_func = on_stat_func
+
+    predictor_desc = libhpref.PredictorDesc(None, None, None, None, None) 
+    env.player_master.rpredictor = libhpref.EnsemblePredictor(predictor_desc,
+            nr_ensembles=get_env('rpredictor.nr_ensembles'),
+            devices=[env.master_device] * get_env('rpredictor.nr_ensembles'),
+            nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'))
+
 
     env.players_history = collections.defaultdict(list)
 

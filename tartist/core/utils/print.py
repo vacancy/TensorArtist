@@ -9,8 +9,12 @@
 import io
 import sys
 import numpy as np
+import collections
+import threading
 
 __all__ = ['stprint', 'stformat']
+
+__stprint_locks = collections.defaultdict(threading.Lock)
 
 
 def _indent_print(msg, indent, prefix=None, end='\n', file=sys.stdout):
@@ -20,7 +24,7 @@ def _indent_print(msg, indent, prefix=None, end='\n', file=sys.stdout):
     print(msg, end=end, file=file)
 
 
-def stprint(data, key=None, indent=0, file=sys.stdout):
+def stprint(data, key=None, indent=0, file=sys.stdout, need_lock=True):
     """
     Structure print. Usage:
 
@@ -44,32 +48,37 @@ def stprint(data, key=None, indent=0, file=sys.stdout):
     """
     t = type(data)
 
+    if need_lock:
+        __stprint_locks[file].acquire()
+
     if t is tuple:
         _indent_print('tuple[', indent, prefix=key, file=file)
         for v in data:
-            stprint(v, indent=indent + 1, file=file)
+            stprint(v, indent=indent + 1, file=file, need_lock=False)
         _indent_print(']', indent, file=file)
     elif t is list:
         _indent_print('list[', indent, prefix=key, file=file)
         for v in data:
-            stprint(v, indent=indent + 1, file=file)
+            stprint(v, indent=indent + 1, file=file, need_lock=False)
         _indent_print(']', indent, file=file)
     elif t is dict:
         _indent_print('dict{', indent, prefix=key, file=file)
         for k in sorted(data.keys()):
             v = data[k]
-            stprint(v, indent=indent + 1, key='{}: '.format(k), file=file)
+            stprint(v, indent=indent + 1, key='{}: '.format(k), file=file, need_lock=False)
         _indent_print('}', indent, file=file)
     elif t is np.ndarray:
         _indent_print('ndarray{}, dtype={}'.format(data.shape, data.dtype), indent, prefix=key, file=file)
     else:
         _indent_print(data, indent, prefix=key, file=file)
 
+    if need_lock:
+        __stprint_locks[file].release()
+
 
 def stformat(data, key=None, indent=0):
     f = io.StringIO()
-    stprint(data, key=key, indent=indent, file=f)
+    stprint(data, key=key, indent=indent, file=f, need_lock=False)
     value = f.getvalue()
     f.close()
     return value
-
