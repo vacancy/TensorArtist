@@ -109,6 +109,8 @@ class EnsemblePredictor(object):
             self._try_train_again()
 
     def predict(self, state, action, ret_variance=False):
+        action = np.array(action)
+
         with self._funcs_predict_lock:
             if len(self._funcs_predict) == 0:
                 rs = self._rng.random_sample(size=self._nr_ensembles)
@@ -123,7 +125,7 @@ class EnsemblePredictor(object):
     def predict_batch(self, state_batch, action_batch, ret_variance=False):
         with self._funcs_predict_lock:
             if len(self._funcs_predict) == 0:
-                rs = self._rng.random_sample(size=(self._nr_ensembles, len(state_batch)))
+                rs = self._rng.random_sample(size=(len(state_batch), self._nr_ensembles))
             else:
                 rs = []
                 for f in self._funcs_predict:
