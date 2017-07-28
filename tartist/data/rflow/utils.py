@@ -11,8 +11,14 @@ import socket
 import uuid
 import json
 
+from ...core.utils.network import get_local_addr_v2
+
+
 json_dumpb = lambda x: json.dumps(x).encode('utf-8')
 json_loadb = lambda x: json.loads(x.decode('utf-8'))
+
+# MJY(20170706):: backward compatibility: move it to core.utils.network.
+get_addr = get_local_addr_v2
 
 
 def router_recv_json(sock, flag=zmq.NOBLOCK, loader=json_loadb):
@@ -92,37 +98,6 @@ def bind_to_random_ipc(sock, name):
 
 def uid():
     return socket.gethostname() + '/' + uuid.uuid4().hex
-
-
-def get_addrv1():
-    try:
-        return socket.gethostbyname(socket.gethostname())
-    except:
-        return '127.0.0.1'
-
-
-def get_addrv2():
-    try:
-        return _get_addrv2_impl()
-    except:
-        # fallback to addrv1
-        return get_addrv1()
-
-
-# http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
-def _get_addrv2_impl():
-    resolve = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1]
-    if len(resolve):
-        return resolve[0]
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    addr = s.getsockname()[0]
-    s.close()
-    return addr
-
-
-get_addr = get_addrv2
 
 
 def graceful_close(sock):

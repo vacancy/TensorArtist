@@ -43,7 +43,24 @@ def _default_main_train(trainer):
     trainer.train()
 
 
-class EnsemblePredictor(object):
+class PredictorBase(object):
+    def initialize(self):
+        pass
+
+    def add_training_data(self, data):
+        raise NotImplementedError()
+
+    def extend_training_data(self, data):
+        raise NotImplementedError()
+
+    def predict(self, state, action):
+        raise NotImplementedError()
+
+    def predict_batch(self, state_batch, action_batch):
+        raise NotImplementedError()
+
+
+class EnsemblePredictor(PredictorBase):
     _validation_ratio = 1 / 2.718281828
     _network_output_name = 'pred'
 
@@ -77,7 +94,7 @@ class EnsemblePredictor(object):
     def initialize(self):
         self.__initialize_envs()
 
-    def add_data(self, data, acquire_lock=True, try_retrain=True):
+    def add_training_data(self, data, acquire_lock=True, try_retrain=True):
         assert isinstance(data, TrainingData)
         if data.pref== -1:
             return
@@ -99,11 +116,11 @@ class EnsemblePredictor(object):
             if new_size - last_size > self._retrain_thresh:
                 self._try_train_again()
 
-    def extend_data(self, data, force_retrain=True):
+    def extend_training_data(self, data, force_retrain=True):
         with self._data_pool_lock:
             for d in data[:-1]:
-                self.add_data(d, acquire_lock=False, try_retrain=False)
-            self.add_data(data[-1], acquire_lock=False, try_retrain=not force_retrain)
+                self.add_training_data(d, acquire_lock=False, try_retrain=False)
+            self.add_training_data(data[-1], acquire_lock=False, try_retrain=not force_retrain)
 
         if force_retrain:
             self._try_train_again()

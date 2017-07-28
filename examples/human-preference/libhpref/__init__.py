@@ -7,5 +7,5 @@
 # This file is part of TensorArtist.
 
 from .rpredictor import *
-from .webserver import *
+from .collector import *
 from .train import *

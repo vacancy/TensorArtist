@@ -316,11 +316,12 @@ def make_a3c_configs(env):
     env.player_master.on_stat_func = on_stat_func
 
     predictor_desc = libhpref.PredictorDesc(None, None, None, None, None) 
-    env.player_master.rpredictor = libhpref.EnsemblePredictor(predictor_desc,
-            nr_ensembles=get_env('rpredictor.nr_ensembles'),
-            devices=[env.master_device] * get_env('rpredictor.nr_ensembles'),
-            nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'))
-
+    env.player_master.rpredictor = libhpref.EnsemblePredictor(
+        predictor_desc,
+        nr_ensembles=get_env('rpredictor.nr_ensembles'),
+        devices=[env.master_device] * get_env('rpredictor.nr_ensembles'),
+        nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size')
+    )
 
     env.players_history = collections.defaultdict(list)
 

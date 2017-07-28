@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : start-webserver.py
+# File   : start-collector.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 03/07/2017
@@ -8,7 +8,7 @@
 
 import argparse
 from tartist.core import get_logger
-from tartist.data.rflow.utils import get_addrv2
+from tartist.core.utils.network import get_local_addr
 from libhpref.webserver import TrajectoryPairPool, WebServer
 
 logger = get_logger(__file__)
@@ -28,7 +28,7 @@ def main():
     pool = TrajectoryPairPool()
     server = WebServer(pool, test_configs)
 
-    logger.critical('Starting webserver at http://{}:{}'.format(get_addrv2(), args.port))
+    logger.critical('Starting webserver at http://{}:{}'.format(get_local_addr(), args.port))
     server.mainloop()
 
 
