@@ -124,13 +124,15 @@ class A3CTrainerEnv(SimpleTrainerEnv):
     def _initialize_a3c_master(self):
         nr_predictors = get_env('a3c.nr_predictors')
         self._player_master = A3CMaster(self, 'a3c-player', nr_predictors)
+
         self._inference_player_master = A3CMaster(self, 'a3c-inference-player', nr_predictors)
 
     def initialize_all_peers(self):
         nr_players = get_env('a3c.nr_players')
 
         self._player_master.initialize()
-        self._inference_player_master.initialize()
+        if self._inference_player_master is not None:
+            self._inference_player_master.initialize()
 
         # Must call initialize_all_variables before start any players.
         self.initialize_all_variables()
@@ -138,7 +140,8 @@ class A3CTrainerEnv(SimpleTrainerEnv):
 
     def finalize_all_peers(self):
         self.player_master.finalize()
-        self.inference_player_master.finalize()
+        if self._inference_player_master is not None:
+            self.inference_player_master.finalize()
 
     def _make_predictor_net_func(self, i, dev):
         def prefix_adder(feed_dict):

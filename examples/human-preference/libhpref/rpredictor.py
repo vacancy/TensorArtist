@@ -7,8 +7,9 @@
 # This file is part of TensorArtist.
 
 from tartist import random
+from tartist.core import get_logger
 from tartist.core.utils.meta import map_exec
-from tartist.data.flow import LOARandomSampleDataFlow, ListOfArrayDataFlow
+from tartist.data.flow import PoolRandomSampleDataFlow, PoolDataFlow
 from tartist.nn.train import SimpleTrainerEnv, SimpleTrainer
 import threading
 import collections
@@ -17,8 +18,10 @@ import numpy as np
 __all__ = ['TrainingData', 'PredictorDesc', 'EnsemblePredictor']
 
 TrainingData = collections.namedtuple('TrainingData', ['t1_state', 't1_action', 't2_state', 't2_action', 'pref'])
-PredictorDesc = collections.namedtuple('PredictorDesc', ['make_network', 'make_optimizer', 'wrap_dataflow_train',
-                                                         'wrap_dataflow_validation', 'main_train'])
+PredictorDesc = collections.namedtuple('PredictorDesc', ['make_network', 'make_optimizer',
+                                                         'wrap_dataflow_train', 'wrap_dataflow_validation',
+                                                         'main_train'])
+logger = get_logger(__file__)
 
 
 def _list_choice_n(a, size, rng=None):
@@ -40,7 +43,12 @@ def _compute_e_var(rs, ret_variance):
 
 
 def _default_main_train(trainer):
+    # TODO:: Early stop
     trainer.train()
+
+
+def _default_wrap_dataflow(env, df):
+    return df
 
 
 class PredictorBase(object):
@@ -62,10 +70,11 @@ class PredictorBase(object):
 
 class EnsemblePredictor(PredictorBase):
     _validation_ratio = 1 / 2.718281828
-    _network_output_name = 'pred'
+    _network_output_name = 'reward'
 
-    def __init__(self, desc, nr_ensembles,
-                 devices, nr_epochs, epoch_size, retrain_thresh=10):
+    def __init__(self, desc, nr_ensembles, devices,
+                 nr_epochs, epoch_size, retrain_thresh=10):
+
         self._desc = desc
         self._nr_ensembles = nr_ensembles
         self._devices = devices
@@ -96,14 +105,12 @@ class EnsemblePredictor(PredictorBase):
 
     def add_training_data(self, data, acquire_lock=True, try_retrain=True):
         assert isinstance(data, TrainingData)
-        if data.pref== -1:
+        if data.pref == -1:
             return
 
-        p2 = data.pref
-        p1 = 1 - p2
         data = dict(t1_state=data.t1_state, t2_state=data.t2_state,
                     t1_action=data.t1_action, t2_action=data.t2_action,
-                    p1=p1, p2=p2)
+                    pref=data.pref)
 
         if acquire_lock:
             self._data_pool_lock.acquire()
@@ -162,17 +169,18 @@ class EnsemblePredictor(PredictorBase):
 
     @property
     def _wrap_dataflow_train(self):
-        return self._desc.wrap_dataflow_train
+        return self._desc.wrap_dataflow_train or _default_wrap_dataflow
 
     @property
     def _wrap_dataflow_validation(self):
-        return self._desc.wrap_dataflow_validation
+        return self._desc.wrap_dataflow_validation or _default_wrap_dataflow
 
     @property
     def _main_train(self):
         return self._desc.main_train or _default_main_train
 
     def __initialize_envs(self):
+        # Using rolling array
         def gen(i):
             for _ in range(2):
                 env = SimpleTrainerEnv(SimpleTrainerEnv.Phase.TRAIN, self._devices[i])
@@ -202,9 +210,9 @@ class EnsemblePredictor(PredictorBase):
         # make dataflows
         self._dataflows = []
         for i in range(self._nr_ensembles):
-            df_train = LOARandomSampleDataFlow(self._training_sets[i])
+            df_train = PoolRandomSampleDataFlow(self._training_sets[i])
             df_train = self._wrap_dataflow_train(self._envs[i], df_train)
-            df_validation = ListOfArrayDataFlow(self._validation_set)
+            df_validation = PoolDataFlow(self._validation_set)
             df_validation = self._wrap_dataflow_validation(self._envs[i], df_validation)
             self._dataflows.append((df_train, df_validation))
 
@@ -235,11 +243,13 @@ class EnsemblePredictor(PredictorBase):
             self._funcs_predict.append(f)
 
     def __do_train_again(self):
+        logger.critical('Predictors training begins.')
         with self._data_pool_lock:
             self.__split_training_data()
         self.__train()
         with self._funcs_predict_lock:
             self.__make_predictors()
+        logger.critical('Predictors training ends.')
 
     def _try_train_again(self):
         rc = self._training_lock.acquire(blocking=False)

@@ -8,13 +8,17 @@
           integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
     <style type="text/css">
         #hp-main {
-            margin-top: 15%;
+            margin-top: 5%;
             text-align: center
         }
 
+        #hp-title {
+            margin-bottom: 48px
+        }
+
         #hp-info-container {
-            margin: 0 auto 25px;
-            height: 50px
+            margin: 0 auto 25px
+            /* height: 50px */
         }
         #hp-info {
             max-width: 800px;
@@ -23,7 +27,12 @@
         }
 
         #hp-container {
-            margin: 50px auto 0
+            margin: auto 0
+        }
+
+        #hp-container img {
+            width: 252px;
+            height: 252px
         }
 
         .hp-trajectory {
@@ -57,6 +66,7 @@
 
 <body>
 <div class="container" id="hp-main">
+    <div id="hp-title"><h1>{{ site_title }}</h1><hr /></div>
     <div id="hp-info-container">
         <div class="alert alert-info" role="alert" id="hp-info">
         </div>
@@ -108,19 +118,28 @@
     var currentID = -1;
 
     function reload() {
-        $("#hp-container").slideUp();
         $("#hp-info").html("Loading data...").fadeIn();
         $.getJSON('/get?seed=' + Math.random(), function (data) {
-            console.log("data=" + data.id + " " + data.traj1 + " " + data.traj2);
-            currentID = data["id"];
-            $("#hp-traj1").html(data["traj1"]);
-            $("#hp-traj2").html(data["traj2"]);
-            $("#hp-info").fadeOut();
-            $("#hp-container").slideDown();
+            if (data.rc != 200) {
+                $("#hp-info").html("Unsuccessful fetch: return code=" + data.rc + ".");
+            } else {
+                console.log("data=" + data.id + " " + data.traj1 + " " + data.traj2);
+                currentID = data["id"];
+                $("#hp-traj1").html(data["traj1"]);
+                $("#hp-traj2").html(data["traj2"]);
+                $("#hp-info").fadeOut();
+                $("#hp-container").slideDown();
+            }
         });
     }
 
     function submit(pref) {
+        if (currentID == -1) {
+            reload();
+            return;
+        }
+
+        $("#hp-container").slideUp();
         $.post("/submit", {
             "id": currentID,
             "pref": pref
@@ -129,10 +148,12 @@
             setTimeout(function () {
                 reload()
             }, 2000)
-        })
+        });
+        currentID = -1;
     }
 
     $(function () {
+        $("#hp-container").slideUp();
         reload()
     })
 </script>

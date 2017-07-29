@@ -8,6 +8,7 @@
 
 from tartist.app.rl.train import A3CMaster, A3CTrainer, A3CTrainerEnv
 from tartist.core import get_env
+from tartist.core.utils.meta import notnone_property
 
 import threading
 
@@ -22,13 +23,30 @@ class HPA3CMaster(A3CMaster):
         return threading.Thread(target=self.predictor_func, daemon=daemon,
                                 args=(i, self.rpredictor, self.router, self.queue, func))
 
+    def initialize(self):
+        # Initialize the rpredictor first to avoid calling wrong function when the workers start.
+        self.rpredictor.initialize()
+        super().initialize()
+
 
 class HPA3CTrainerEnv(A3CTrainerEnv):
+    _pcollector = None
+
+    @notnone_property
+    def pcollector(self):
+        return self._pcollector
+
+    def set_pcollector(self, pc):
+        self._pcollector = pc
+        return self
+
     def _initialize_a3c_master(self):
         nr_predictors = get_env('a3c.nr_predictors')
         self._player_master = HPA3CMaster(self, 'hpa3c-player', nr_predictors)
-        self._inference_player_master = HPA3CMaster(self, 'hpa3c-inference-player', nr_predictors)
+        # self._inference_player_master = HPA3CMaster(self, 'hpa3c-inference-player', nr_predictors)
 
 
 class HPA3CTrainer(A3CTrainer):
-    pass
+    def initialize(self):
+        super().initialize()
+        self.env.pcollector.initialize()

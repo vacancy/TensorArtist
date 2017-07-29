@@ -11,7 +11,7 @@ import traceback
 import collections
 logger = get_logger(__file__)
 
-__all__ = ['DataFlowBase', 'SimpleDataFlowBase', 'AdvancedDataFlowBase']
+__all__ = ['DataFlowBase', 'SimpleDataFlowBase', 'ProxyDataFlowBase', 'AdvancedDataFlowBase']
 
 
 class DataFlowBase(object):
@@ -57,6 +57,22 @@ class SimpleDataFlowBase(DataFlowBase):
             traceback.print_exc()
         finally:
             self._finalize()
+
+
+class ProxyDataFlowBase(DataFlowBase):
+    def __init__(self, other):
+        self._unwrapped = other
+
+    @property
+    def unwrapped(self):
+        return self._unwrapped
+
+    def _gen(self):
+        for item in self._unwrapped:
+            yield item
+
+    def _len(self):
+        return len(self._unwrapped)
 
 
 class AdvancedDataFlowBase(DataFlowBase):

@@ -14,7 +14,7 @@ import queue
 import numpy as np
 import libhpref
 
-from tartist import random, image, cao
+from tartist import random, image
 from tartist.app import rl
 from tartist.core import get_env, get_logger
 from tartist.core.utils.cache import cached_result
@@ -39,10 +39,10 @@ __envs__ = {
         'gamma': 0.99,
         'nr_td_steps': 5,
 
-        'nr_players': 50,
+        'nr_players': 2,
         'nr_predictors': 2,
         'predictor': {
-            'batch_size': 16,
+            'batch_size': 1,
             'outputs_name': ['value', 'policy_explore']
         },
 
@@ -69,6 +69,15 @@ __envs__ = {
         'batch_size': 16,
         'epoch_size': 100,
         'nr_epochs': 10,
+    },
+
+    'pcollector': {
+        'web_configs': {
+            'debug': False,
+            'title': 'RL Human Preference Collector',
+            'author': 'TensorArtist authors',
+            'port': 8888,
+        }
     }
 }
 
@@ -144,6 +153,67 @@ def make_network(env):
         env.set_slave_devices(slave_devices)
 
 
+def make_rpredictor_network(env):
+    is_train = env.phase is env.Phase.TRAIN
+
+    with env.create_network() as net:
+        h, w, c = get_input_shape()
+        c = 3
+
+        dpc = env.create_dpcontroller()
+        with dpc.activate():
+            def inputs():
+                state = O.placeholder('state', shape=(None, h, w, c))
+                t1_state = O.placeholder('t1_state', shape=(None, h, w, c))
+                t2_state = O.placeholder('t2_state', shape=(None, h, w, c))
+                return [state, t1_state, t2_state]
+
+            @O.auto_reuse
+            def forward_conv(x):
+                _ = x / 255.0
+                with O.argscope(O.conv2d, nonlin=O.relu):
+                    _ = O.conv2d('conv0', _, 32, 5)
+                    _ = O.max_pooling2d('pool0', _, 2)
+                    _ = O.conv2d('conv1', _, 32, 5)
+                    _ = O.max_pooling2d('pool1', _, 2)
+                    _ = O.conv2d('conv2', _, 64, 4)
+                    _ = O.max_pooling2d('pool2', _, 2)
+                    _ = O.conv2d('conv3', _, 64, 3)
+                return _
+
+            def forward(x, t1, t2):
+                dpc.add_output(forward_conv(x), name='feature')
+                dpc.add_output(forward_conv(t1), name='t1_feature')
+                dpc.add_output(forward_conv(t2), name='t2_feature')
+
+            dpc.set_input_maker(inputs).set_forward_func(forward)
+
+        @O.auto_reuse
+        def forward_fc(feature, action):
+            action = O.one_hot(action, get_player_nr_actions())
+            _ = O.concat([feature.flatten2(), action], axis=1)
+            _ = O.fc('fc0', _, 512, nonlin=O.p_relu)
+            reward = O.fc('fc_reward', _, 1)
+            return reward
+
+        action = O.placeholder('action', shape=(None, ), dtype='int64')
+        net.add_output(forward_fc(dpc.outputs['feature'], action), name='reward')
+
+        if is_train:
+            t1_action = O.placeholder('t1_action', shape=(None, ), dtype='int64')
+            t1_reward_exp = O.exp(forward_fc(dpc.outputs['t1_feature'], t1_action).sum())
+            t2_action = O.placeholder('t2_action', shape=(None, ), dtype='int64')
+            t2_reward_exp = O.exp(forward_fc(dpc.outputs['t2_feature'], t2_action).sum())
+
+            pref = O.placeholder('pref')
+            p1, p2 = 1 - pref, pref
+
+            p_greater = t1_reward_exp / (t1_reward_exp + t2_reward_exp)
+            loss = - p1 * O.log(p_greater) - p2 * O.log(1 - p_greater)
+
+            net.set_loss(loss)
+
+
 def make_player(is_train=True, dump_dir=None):
     def resize_state(s):
         return image.resize(s, get_env('a3c.input_shape'), interpolation='NEAREST')
@@ -169,6 +239,15 @@ def make_optimizer(env):
         ('*/b', 2.0),
     ]))
     wrapper.append_grad_modifier(optimizer.grad_modifier.GlobalGradClipByAvgNorm(0.1))
+    env.set_optimizer(wrapper)
+
+
+def make_rpredictor_optimizer(env):
+    wrapper = optimizer.OptimizerWrapper()
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('rpredictor.learning_rate'), epsilon=1e-3))
+    wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
+        ('*/b', 2.0),
+    ]))
     env.set_optimizer(wrapper)
 
 
@@ -198,6 +277,14 @@ def get_input_shape():
     nr_history_frames = get_env('a3c.nr_history_frames')
     h, w, c = input_shape[0], input_shape[1], 3 * nr_history_frames
     return h, w, c
+
+
+# HACK(MJY):: select the last 3 channels representing the current state (ignoring history frames).
+def get_unproxied_state(state):
+    if len(state.shape) == 3:
+        return state[:, :, -3:]
+    else:
+        return state[:, :, :, -3:]
 
 
 PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward', 'reward_var'))
@@ -231,6 +318,9 @@ def on_data_func(env, identifier, inp_data):
     def callback(action, reward_info, predict_value):
         # reward_info is of form (reward, reward_variance)
         player_history.append(PlayerHistory(state, action, predict_value, reward_info[0], reward_info[1]))
+        # simply use state as observation
+        unproxied_state = get_unproxied_state(state)
+        env.pcollector.post_state(identifier, unproxied_state, unproxied_state, action, reward_info[1])
         router.send(identifier, (action, reward_info[0]))
 
     if len(player_history) > 0:
@@ -302,7 +392,10 @@ def _predictor_func(pid, rpredictor, router, task_queue, func, is_inference=Fals
 
             batched_action[i] = action
 
-        rewards = rpredictor.predict_batch(batched_state[:nr_total], batched_action[:nr_total], ret_variance=True)
+        rewards = rpredictor.predict_batch(
+            get_unproxied_state(get_unproxied_state(batched_state[:nr_total])),
+            batched_action[:nr_total], ret_variance=True)
+
         for i in range(nr_total):
             callbacks[i](batched_action[i], rewards[i], out['value'][i])
 
@@ -315,13 +408,14 @@ def make_a3c_configs(env):
     env.player_master.on_data_func = on_data_func
     env.player_master.on_stat_func = on_stat_func
 
-    predictor_desc = libhpref.PredictorDesc(None, None, None, None, None) 
-    env.player_master.rpredictor = libhpref.EnsemblePredictor(
+    predictor_desc = libhpref.PredictorDesc(make_rpredictor_network, make_rpredictor_optimizer,
+                                            None, None, None)
+    env.player_master.rpredictor = rpredictor = libhpref.EnsemblePredictor(
         predictor_desc,
         nr_ensembles=get_env('rpredictor.nr_ensembles'),
         devices=[env.master_device] * get_env('rpredictor.nr_ensembles'),
-        nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size')
-    )
+        nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'))
+    env.set_pcollector(libhpref.PreferenceCollector(rpredictor, get_env('pcollector.web_configs')))
 
     env.players_history = collections.defaultdict(list)
 
