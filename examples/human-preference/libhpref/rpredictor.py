@@ -72,9 +72,10 @@ class EnsemblePredictor(PredictorBase):
     _validation_ratio = 1 / 2.718281828
     _network_output_name = 'reward'
 
-    def __init__(self, desc, nr_ensembles, devices,
+    def __init__(self, owner_env, desc, nr_ensembles, devices,
                  nr_epochs, epoch_size, retrain_thresh=10):
-
+        
+        self._owner_env = owner_env
         self._desc = desc
         self._nr_ensembles = nr_ensembles
         self._devices = devices
@@ -184,9 +185,14 @@ class EnsemblePredictor(PredictorBase):
         def gen(i):
             for _ in range(2):
                 env = SimpleTrainerEnv(SimpleTrainerEnv.Phase.TRAIN, self._devices[i])
+
                 with env.as_default():
                     self._make_network(env)
                     self._make_optimizer(env)
+
+                # initialize the fully random weights
+                env.initialize_all_variables()
+                env.share_func_lock_with(self._owner_env)
                 yield env
 
         for eid in range(self._nr_ensembles):
@@ -194,7 +200,35 @@ class EnsemblePredictor(PredictorBase):
             self._envs.append(env)
             self._envs_predict.append(env_predict)
 
+        with self._funcs_predict_lock:
+            self.__make_predictors()
+
+    def _try_train_again(self):
+        """Try to run the training. If the predictors are being trained, do nothing"""
+        rc = self._training_lock.acquire(blocking=False)
+
+        if rc:
+            t = threading.Thread(target=self.__do_train_again)
+            t.start()
+            self._training_lock.release()
+
+    def __do_train_again(self):
+        """Do the actual training."""
+        logger.critical('Predictors training begins.')
+        with self._data_pool_lock:
+            self.__split_training_data()
+
+        # MJY(20170802):: It seems that we can not jointly run prediction and training even if
+        # we already use rolling arrays due to some tensorflow bugs.
+        # So here during training, we also acquire the lock.
+        with self._funcs_predict_lock:
+            self.__train()
+            self.__make_predictors()
+        logger.critical('Predictors training ends.')
+
     def __split_training_data(self):
+        """Training step 1: split the training set and validation set."""
+
         self._data_pool_last = len(self._data_pool)
         # split the training set and validation set
         nr_validations = max(int(self._validation_ratio * len(self._data_pool)), 1)
@@ -216,7 +250,26 @@ class EnsemblePredictor(PredictorBase):
             df_validation = self._wrap_dataflow_validation(self._envs[i], df_validation)
             self._dataflows.append((df_train, df_validation))
 
+    def __train(self):
+        """Training step 2: run the trainers."""
+
+        logger.critical('Predictor ensemble retraining started.')
+        
+        for i in range(self._nr_ensembles):
+            self.__train_thread(i)
+
+        # all_threads = []
+        # for i in range(self._nr_ensembles):
+        #     t = threading.Thread(target=self.__train_thread, args=(i, ))
+        #     all_threads.append(t)
+        # map_exec(threading.Thread.start, all_threads)
+        # map_exec(threading.Thread.join, all_threads)
+
+        logger.critical('Predictor ensemble retraining finished.')
+
     def __train_thread(self, i):
+        logger.info('Starting training for predictor #{}'.format(i))
+
         nr_iters = self._epoch_size * self._nr_epochs
         trainer = SimpleTrainer(nr_iters, env=self._envs[i],
                                 data_provider=lambda e: self._dataflows[i][0], desc=self._desc)
@@ -226,15 +279,8 @@ class EnsemblePredictor(PredictorBase):
         # When you run train(), the parameters will be reset due to the calling of initialize_all_variables.
         self._main_train(trainer)
 
-    def __train(self):
-        all_threads = []
-        for i in range(self._nr_ensembles):
-            t = threading.Thread(target=self.__train_thread, args=(i, ))
-            all_threads.append(t)
-        map_exec(threading.Thread.start, all_threads)
-        map_exec(threading.Thread.join, all_threads)
-
     def __make_predictors(self):
+        """Training step 3: swap the envs for training and prediction, also build the function for prediction."""
         self._envs_predict, self._envs = self._envs, self._envs_predict
         self._funcs_predict = []
         for i, e in enumerate(self._envs_predict):
@@ -242,19 +288,3 @@ class EnsemblePredictor(PredictorBase):
             f.compile(e.network.outputs[self._network_output_name])
             self._funcs_predict.append(f)
 
-    def __do_train_again(self):
-        logger.critical('Predictors training begins.')
-        with self._data_pool_lock:
-            self.__split_training_data()
-        self.__train()
-        with self._funcs_predict_lock:
-            self.__make_predictors()
-        logger.critical('Predictors training ends.')
-
-    def _try_train_again(self):
-        rc = self._training_lock.acquire(blocking=False)
-
-        if rc:
-            t = threading.Thread(target=self.__do_train_again)
-            t.start()
-            self._training_lock.release()

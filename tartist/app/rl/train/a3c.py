@@ -149,7 +149,7 @@ class A3CTrainerEnv(SimpleTrainerEnv):
                 feed_dict['predictor/{}/{}'.format(i, k)] = feed_dict.pop(k)
 
         outputs_name = get_env('a3c.predictor.outputs_name')
-        new_env = Env(master_dev=dev, flags=self.flags, dpflags=self.dpflags, graph=self.graph, session=self.session)
+        new_env = Env(master_dev=dev, flags=self.flags, dpflags=self.dpflags, sync_with=self)
         with new_env.as_default():
             with new_env.name_scope('predictor/{}'.format(i)), reuse_context(True):
                 self.network_maker(new_env)

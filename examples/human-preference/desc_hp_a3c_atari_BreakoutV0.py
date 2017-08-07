@@ -73,7 +73,6 @@ __envs__ = {
 
     'pcollector': {
         'web_configs': {
-            'debug': False,
             'title': 'RL Human Preference Collector',
             'author': 'TensorArtist authors',
             'port': 8888,
@@ -158,6 +157,7 @@ def make_rpredictor_network(env):
 
     with env.create_network() as net:
         h, w, c = get_input_shape()
+        # Hack(MJY):: forced RGB input (instead of combination of history frames)
         c = 3
 
         dpc = env.create_dpcontroller()
@@ -411,11 +411,12 @@ def make_a3c_configs(env):
     predictor_desc = libhpref.PredictorDesc(make_rpredictor_network, make_rpredictor_optimizer,
                                             None, None, None)
     env.player_master.rpredictor = rpredictor = libhpref.EnsemblePredictor(
-        predictor_desc,
+        env, predictor_desc,
         nr_ensembles=get_env('rpredictor.nr_ensembles'),
         devices=[env.master_device] * get_env('rpredictor.nr_ensembles'),
         nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'))
-    env.set_pcollector(libhpref.PreferenceCollector(rpredictor, get_env('pcollector.web_configs')))
+    env.set_pcollector(libhpref.PreferenceCollector(rpredictor, get_env('pcollector.web_configs'),
+        video_length=25, window_length=100, pool_size=25))
 
     env.players_history = collections.defaultdict(list)
 

@@ -7,6 +7,8 @@
 # This file is part of TensorArtist.
 
 import threading
+from tartist.app import rl
+import numpy as np
 
 from tartist.core import get_env
 

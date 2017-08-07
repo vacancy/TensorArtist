@@ -149,21 +149,22 @@ class Function(object):
         self.__compiled = True
 
     def __call__(self, *args, output_raw=False, **kwargs):
-        if len(args) > 0:
-            assert self._inputs is not None
-            assert len(self._inputs) == len(args)
-            feed_dict = dict(zip(self._inputs, args))
-        else:
-            feed_dict = kwargs
+        with self.owner_env.with_func_lock():
+            if len(args) > 0:
+                assert self._inputs is not None
+                assert len(self._inputs) == len(args)
+                feed_dict = dict(zip(self._inputs, args))
+            else:
+                feed_dict = kwargs
 
-        for f in self._extra_kw_modifiers:
-            f(feed_dict)
-        feed_dict = self.canonize_feed_dict(feed_dict)
+            for f in self._extra_kw_modifiers:
+                f(feed_dict)
+            feed_dict = self.canonize_feed_dict(feed_dict)
 
-        outputs = self.session.run(self._outputs, feed_dict=feed_dict)
-        if output_raw:
-            return outputs
-        return self._output_manager.format(outputs)
+            outputs = self.session.run(self._outputs, feed_dict=feed_dict)
+            if output_raw:
+                return outputs
+            return self._output_manager.format(outputs)
 
     def call(self, *args, **kwargs):
         return self(*args, **kwargs)

@@ -6,6 +6,6 @@
 # 
 # This file is part of TensorArtist.
 
+from .pcollector import *
 from .rpredictor import *
-from .collector import *
 from .train import *
