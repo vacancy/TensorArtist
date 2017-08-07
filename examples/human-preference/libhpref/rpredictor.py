@@ -74,7 +74,7 @@ class EnsemblePredictor(PredictorBase):
 
     def __init__(self, owner_env, desc, nr_ensembles, devices,
                  nr_epochs, epoch_size, retrain_thresh=10):
-        
+
         self._owner_env = owner_env
         self._desc = desc
         self._nr_ensembles = nr_ensembles
@@ -254,7 +254,7 @@ class EnsemblePredictor(PredictorBase):
         """Training step 2: run the trainers."""
 
         logger.critical('Predictor ensemble retraining started.')
-        
+
         for i in range(self._nr_ensembles):
             self.__train_thread(i)
 
