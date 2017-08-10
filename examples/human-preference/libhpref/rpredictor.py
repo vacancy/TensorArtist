@@ -7,7 +7,7 @@
 # This file is part of TensorArtist.
 
 from tartist import random
-from tartist.core import get_logger
+from tartist.core import get_logger, register_event
 from tartist.core.utils.meta import map_exec
 from tartist.data.flow import PoolRandomSampleDataFlow, PoolDataFlow
 from tartist.nn.train import SimpleTrainerEnv, SimpleTrainer
@@ -44,6 +44,52 @@ def _compute_e_var(rs, ret_variance):
 
 def _default_main_train(trainer):
     # TODO:: Early stop
+    def on_optimization_before(trainer):
+        # clear the validation loss history
+        trainer.runtime['validation_losses'] = []
+
+        # compile the function for inference
+        trainer.inference_func = trainer.env.make_func()
+        trainer.inference_func.compile(trainer.network.loss)
+
+    def on_epoch_after(trainer):
+        # compute the validation loss
+        sum_loss, nr_data = 0, 0
+        for data in trainer.dataflow_validation:
+            sum_loss += trainer.inference_func(**data)
+            nr_data += 1
+        avg_loss = sum_loss / nr_data
+        logger.info('Epoch: {}: average validation loss = {}.'.format(trainer.epoch, avg_loss))
+
+        trainer.runtime['validation_losses'].append(avg_loss)
+
+        # test whether early stop
+        losses = trainer.runtime['validation_losses'][-6:]
+        if len(losses) <= 1:
+            return
+
+        # 2 out of 5
+        nr_loss_increase = 0
+        for a, b in zip(losses[:-1], losses[1:]):
+            if b > a:
+                nr_loss_increase += 1
+
+        if nr_loss_increase >= 2:
+            # acquire early stop
+            logger.critical('Validation loss is keeping increasing: acquire early stop.')
+            trainer.stop()
+
+    from tartist.plugins.trainer_enhancer import summary
+    summary.enable_summary_history(trainer)
+    summary.enable_echo_summary_scalar(trainer, enable_json=False, enable_tensorboard=False)
+
+    from tartist.plugins.trainer_enhancer import progress
+    progress.enable_epoch_progress(trainer)
+
+    # early stop related hooks
+    trainer.register_event('optimization:before', on_optimization_before)
+    trainer.register_event('epoch:after', on_epoch_after)
+
     trainer.train()
 
 
@@ -287,4 +333,3 @@ class EnsemblePredictor(PredictorBase):
             f = e.make_func()
             f.compile(e.network.outputs[self._network_output_name])
             self._funcs_predict.append(f)
-

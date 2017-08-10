@@ -59,7 +59,7 @@ __envs__ = {
         'learning_rate': 0.001,
 
         'batch_size': 128,
-        'epoch_size': 1000,
+        'epoch_size': 100,
         'nr_epochs': 200,
     },
 
@@ -67,11 +67,15 @@ __envs__ = {
         'nr_ensembles': 3,
         'learning_rate': 0.001,
         'batch_size': 16,
-        'epoch_size': 100,
-        'nr_epochs': 10,
+        'epoch_size': 20,
+        'nr_epochs': 100,
+        'retrain_thresh': 25,
     },
 
     'pcollector': {
+        'video_length': 25,
+        'window_length': 25,
+        'pool_size': 25,
         'web_configs': {
             'title': 'RL Human Preference Collector',
             'author': 'TensorArtist authors',
@@ -414,9 +418,11 @@ def make_a3c_configs(env):
         env, predictor_desc,
         nr_ensembles=get_env('rpredictor.nr_ensembles'),
         devices=[env.master_device] * get_env('rpredictor.nr_ensembles'),
-        nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'))
+        nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'),
+        retrain_thresh=get_env('rpredictor.retrain_thresh'))
     env.set_pcollector(libhpref.PreferenceCollector(rpredictor, get_env('pcollector.web_configs'),
-        video_length=25, window_length=100, pool_size=25))
+        video_length=get_env('pcollector.video_length'), window_length=get_env('pcollector.window_length'),
+        pool_size=get_env('pcollector.pool_size')))
 
     env.players_history = collections.defaultdict(list)
 
