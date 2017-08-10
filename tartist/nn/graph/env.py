@@ -151,10 +151,10 @@ class Env(object):
         """
 
         if sync_with is not None:
-            assert graph is None and sessoin is None and func_lock is None
-            graph = share_session_with.graph
-            session = share_session_with.session
-            func_lock = share_session_with.get_or_make_func_lock()
+            assert graph is None and session is None and func_lock is None
+            graph = sync_with.graph
+            session = sync_with.session
+            func_lock = sync_with.get_or_make_func_lock()
 
         self.__phase = phase
         self.__session = None
