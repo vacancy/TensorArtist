@@ -9,6 +9,7 @@
 from .base import ProxyRLEnvironBase
 from tartist.core import get_logger 
 from tartist.core.utils.meta import run_once
+import copy
 import functools
 import collections
 import numpy as np
