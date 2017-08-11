@@ -25,11 +25,12 @@ def enable_epoch_progress(trainer):
             desc += ', error={:.4f}'.format(trainer.runtime['error'])
         for k in sorted(out.keys()):
             v = out[k]
-            try:
-                v = float(v)
-                desc += ', {}={:.4f}'.format(k, v)
-            except ValueError:
-                pass
+            if type(v) in (str, int, float):
+                try:
+                    v = float(v)
+                    desc += ', {}={:.4f}'.format(k, v)
+                except ValueError:
+                    pass
         pbar.set_description(desc)
         pbar.update()
 
