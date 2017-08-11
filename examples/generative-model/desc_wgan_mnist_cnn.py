@@ -6,9 +6,7 @@
 #          dhh19951@gmail.com
 # Date   : 4/1/17
 #
-# This file is part of TensorArtist
-
-import tensorflow as tf
+# This file is part of TensorArtist.
 
 from tartist.app import gan
 from tartist.app.gan import GANGraphKeys
@@ -59,7 +57,7 @@ def make_network(env):
                     return []
 
             def generator(z):
-                w_init = tf.truncated_normal_initializer(stddev=0.02)
+                w_init = O.truncated_normal_initializer(stddev=0.02)
                 with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.fc, W=w_init):
 
@@ -73,7 +71,7 @@ def make_network(env):
                 return _
 
             def discriminator(img):
-                w_init = tf.truncated_normal_initializer(stddev=0.02)
+                w_init = O.truncated_normal_initializer(stddev=0.02)
                 with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.fc, W=w_init),\
                      O.argscope(O.leaky_relu, alpha=0.2):
@@ -91,16 +89,16 @@ def make_network(env):
                 g_batch_size = get_env('trainer.batch_size') if env.phase is env.Phase.TRAIN else 1
                 z = O.random_normal([g_batch_size, z_dim])
 
-                with tf.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
+                with env.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
                     img_gen = generator(z)
                 # tf.summary.image('generated-samples', img_gen, max_outputs=30)
 
-                with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES):
+                with env.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES):
                     logits_fake = discriminator(img_gen)
                 dpc.add_output(img_gen, name='output')
 
                 if env.phase is env.Phase.TRAIN:
-                    with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=True):
+                    with env.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=True):
                         logits_real = discriminator(x)
 
                     d_loss = (logits_fake - logits_real).mean()
@@ -161,4 +159,3 @@ def main_train(trainer):
     enable_param_clippping(trainer)
 
     trainer.train()
-

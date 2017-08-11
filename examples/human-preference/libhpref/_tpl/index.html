@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>{{ site_title }}</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css"
+          integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+    <style type="text/css">
+        #hp-main {
+            margin-top: 5%;
+            text-align: center
+        }
+
+        #hp-title {
+            margin-bottom: 48px
+        }
+
+        #hp-info-container {
+            margin: 0 auto 25px
+            /* height: 50px */
+        }
+        #hp-info {
+            max-width: 800px;
+            overflow: hidden;
+            margin: 0 auto
+        }
+
+        #hp-container {
+            margin: auto 0
+        }
+
+        #hp-container img {
+            width: 252px;
+            height: 252px
+        }
+
+        .hp-trajectory {
+            text-align: center
+        }
+
+        .hp-placeholder {
+            height: 168px;
+            width: 168px;
+            border: 1px solid #1c4e63;
+            margin: 0 auto
+        }
+
+        .hp-controller {
+            margin-top: 50px
+        }
+
+        .hp-controller-col {
+            text-align: center
+        }
+
+        .hp-controller-col .btn-group {
+            margin: 0 auto
+        }
+
+        .hp-controller-col .btn {
+            width: 140px
+        }
+    </style>
+</head>
+
+<body>
+<div class="container" id="hp-main">
+    <div id="hp-title"><h1>{{ site_title }}</h1><hr /></div>
+    <div id="hp-info-container">
+        <div class="alert alert-info" role="alert" id="hp-info">
+        </div>
+    </div>
+    <div class="row" id="hp-container" style="display:none">
+        <div class="col-md-6 hp-trajectory">
+            <h3>Traj #1</h3>
+            <div id="hp-traj1"></div>
+        </div>
+        <div class="col-md-6 hp-trajectory">
+            <h3>Traj #2</h3>
+            <div id="hp-traj2"></div>
+        </div>
+    </div>
+
+    <div class="row hp-controller">
+        <div class="col-md-12 hp-controller-col">
+            <div class="btn-group" role="group" aria-label="Basic example">
+                <button type="button" class="btn btn-primary" onclick="submit(0)">#1 is better</button>
+                <button type="button" class="btn btn-info" onclick="submit(0.5)">Tile</button>
+                <button type="button" class="btn btn-primary" onclick="submit(1)">#2 is better</button>
+                <button type="button" class="btn btn-warning" onclick="submit(-1)">Can't tell</button>
+            </div>
+        </div>
+    </div>
+
+    <hr>
+
+    <footer>
+        <p>&copy; {{ site_author }} 2017</p>
+    </footer>
+</div>
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="http://code.jquery.com/jquery-1.12.4.min.js"
+        integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+<script src="http://code.jquery.com/ui/1.12.1/jquery-ui.min.js"
+        integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js"
+        integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb"
+        crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js"
+        integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn"
+        crossorigin="anonymous"></script>
+
+<script type="text/javascript">
+    var currentID = -1;
+
+    function reload() {
+        $("#hp-info").html("Loading data...").fadeIn();
+        $.getJSON('/get?seed=' + Math.random(), function (data) {
+            if (data.rc != 200) {
+                $("#hp-info").html("Unsuccessful fetch: return code=" + data.rc + ".");
+            } else {
+                console.log("data=" + data.id + " " + data.traj1 + " " + data.traj2);
+                currentID = data["id"];
+                $("#hp-traj1").html(data["traj1"]);
+                $("#hp-traj2").html(data["traj2"]);
+                $("#hp-info").fadeOut();
+                $("#hp-container").slideDown();
+            }
+        });
+    }
+
+    function submit(pref) {
+        if (currentID == -1) {
+            reload();
+            return;
+        }
+
+        $("#hp-container").slideUp();
+        $.post("/submit", {
+            "id": currentID,
+            "pref": pref
+        }, function (data) {
+            $("#hp-info").html("Response: " + data).fadeIn();
+            setTimeout(function () {
+                reload()
+            }, 200)
+        });
+        currentID = -1;
+    }
+
+    $(function () {
+        $("#hp-container").slideUp();
+        reload()
+    })
+</script>
+</body>
+</html>
+

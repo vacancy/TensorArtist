@@ -4,18 +4,19 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/16/17
 # 
-# This file is part of TensorArtist
-
-from tartist import image
-from tartist.core import load_env, get_env, get_logger
-from tartist.core import io
-from tartist.core.utils.cli import parse_devices
-from tartist.nn import Env
-from tartist.nn import opr as O
+# This file is part of TensorArtist.
 
 import argparse
 import os
+
 import numpy as np
+
+from tartist import image
+from tartist.core import io
+from tartist.core import load_env, get_env, get_logger
+from tartist.core.utils.cli import parse_devices
+from tartist.nn import Env
+from tartist.nn import opr as O
 
 logger = get_logger(__file__)
 
@@ -74,7 +75,7 @@ def make_step(net):
 
     imgvar = net.outputs['img']
     target = net.outputs['end']
-    netin = imgvar.taop
+    netin = imgvar
 
     # random draw ox, oy
     jitter = get_env('deep_dream.jitter')
@@ -121,7 +122,7 @@ def main():
         snapshot.load_weights_file(env, args.weight_path)
 
         net = env.network
-        netin = net.outputs['img'].taop
+        netin = net.outputs['img']
         netin.set_value(as_netin(img))
 
         io.makedir(args.output_path)
@@ -139,4 +140,3 @@ def main():
 
 if __name__ == '__main__':
    main()
-

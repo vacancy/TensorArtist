@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 NS_CTL_PROTOCAL = 'tcp'

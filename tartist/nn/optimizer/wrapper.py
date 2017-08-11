@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import get_optimizer_variable
 from ..graph.env import get_default_env
@@ -36,7 +36,7 @@ class OptimizerWrapper(object):
 
     def set_learning_rate(self, value):
         with self._owner_env.as_default():
-            logger.critical('Setting learning rate to {} (var. name={})'.format(
+            logger.critical('Setting learning rate to {} (var. name={}).'.format(
                 value, self.learning_rate_variable_name))
             get_optimizer_variable(self.learning_rate_variable_name, env=self._owner_env).set_value(value)
 
@@ -66,4 +66,3 @@ class OptimizerWrapper(object):
         for f in self._grad_modifiers:
             all_gradients = f(all_gradients)
         return all_gradients
-

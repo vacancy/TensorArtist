@@ -4,8 +4,9 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/23/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
+from .base import ProxyDataFlowBase
 from itertools import repeat, cycle as cached_cycle
 from itertools import takewhile, dropwhile, filterfalse
 from itertools import chain
@@ -20,7 +21,8 @@ __all__ = [
     'chain',
     'map', 'starmap', 'ssmap'
     'islice', 'truncate',
-    'tee'
+    'tee',
+    'MapDataFlow'
 ]
 
 repeat_n = repeat
@@ -46,3 +48,15 @@ def ssmap(function, iterable):
     for args in iterable:
         yield function(**args)
 
+
+class MapDataFlow(ProxyDataFlowBase):
+    def __init__(self, other, map_func=None):
+        super().__init__(other)
+        self.__map_func = map_func
+
+    def _map(self, data):
+        return self.__map_func(data)
+
+    def _gen(self):
+        for data in self.unwrapped:
+            yield self._map(data)

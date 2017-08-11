@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/29/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ...core import get_logger
 from ...core.event import EventManager, register_event, trigger_event
@@ -51,7 +51,7 @@ class TrainerEnvBase(Env):
     def load_snapshot(self, snapshot):
         for k, v in snapshot.items():
             if k not in self._snapshot_parts:
-                logger.warning('Ignored snapshot part: {}'.format(k))
+                logger.warning('Ignored snapshot part: {}.'.format(k))
             else:
                 loader = self._snapshot_parts[k][1]
                 loader(v)

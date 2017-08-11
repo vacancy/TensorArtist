@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from .. import TArtGraphKeys, opr as O
@@ -12,7 +12,8 @@ import functools
 import tensorflow as tf
 
 
-__all__ = ['make_optimizer_variable', 'get_optimizer_variable,'
+__all__ = ['make_optimizer_variable', 'get_optimizer_variable',
+           'CustomOptimizerBase',
            'SGDOptimizer', 'MomentumOptimizer', 'AdamOptimizer', 'AdagradOptimizer', 'RMSPropOptimizer'
 ]
 
@@ -38,10 +39,14 @@ def _migrate_lr_based_optimizer(tf_optimizer):
         return tf_optimizer(learning_rate, *args, **kwargs)
     return opt
 
+
+class CustomOptimizerBase(object):
+    def minimize(self, *args, **kwargs):
+        raise NotImplementedError()
+
 SGDOptimizer = _migrate_lr_based_optimizer(tf.train.GradientDescentOptimizer)
 MomentumOptimizer = _migrate_lr_based_optimizer(tf.train.MomentumOptimizer)
 AdamOptimizer = _migrate_lr_based_optimizer(tf.train.AdamOptimizer)
 
 AdagradOptimizer = _migrate_lr_based_optimizer(tf.train.AdagradOptimizer)
 RMSPropOptimizer = _migrate_lr_based_optimizer(tf.train.RMSPropOptimizer)
-

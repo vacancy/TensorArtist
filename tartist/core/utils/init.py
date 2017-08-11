@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/25/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import os
 import sys
@@ -34,4 +34,3 @@ def tune_opencv():
 def initialize_main():
     release_syslim()
     tune_tensorflow()
-    

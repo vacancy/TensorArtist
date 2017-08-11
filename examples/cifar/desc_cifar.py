@@ -6,15 +6,13 @@
 #          dhh19951@gmail,com
 # Date   : 2/27/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
-import tensorflow as tf
+import functools
 
 from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
-
-import functools
 
 logger = get_logger(__file__)
 
@@ -52,7 +50,7 @@ def make_network(env):
         nr_classes = get_env('dataset.nr_classes')
 
         conv_bn_relu = functools.partial(O.conv2d, nonlin=O.bn_relu)
-        conv2d = conv_bn_relu 
+        conv2d = conv_bn_relu
 
         dpc = env.create_dpcontroller()
         with dpc.activate():
@@ -83,12 +81,12 @@ def make_network(env):
         _ = O.fc('linear', _, nr_classes)
 
         prob = O.softmax(_, name='prob')
-        pred = _.argmax(axis=1).astype(tf.int32, name='pred')
+        pred = _.argmax(axis=1).astype('int32', name='pred')
         net.add_output(prob)
         net.add_output(pred)
 
         if env.phase is env.Phase.TRAIN:
-            label = O.placeholder('label', shape=(None, ), dtype=tf.int32)
+            label = O.placeholder('label', shape=(None, ), dtype='int32')
             loss = O.sparse_softmax_cross_entropy_with_logits(logits=_, labels=label).mean()
             loss = O.identity(loss, name='loss')
             net.set_loss(loss)
@@ -111,6 +109,7 @@ def make_optimizer(env):
     ]))
     env.set_optimizer(wrapper)
 
+
 from data_provider import *
 
 
@@ -130,4 +129,3 @@ def main_train(trainer):
     inference.enable_inference_runner(trainer, make_dataflow_inference)
 
     trainer.train()
-

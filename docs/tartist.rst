@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     tartist.app
+    tartist.cao
     tartist.core
     tartist.data
     tartist.image

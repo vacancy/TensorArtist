@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import tensorflow as tf
 
@@ -57,8 +57,8 @@ class NameBasedGradModifierBase(GradModifierBase):
             log_msgs.insert(0, 'Log grad modification for {}:'.format(self.__class__.__name__))
             logger.info('\n'.join(log_msgs))
         if len(unused) > 0:
-            log_msg = 'Log grad modification for {}: unused patterns are {}'.format(self.__class__.__name__, unused)
-            logger.warning(log_msg)
+            log_msg = 'Log grad modification for {}: unused patterns are {}.'.format(self.__class__.__name__, unused)
+            logger.warn(log_msg)
 
         return res
 
@@ -98,8 +98,8 @@ class GradClip(NameBasedGradModifierBase):
             rule = float(rule)
             lower, upper = -rule, rule
         _ = grad
-        _ = tf.maximum(_, upper)
-        _ = tf.minimum(_, lower)
+        _ = tf.minimum(_, upper)
+        _ = tf.maximum(_, lower)
         return _
 
 
@@ -111,8 +111,8 @@ class GlobalGradClip(GlobalGradModifierBase):
 
     def _op(self, grad, var):
         _ = grad
-        _ = tf.maximum(_, self._upper)
-        _ = tf.minimum(_, self._lower)
+        _ = tf.minimum(_, self._upper)
+        _ = tf.maximum(_, self._lower)
         return _
 
 

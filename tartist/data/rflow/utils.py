@@ -4,15 +4,21 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import zmq
 import socket
 import uuid
 import json
 
+from ...core.utils.network import get_local_addr_v2
+
+
 json_dumpb = lambda x: json.dumps(x).encode('utf-8')
 json_loadb = lambda x: json.loads(x.decode('utf-8'))
+
+# MJY(20170706):: backward compatibility: move it to core.utils.network.
+get_addr = get_local_addr_v2
 
 
 def router_recv_json(sock, flag=zmq.NOBLOCK, loader=json_loadb):
@@ -94,29 +100,8 @@ def uid():
     return socket.gethostname() + '/' + uuid.uuid4().hex
 
 
-def get_addrv1():
-    return socket.gethostbyname(socket.gethostname())
-
-
-# http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
-def get_addrv2():
-    resolve = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1]
-    if len(resolve):
-        return resolve[0]
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    addr = s.getsockname()[0]
-    s.close()
-    return addr
-
-
-get_addr = get_addrv2
-
-
 def graceful_close(sock):
     if sock is None:
         return
     sock.setsockopt(zmq.LINGER, 0)
     sock.close()
-

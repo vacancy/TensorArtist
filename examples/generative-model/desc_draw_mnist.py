@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/22/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """
 Implementation of paper: Deep Recurrent Attentive Writer (DRAW) network architecture introduced by
@@ -21,7 +21,6 @@ from tartist.core import get_env, get_logger
 from tartist.core.utils.naming import get_dump_directory, get_data_directory
 from tartist.nn import opr as O, optimizer, summary
 
-import tensorflow as tf
 import draw_opr
 
 logger = get_logger(__file__)
@@ -71,8 +70,8 @@ def make_network(env):
                 return []
 
             def forward(img=None):
-                encoder = tf.contrib.rnn.BasicLSTMCell(256)
-                decoder = tf.contrib.rnn.BasicLSTMCell(256)
+                encoder = O.BasicLSTMCell(256)
+                decoder = O.BasicLSTMCell(256)
 
                 batch_size = img.shape[0] if is_train else 1
 
@@ -82,12 +81,12 @@ def make_network(env):
                 enc_h, dec_h = enc_state[1], dec_state[1]
 
                 def encode(x, state, reuse):
-                    with tf.variable_scope('read_encoder', reuse=reuse):
-                        return encoder(O.as_tftensor(x), state)
+                    with env.variable_scope('read_encoder', reuse=reuse):
+                        return encoder(x, state)
 
                 def decode(x, state, reuse):
-                    with tf.variable_scope('write_decoder', reuse=reuse):
-                        return decoder(O.as_tftensor(x), state)
+                    with env.variable_scope('write_decoder', reuse=reuse):
+                        return decoder(x, state)
 
                 all_sqr_mus, all_vars, all_log_vars = 0., 0., 0.
 
@@ -97,22 +96,22 @@ def make_network(env):
                         img_hat = draw_opr.image_diff(img, canvas)  # eq. 3
 
                         # Note: here the input should be dec_h
-                        with tf.variable_scope('read', reuse=reuse):
+                        with env.variable_scope('read', reuse=reuse):
                             read_param = O.fc('fc_param', dec_h, 5)
 
-                        with tf.name_scope('read_step{}'.format(step)):
+                        with env.name_scope('read_step{}'.format(step)):
                             cx, cy, delta, var, gamma = draw_opr.split_att_params(h, w, att_dim, read_param)
                             read_inp = O.concat([img, img_hat], axis=3)  # of shape: batch_size x h x w x (2c)
                             read_out = draw_opr.att_read(att_dim, read_inp, cx, cy, delta, var)  # eq. 4
                             enc_inp = O.concat([gamma * read_out.flatten2(), dec_h], axis=1)
                         enc_h, enc_state = encode(enc_inp, enc_state, reuse)  # eq. 5
 
-                        with tf.variable_scope('sample', reuse=reuse):
+                        with env.variable_scope('sample', reuse=reuse):
                             _ = enc_h
                             sample_mu = O.fc('fc_mu', _, code_length)
                             sample_log_var = O.fc('fc_sigma', _, code_length)
 
-                        with tf.name_scope('sample_step{}'.format(step)):
+                        with env.name_scope('sample_step{}'.format(step)):
                             sample_var = O.exp(sample_log_var)
                             sample_std = O.sqrt(sample_var)
                             sample_epsilon = O.random_normal([batch_size, code_length])
@@ -128,11 +127,11 @@ def make_network(env):
                     # z = O.callback_injector(z)
 
                     dec_h, dec_state = decode(z, dec_state, reuse)  # eq. 7
-                    with tf.variable_scope('write', reuse=reuse):
+                    with env.variable_scope('write', reuse=reuse):
                         write_param = O.fc('fc_param', dec_h, 5)
                         write_in = O.fc('fc', dec_h, (att_dim * att_dim * c)).reshape(-1, att_dim, att_dim, c)
 
-                    with tf.name_scope('write_step{}'.format(step)):
+                    with env.name_scope('write_step{}'.format(step)):
                         cx, cy, delta, var, gamma = draw_opr.split_att_params(h, w, att_dim, write_param)
                         write_out = draw_opr.att_write(h, w, write_in, cx, cy, delta, var)  # eq. 8
 
@@ -144,7 +143,7 @@ def make_network(env):
                 canvas = O.sigmoid(canvas)
 
                 if env.phase is env.Phase.TRAIN:
-                    with tf.variable_scope('loss'):
+                    with env.variable_scope('loss'):
                         img, canvas = img.flatten2(), canvas.flatten2()
                         content_loss = O.raw_cross_entropy_prob('raw_content', canvas, img)
                         content_loss = content_loss.sum(axis=1).mean(name='content')

@@ -1,5 +1,5 @@
-tartist.nn package
-==================
+tartist\.nn package
+===================
 
 Subpackages
 -----------
@@ -15,8 +15,8 @@ Subpackages
 Submodules
 ----------
 
-tartist.nn.tfutils module
--------------------------
+tartist\.nn\.tfutils module
+---------------------------
 
 .. automodule:: tartist.nn.tfutils
     :members:

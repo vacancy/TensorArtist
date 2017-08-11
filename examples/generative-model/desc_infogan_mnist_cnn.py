@@ -6,10 +6,9 @@
 #          dhh19951@gmail.com
 # Date   : 3/17/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import numpy as np
-import tensorflow as tf
 
 from tartist.app import gan
 from tartist.app.gan import GANGraphKeys
@@ -43,7 +42,6 @@ __envs__ = {
     },
 
     'demo': {
-        'customized': True,
         'mode': 'infogan',
         'infogan': {
             'grid_desc': ('5h', '2v', '5h', '5v')
@@ -63,7 +61,7 @@ def make_network(env):
         zn_size = 88
 
         # code latent variables distribution
-        zc_distrib = O.distrib.MultinomialDistribution('cat', 10)
+        zc_distrib = O.distrib.CategoricalDistribution('cat', 10)
         zc_distrib *= O.distrib.GaussianDistributionWithUniformSample('code_a', 1, nr_num_samples=5)
         zc_distrib *= O.distrib.GaussianDistributionWithUniformSample('code_b', 1, nr_num_samples=5)
         net.zc_distrib = zc_distrib
@@ -83,7 +81,7 @@ def make_network(env):
                 return [img, zc]
 
             def generator(z):
-                w_init = tf.truncated_normal_initializer(stddev=0.02)
+                w_init = O.truncated_normal_initializer(stddev=0.02)
                 with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.fc, W=w_init):
 
@@ -97,7 +95,7 @@ def make_network(env):
                 return _
 
             def discriminator(img):
-                w_init = tf.truncated_normal_initializer(stddev=0.02)
+                w_init = O.truncated_normal_initializer(stddev=0.02)
                 with O.argscope(O.conv2d, O.deconv2d, kernel=4, stride=2, W=w_init),\
                      O.argscope(O.fc, W=w_init),\
                      O.argscope(O.leaky_relu, alpha=0.2):
@@ -109,10 +107,10 @@ def make_network(env):
                     _ = O.fc('fc1', _, 1024, nonlin=O.bn_nonlin)
                     _ = O.leaky_relu(_)
 
-                    with tf.variable_scope('score'):
+                    with env.variable_scope('score'):
                         logits = O.fc('fct', _, 1)
 
-                    with tf.variable_scope('code'):
+                    with env.variable_scope('code'):
                         _ = O.fc('fc1', _, 128, nonlin=O.bn_nonlin)
                         _ = O.leaky_relu(_)
                         code = O.fc('fc2', _, zc_distrib.param_size)
@@ -126,10 +124,10 @@ def make_network(env):
                 zn = O.random_normal([g_batch_size, zn_size], -1 , 1)
                 z = O.concat([zc, zn], axis=1, name='z')
                 
-                with tf.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
+                with env.variable_scope(GANGraphKeys.GENERATOR_VARIABLES):
                     x_given_z = generator(z)
 
-                with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES):
+                with env.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES):
                     logits_fake, code_fake = discriminator(x_given_z)
                     score_fake = O.sigmoid(logits_fake)
 
@@ -138,12 +136,12 @@ def make_network(env):
                 dpc.add_output(code_fake, name='code')
 
                 if env.phase is env.Phase.TRAIN:
-                    with tf.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=True):
+                    with env.variable_scope(GANGraphKeys.DISCRIMINATOR_VARIABLES, reuse=True):
                         logits_real, code_real = discriminator(x)
                         score_real = O.sigmoid(logits_real)
 
                     # build loss
-                    with tf.variable_scope('loss'):
+                    with env.variable_scope('loss'):
                         d_loss_real = O.sigmoid_cross_entropy_with_logits(
                             logits=logits_real, labels=O.ones_like(logits_real)).mean()
                         d_loss_fake = O.sigmoid_cross_entropy_with_logits(
@@ -217,4 +215,3 @@ def main_train(trainer):
     snapshot.enable_snapshot_saver(trainer)
 
     trainer.train()
-

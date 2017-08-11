@@ -4,19 +4,19 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/17/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """
 This file follows the design of tensorpack by ppwwyyxx
 See https://github.com/ppwwyyxx/tensorpack/blob/master/tensorpack/tfutils/distributions.py
 """
 
-from .helper import wrap_named_class_func, lazy_O as O
+from .helper import wrap_named_op_method, lazy_O as O
 import numpy as np
 
 __all__ = [
     'DistributionBase',
-    'MultinomialDistribution',
+    'CategoricalDistribution',
     'GaussianDistribution', 'GaussianDistributionWithUniformSample'
 ]
 
@@ -29,7 +29,7 @@ class DistributionBase(object):
     def name(self):
         return self._name
 
-    @wrap_named_class_func
+    @wrap_named_op_method
     def log_likelihood(self, x, theta, process_theta=False):
         assert x.ndims == 2 and x.static_shape[1] == self.sample_size, x.static_shape
         assert theta.ndims == 2 and theta.static_shape[1] == self.param_size, theta.static_shape
@@ -41,19 +41,27 @@ class DistributionBase(object):
         assert logl.ndims == 1, logl.static_shape
         return O.identity(logl, name='out')
 
-    @wrap_named_class_func
+    @wrap_named_op_method
+    def entropy(self, theta, process_theta=False):
+        assert theta.ndims == 2 and theta.static_shape[1] == self.param_size, theta.static_shape
+
+        if process_theta:
+            theta = self._get_true_theta(theta)
+        return O.identity(self._get_entropy(theta), name='out')
+
+    @wrap_named_op_method
     def cross_entropy(self, x, theta, process_theta=False):
         log_likelihood = self.log_likelihood(x, theta, process_theta=process_theta)
         return -log_likelihood.mean(name='out')
 
-    @wrap_named_class_func
+    @wrap_named_op_method
     def sample(self, batch_size, theta, process_theta=False):
         shape = theta.static_shape
         assert len(shape) in [1, 2] and shape[-1] == self.param_size , shape
         if len(shape) == 1:
             theta = O.tile(theta.add_axis(0), [batch_size, 1])
-        else:
-            assert shape[0] == batch_size
+        elif type(batch_size) is int and shape[0] is not None:
+            assert shape[0] == batch_size 
 
         if process_theta:
             theta = self._get_true_theta(theta)
@@ -77,6 +85,9 @@ class DistributionBase(object):
         return self._get_param_size()
 
     def _get_log_likelihood(self, x, theta):
+        raise NotImplementedError()
+
+    def _get_entropy(self, theta):
         raise NotImplementedError()
 
     def _get_true_theta(self, theta):
@@ -119,6 +130,10 @@ class MergedDistribution(DistributionBase):
         at, bt = self.__split(theta, True)
         return self._x.log_likelihood(ax, at) + self._y.log_likelihood(bx, bt)
 
+    def _get_entropy(self, theta):
+        at, bt = self.__split(theta, True)
+        return self._x.entropy(at) + self._y.entropy(bt)
+
     def _get_true_theta(self, theta):
         at, bt = self.__split(theta, True)
         return O.concat([self._x._get_true_theta(at), self._y._get_true_theta(bt)], axis=1)
@@ -143,7 +158,7 @@ class MergedDistribution(DistributionBase):
         return self._x.param_size + self._y.param_size
 
 
-class MultinomialDistribution(DistributionBase):
+class CategoricalDistribution(DistributionBase):
     _eps = 1e-8
 
     def __init__(self, name, nr_classes):
@@ -155,6 +170,9 @@ class MultinomialDistribution(DistributionBase):
 
     def _get_true_theta(self, theta):
         return O.softmax(theta)
+
+    def _get_entropy(self, theta):
+        return -O.reduce_sum(theta * O.log(theta + self._eps), 1)
 
     def _get_sample(self, batch_size, theta):
         ids = O.random_multinomial(O.log(theta + self._eps), num_samples=1).remove_axis(1)
@@ -205,6 +223,13 @@ class GaussianDistribution(DistributionBase):
             mean, stddev = O.split(theta, 2, axis=1)
         e = O.random_normal(mean.shape)
         return mean + e * stddev
+
+    def _get_entropy(self, theta):
+        if self._fixed_std:
+            return 0.5 * (np.log(2 * np.pi * self._fixed_std_val ** 2) + 1) * theta.shape[1].astype('float32')
+        else:
+            mean, stddev = O.split(theta, 2, axis=1)
+            return (0.5 * np.log(2 * np.pi) + O.log(stddev + self._eps) + 0.5).sum(axis=1)
 
     def _get_numerical_sample(self, theta):
         assert self._size == 1

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/31/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import re
 import tensorflow as tf
@@ -13,10 +13,12 @@ import tensorflow as tf
 class TArtGraphKeys:
     PLACEHOLDERS = 'placeholders'
     TART_VARIABLES = 'tart_variables'
-    TART_OPERATORS = 'tart_operators'
     INFERENCE_SUMMARIES = 'inference_summaries'
     SCALAR_VARIABLES = 'scalar_variables'
     OPTIMIZER_VARIABLES = 'optimizer_variables'
+
+    # DEPRECATED: (2017-12-02)
+    TART_OPERATORS = 'tart_operators'
 
 
 def clean_name(tensor, suffix=':0'):
@@ -26,8 +28,26 @@ def clean_name(tensor, suffix=':0'):
     return name
 
 
-def clean_summary_name(name):
+def escape_name(tensor):
+    name = tensor.name
+    return re.sub(':|/', '_', name)
+
+
+def clean_summary_suffix(name):
     return re.sub('_\d+$', '', name)
+
+
+def remove_tower_name(name):
+    return re.sub('^tower/\d+/', '', name)
+
+
+def format_summary_name(name):
+    name = clean_summary_suffix(name)
+    name = remove_tower_name(name)
+    if 'train/' in name:
+        name = name.replace('train/', '')
+        name = 'train/' + name
+    return name
 
 
 def assign_variable(var, value, session=None, use_locking=False):

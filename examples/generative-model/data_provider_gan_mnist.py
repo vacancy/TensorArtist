@@ -4,15 +4,15 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import numpy as np
 import tqdm
 
 from tartist import image
+from tartist.app import gan
 from tartist.core import get_env
 from tartist.core.utils.thirdparty import get_tqdm_defaults
-from tartist.app import gan
 from tartist.data import flow
 from tartist.data.datasets.mnist import load_mnist
 
@@ -20,7 +20,7 @@ _mnist = []
 
 
 def ensure_load():
-    global _mnist 
+    global _mnist
 
     if len(_mnist) == 0:
         for xy in load_mnist(get_env('dir.data')):
@@ -33,9 +33,8 @@ def make_dataflow_train(env):
 
     df = _mnist[0]
     df = flow.DOARandomSampleDataFlow(df)
-    df = flow.BatchDataFlow(df, batch_size, sample_dict={
-        'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
-    })
+    df = flow.BatchDataFlow(df, batch_size,
+                            sample_dict={'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'), })
     df = gan.GANDataFlow(None, df, get_env('trainer.nr_g_per_iter', 1), get_env('trainer.nr_d_per_iter', 1))
 
     return df
@@ -82,9 +81,8 @@ def main_demo_infogan(env, func):
 def main_demo(env, func):
     mode = get_env('demo.mode')
     assert mode is not None
-    
+
     if mode == 'infogan':
         main_demo_infogan(env, func)
     else:
         assert False, 'Unknown mode {}'.format(mode)
-

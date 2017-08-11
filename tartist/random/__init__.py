@@ -4,11 +4,13 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/23/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 # This file is part of NeuArtist2
 
+from ..core.utils.nd import isndarray
 from .rng import rng, reset_rng, gen_seed, gen_rng, shuffle_multiarray
 
+import random as _random
 import functools
 
 __all__ = ['rng', 'reset_rng', 'gen_seed', 'gen_rng', 'shuffle_multiarray']
@@ -88,10 +90,21 @@ random = random_sample
 __all__.append('random')
 
 _rng = rng
+
+
 def list_choice(l, rng=None):
-    """Efficiently draw an element from an list, if the rng is given, use it instead of the system one"""
+    """Efficiently draw an element from an list, if the rng is given, use it instead of the system one."""
     rng = rng or _rng
     assert type(l) in (list, tuple)
     return l[rng.choice(len(l))]
+
+
+def list_shuffle(l, rng=None):
+    rng = rng or _rng
+    if isndarray(l):
+        rng.shuffle(l)
+
+    assert type(l) is list
+    _random.shuffle(l, random=rng.random_sample)
     
-__all__.append('list_choice')
+__all__.extend(['list_choice', 'list_shuffle'])

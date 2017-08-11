@@ -4,10 +4,10 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/22/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
-import tensorflow as tf
 from tartist.nn import opr as O
+import tensorflow as tf
 
 
 def image_diff(origin, canvas_logits):
@@ -144,4 +144,3 @@ def att_write(img_h, img_w, window, center_x, center_y, delta, var):
     with tf.name_scope('att_write'):
         fx, fy = filterbank(img_h, img_w, window.static_shape[1], center_x, center_y, delta, var)
         return apply_filterbank(window, fx, fy, dir='w2i')
-

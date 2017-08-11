@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/19/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 import pickle
@@ -17,7 +17,7 @@ import numpy
 try:
     from ..logger import get_logger
     logger = get_logger(__file__)
-    info = logger.warning
+    info = logger.warn
 except Exception as e:
     info = print
 
@@ -25,7 +25,7 @@ try:
     import joblib
 except ImportError:
     joblib = numpy
-    info('Fail to import joblib, use built-in numpy load/dump')
+    info('Fail to import joblib; use built-in numpy load/dump.')
 
 
 from ..utils.meta import assert_instance
@@ -183,4 +183,3 @@ def make_env_dir(key, path):
     from ..environ import set_env
     make_dir(path)
     set_env(key, path)
-

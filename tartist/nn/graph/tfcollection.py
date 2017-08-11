@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/21/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import tensorflow as tf
 import contextlib
@@ -35,4 +35,3 @@ def freeze_collections(keys, graph=None):
     saved = save_collections(keys, graph=graph)
     yield
     restore_collections(saved, graph=graph)
-

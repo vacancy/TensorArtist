@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/26/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.core import get_env, register_event, get_logger
 from tartist.core import io
@@ -56,7 +56,7 @@ def enable_snapshot_saver(trainer, save_interval=1):
 
         io.link(fpath, *fpath_aliased)
 
-        logger.info('Model at epoch {} dumped to {}.\n(Also alias: {})'.format(
+        logger.info('Model at epoch {} dumped to {}.\n(Also alias: {}).'.format(
             trainer.epoch, fpath, ', '.join(fpath_aliased)))
 
     trainer.register_event('epoch:after', dump_snapshot_on_epoch_after, priority=20)
@@ -103,7 +103,7 @@ def enable_snapshot_loading_after_initialization(trainer, *, continue_last=None,
         if fpath:
             if load_snapshot_file(trainer, fpath):
                 fpath_real = osp.relpath(osp.realpath(fpath), osp.dirname(fpath))
-                logger.info('Restored snapshot from {} (aka. {}), continue={}'.format(
+                logger.info('Restored snapshot from {} (aka. {}), continue={}.'.format(
                     fpath, fpath_real, continue_last, continue_from))
                 trainer.runtime['restore_snapshot'] = fpath
 
@@ -113,8 +113,7 @@ def enable_snapshot_loading_after_initialization(trainer, *, continue_last=None,
 def enable_weights_loading_after_intialization(trainer, weights_fpath):
     def load_weights_on_initialization_after(trainer):
         if load_weights_file(trainer.env, weights_fpath):
-            logger.info('Restored weights from {}'.format(weights_fpath))
+            logger.info('Restored weights from {}.'.format(weights_fpath))
             trainer.runtime['restore_weights'] = weights_fpath
 
     trainer.register_event('initialization:after', load_weights_on_initialization_after, priority=25)
-

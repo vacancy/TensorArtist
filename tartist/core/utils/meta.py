@@ -4,20 +4,25 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/29/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
+import functools
 import collections
+import threading
 
 import numpy
 
-__all__ = ['iter_kv', 'merge_iterable',
+__all__ = ['iter_kv', 'merge_iterable', 'map_exec', 'filter_exec',
            'dict_deep_update', 'dict_deep_keys',
            'astuple', 'asshape',
            'canonize_args_list',
            'assert_instance', 'assert_none', 'assert_notnone',
            'notnone_property',
-           'UniqueValueGetter', 'AttrObject']
+           'UniqueValueGetter', 'AttrObject',
+           'run_once',
+           'synchronized', 
+           'try_run']
 
 
 def iter_kv(v):
@@ -34,6 +39,14 @@ def merge_iterable(v1, v2):
         return v
 
     return v1 + v2
+
+
+def map_exec(func, *iterables):
+    return list(map(func, *iterables))
+
+
+def filter_exec(func, iterable):
+    return list(filter(func, iterable))
 
 
 def dict_deep_update(a, b):
@@ -171,3 +184,39 @@ class notnone_property:
         assert v is not None, '{}.{} can not be None, maybe not set yet'.format(
                 type(instance).__name__, self.__name__)
         return v
+
+
+def run_once(func):
+    has_run = False
+
+    @synchronized()
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        nonlocal has_run
+        if not has_run:
+            has_run = True
+            return func(*args, **kwargs)
+        else:
+            return
+    return new_func
+
+
+def synchronized(mutex=None):
+    if mutex is None:
+        mutex = threading.Lock()
+
+    def wrapper(func):
+        @functools.wraps(func)
+        def wrapped_func(*args, **kwargs):
+            with mutex:
+                return func(*args, **kwargs)
+        return wrapped_func
+
+    return wrapper
+
+
+def try_run(lambda_):
+    try:
+        return lambda_()
+    except:
+        return None

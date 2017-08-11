@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/23/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 # This file is part of NeuArtist2
 
 import os
@@ -52,4 +52,3 @@ def shuffle_multiarray(*arrs):
     return tuple(map(lambda x: x[inds], arrs))
 
 __initialize_rng()
-

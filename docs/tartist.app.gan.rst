@@ -1,11 +1,19 @@
-tartist.app.gan package
-=======================
+tartist\.app\.gan package
+=========================
 
 Submodules
 ----------
 
-tartist.app.gan.train module
-----------------------------
+tartist\.app\.gan\.opr module
+-----------------------------
+
+.. automodule:: tartist.app.gan.opr
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+tartist\.app\.gan\.train module
+-------------------------------
 
 .. automodule:: tartist.app.gan.train
     :members:

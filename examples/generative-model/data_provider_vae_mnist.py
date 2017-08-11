@@ -4,20 +4,20 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/30/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
+
+import numpy as np
 
 from tartist import image
 from tartist.core import get_env
-from tartist.data import flow 
+from tartist.data import flow
 from tartist.data.datasets.mnist import load_mnist
-
-import numpy as np
 
 _mnist = []
 
 
 def ensure_load():
-    global _mnist 
+    global _mnist
 
     if len(_mnist) == 0:
         for xy in load_mnist(get_env('dir.data')):
@@ -30,9 +30,8 @@ def make_dataflow_train(env):
 
     df = _mnist[0]
     df = flow.DOARandomSampleDataFlow(df)
-    df = flow.BatchDataFlow(df, batch_size, sample_dict={
-        'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
-    })
+    df = flow.BatchDataFlow(df, batch_size,
+                            sample_dict={'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'), })
 
     return df
 
@@ -45,9 +44,8 @@ def make_dataflow_inference(env):
     df = _mnist[1]  # use validation set actually
     df = flow.DictOfArrayDataFlow(df)
     df = flow.tools.cycle(df)
-    df = flow.BatchDataFlow(df, batch_size, sample_dict={
-        'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'),
-    })
+    df = flow.BatchDataFlow(df, batch_size,
+                            sample_dict={'img': np.empty(shape=(batch_size, 28, 28, 1), dtype='float32'), })
     df = flow.EpochDataFlow(df, epoch_size)
 
     return df
@@ -122,4 +120,3 @@ def demo_draw(feed_dict, result, extra_info):
     final = image.resize_minmax(final, 480, 720)
 
     image.imshow('demo', final)
-

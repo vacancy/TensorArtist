@@ -4,9 +4,10 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/29/16
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import enum
+import threading
 import contextlib
 import tensorflow as tf
 
@@ -71,7 +72,8 @@ def _on_train_flag(attr_name):
         if attr is None:
             return get_default_env().phase is Env.Phase.TRAIN
         if callable(attr):
-            return attr(name)
+            e = get_default_env()
+            return get_default_env().phase is Env.Phase.TRAIN and attr(e.get_name_scope())
         return bool(attr)
     return compute
 
@@ -133,7 +135,7 @@ class Env(object):
         TEST = 2
 
     def __init__(self, phase=Phase.TEST, master_dev='/gpu:0', slave_devs=None, flags=None, dpflags=None,
-                 graph=None, session=None):
+                 graph=None, session=None, func_lock=None, sync_with=None):
         """
 
         :param phase: The phase, either TRAIN or TEST.
@@ -144,7 +146,15 @@ class Env(object):
         :param graph: A tf.Graph object, if not provided, a default graph will be created. This parameter is useful if
         you want to share a tf.Graph amount different envs.
         :param session: A tf.Session object. Similarly, a default one be use if not provided.
+        :param func_lock: A threading.Lock object.
+        :param sync_with: Synchronize everything with another env: graph, session and func_lock
         """
+
+        if sync_with is not None:
+            assert graph is None and session is None and func_lock is None
+            graph = sync_with.graph
+            session = sync_with.session
+            func_lock = sync_with.get_or_make_func_lock()
 
         self.__phase = phase
         self.__session = None
@@ -158,6 +168,7 @@ class Env(object):
         self._dpflags = dpflags or type(self).DataParallelFlag()
         self._dpsplitters = []
         self._graph = graph or tf.Graph()
+        self._func_lock = func_lock
 
         if session is not None:
             self.__session = session
@@ -208,6 +219,10 @@ class Env(object):
         if self.__session is None:
             self._make_session()
         return self.__session
+
+    def reuse_session(self, session):
+        self.__session = session
+        return self
 
     def _make_session(self):
         config = tf.ConfigProto()
@@ -295,6 +310,20 @@ class Env(object):
             else:
                 yield
 
+    def get_or_make_func_lock(self):
+        if self._func_lock is None:
+            self._func_lock = threading.Lock()
+        return self._func_lock
+
+    def share_func_lock_with(self, env):
+        self._func_lock = env.get_or_make_func_lock()
+        return self
+
+    def with_func_lock(self):
+        if self._func_lock is None:
+            return EmptyContext()
+        return self._func_lock
+
     def make_func(self):
         """Make a function associated with this Env, and register the data-parallel splitters."""
         if self._use_input_queue:
@@ -320,17 +349,19 @@ class Env(object):
         with self.graph.as_default():
             tf.train.start_queue_runners(sess=sess)
 
-    def clone(self, share_graph=True, share_session=True):
+    def clone(self, share_graph=True, share_session=True, share_func_lock=False):
         """
         Clone this graph.
 
         :param share_graph: Whether the new env will share the graph with this.
         :param share_session: Whether the new env will share the session with this.
+        :param share_func_lock: Whether the new env will share the func_lock with this.
         """
-        graph = self.graph if share_graph else None
-        sess = self.session if share_session else None
         return type(self)(self.phase, master_dev=self.master_device, slave_devs=self.slave_devices,
-                          flags=self.flags, dpflags=self.dpflags, graph=graph, session=sess)
+                          flags=self.flags, dpflags=self.dpflags,
+                          graph=self.graph if share_graph else None,
+                          session=self.session if share_session else None,
+                          func_lock=self.get_or_make_func_lock() if share_func_lock else None)
 
     def run(self, fetches, feed_dict=None, options=None, run_metadata=None):
         """Perform session.run use the default session."""
@@ -352,6 +383,21 @@ class Env(object):
         except ValueError:
             return as_varnode(self.graph.get_tensor_by_name(name + ':0'))
 
+    def add_to_collection(self, name, value):
+        return self.graph.add_to_collection(name, value)
+
+    def add_to_collections(self, names, value):
+        return self.graph.add_to_collections(names, value)
+
+    def get_collection(self, name, scope=None):
+        return self.graph.get_collection(name, scope=scope)
+
+    def get_collection_ref(self, name):
+        return self.graph.get_collection_ref(name)
+
+    def get_all_collection_keys(self):
+        return self.graph.get_all_collection_keys()
+
     def find_in_collection_by_name(self, collection_or_key, name):
         """
         Find a op/tensor by name in a collection.
@@ -372,6 +418,11 @@ class Env(object):
                 return v
         return None
 
+    def name_scope(self, name, default_name=None):
+        if name is None:
+            name = default_name
+        return self.graph.name_scope(name)
+
     def get_name_scope(self, use_name=None):
         """Get current name scope"""
         if use_name:
@@ -383,6 +434,21 @@ class Env(object):
         if len(name) > len(random_str):
             return name[:-(len(random_str) + 1)]
         return ''
+
+    def variable_scope(self, name_or_scope, default_name=None, reuse=None):
+        with self.graph.as_default():
+            return tf.variable_scope(name_or_scope=name_or_scope, default_name=default_name, reuse=reuse)
+
+    def get_variable_scope(self):
+        with self.graph.as_default():
+            return tf.get_variable_scope()
+
+    def reuse_scope(self, activate=True):
+        with self.graph.as_default():
+            return reuse_context(activate)
+
+    def get_unique_name(self, scope_name):
+        return self.graph.unique_name(scope_name, mark_as_used=False)
 
     def get_pure_unique_name(self, scope_name):
         prefix = self.get_name_scope()
@@ -652,7 +718,7 @@ class Network(object):
             value = all_variables.get(clean_name(v), None)
             if value is not None:
                 if verbose:
-                    logger.info('Assign variable from external dict: {}'.format(clean_name(v)))
+                    logger.info('Assign variable from external dict: {}.'.format(clean_name(v)))
                 assign_variable(v, value, self.owner_env.session)
         return self
 

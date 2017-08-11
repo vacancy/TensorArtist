@@ -6,7 +6,7 @@
 #          dhh19951@gmail.com
 # Date   : 2/27/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist import image
 from tartist.core import get_env

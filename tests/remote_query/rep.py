@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/19/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.data.rflow import QueryRepPipe
 import time
@@ -20,4 +20,3 @@ with rep.activate():
     print('tart req.py', *rep.conn_info)
     while True:
         time.sleep(1)
-

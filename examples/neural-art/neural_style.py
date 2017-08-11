@@ -4,22 +4,22 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/27/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
+
+import argparse
+import os
+
+import neural_style_opr
+import numpy as np
 
 from tartist import image
-from tartist.core import load_env, get_env, get_logger
 from tartist.core import io
+from tartist.core import load_env, get_env, get_logger
 from tartist.core.utils.cli import parse_devices
 from tartist.nn import Env
 from tartist.nn import opr as O, optimizer
 from tartist.nn.train import SimpleTrainerEnv
-import neural_style_opr
-
-import argparse
-import collections
-import os
-import numpy as np
 
 logger = get_logger(__file__)
 
@@ -108,7 +108,7 @@ def main():
         make_network(env, h, w)
 
     net = env.network
-    netin = net.outputs['img'].taop
+    netin = net.outputs['img']
 
     with env.as_default():
         outputs = net.outputs
@@ -158,4 +158,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

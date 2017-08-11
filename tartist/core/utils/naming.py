@@ -4,13 +4,13 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 11/23/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 # This file is part of NeuArtist2
 
 import os
 import socket
 
-__all__ = ['get_dump_directory', 'get_uri_prefix']
+__all__ = ['get_dump_directory', 'get_uri_prefix', 'get_name_of_vars']
 
 
 def get_uri_prefix(group_name='neuart'):
@@ -40,3 +40,6 @@ def get_data_directory(dirname, prefix=None):
         prefix = os.getenv('TART_DIR_DATA', os.path.expanduser('~/data'))
     return os.path.join(prefix, dirname)
 
+
+def get_name_of_vars(var_list):
+    return [v.name for v in var_list]

@@ -4,11 +4,10 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/1/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from .summary import put_summary_history
-from tartist.core import register_event
 from tartist.core.utils.thirdparty import get_tqdm_defaults
 from tartist.nn import TArtGraphKeys
 import tensorflow as tf

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/30/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import SimpleDataFlowBase
 from .rng import RandomizedDataFlowBase 
@@ -46,4 +46,3 @@ class KVStoreRandomSampleDataFlow(RandomizedDataFlowBase):
         while True:
             k = self._keys[self._rng.choice(self._nr_keys)]
             yield self._kvstore.get(k)
-

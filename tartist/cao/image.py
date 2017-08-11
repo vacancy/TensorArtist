@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 4/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist import image
 import numpy as np
@@ -22,7 +22,7 @@ def imshow(img, resize=(600, 800), title='imshow'):
     image.imshow(title, img)
 
 
-def batch_show(batch, nr_show=16, grid_desc=('4h', '4v'), resize=(600, 800), title='batch_show'):
+def batch_show(batch, nr_show=16, grid_desc=('4v', '4h'), resize=(600, 800), title='batch_show'):
     """
     Show a batch of images.
 
@@ -46,4 +46,3 @@ def batch_show(batch, nr_show=16, grid_desc=('4h', '4v'), resize=(600, 800), tit
     img = image.image_grid(batch, grid_desc)
     img = image.resize_minmax(img, *resize, interpolation='NEAREST')
     image.imshow(title, img)
-

@@ -6,6 +6,7 @@
 # 
 # This file is part of TensorArtistS
 
+from .train import _pure_name
 from .. import TArtGraphKeys
 import functools
 import tensorflow as tf
@@ -21,7 +22,7 @@ def _migrate_summary(tf_func):
 
         if hasattr(name, 'name'):
             name, tensor = name.name, name
-            name = name_prefix + name
+            name = name_prefix + _pure_name(name)
             return tf_func(name, tensor, *args, **kwargs)
         name = name_prefix + name
         return tf_func(name, *args, **kwargs)

@@ -1,5 +1,5 @@
-tartist.core package
-====================
+tartist\.core package
+=====================
 
 Subpackages
 -----------
@@ -12,24 +12,24 @@ Subpackages
 Submodules
 ----------
 
-tartist.core.environ module
----------------------------
+tartist\.core\.environ module
+-----------------------------
 
 .. automodule:: tartist.core.environ
     :members:
     :undoc-members:
     :show-inheritance:
 
-tartist.core.event module
--------------------------
+tartist\.core\.event module
+---------------------------
 
 .. automodule:: tartist.core.event
     :members:
     :undoc-members:
     :show-inheritance:
 
-tartist.core.logger module
---------------------------
+tartist\.core\.logger module
+----------------------------
 
 .. automodule:: tartist.core.logger
     :members:

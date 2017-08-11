@@ -1,24 +1,26 @@
-#pmt -*- coding:utf8 -*-
+# -*- coding:utf8 -*-
 # File   : summary.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 2/26/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
-from tartist.core import get_logger, get_env, set_env, io
-from tartist.data.rflow.utils import get_addr
-from tartist.nn.tfutils import clean_summary_name
-import math
-import random
 import collections
-import threading
+import json
+import math
 import os
 import os.path as osp
-import json
+import random
 import shutil
 import subprocess
+import threading
+
 import tensorflow as tf
+
+from tartist.core import get_logger, get_env, io
+from tartist.data.rflow.utils import get_addr
+from tartist.nn.tfutils import format_summary_name, clean_summary_suffix
 
 logger = get_logger()
 
@@ -60,7 +62,7 @@ class SummaryHistoryManager(object):
         for val in summaries.value:
             if val.WhichOneof('value') == 'simple_value':
                 # XXX: do hacks here
-                val.tag = clean_summary_name(val.tag)
+                val.tag = format_summary_name(val.tag)
                 self.put_scalar(val.tag, val.simple_value)
                 self.set_type(val.tag, 'scalar')
 
@@ -157,7 +159,7 @@ def enable_summary_history(trainer, extra_summary_types=None):
 
         if isinstance(summaries, collections.Iterable):
             for s in summaries:
-                mgr.put_summaries(s)
+                put_summary_history(trainer, s)
         else:
             if 'loss' in trainer.runtime and not check_proto_contains(summaries, 'train/loss'):
                 summaries.value.add(tag='train/loss', simple_value=trainer.runtime['loss'])
@@ -166,7 +168,7 @@ def enable_summary_history(trainer, extra_summary_types=None):
             if mgr.has(error_summary_key):
                 if not check_proto_contains(summaries, 'train/error'):
                     for v in summaries.value:
-                        if clean_summary_name(v.tag) == error_summary_key:
+                        if clean_summary_suffix(v.tag) == error_summary_key:
                             trainer.runtime['error'] = v.simple_value
                     summaries.value.add(tag='train/error', simple_value=trainer.runtime['error'])
 
@@ -214,7 +216,8 @@ def enable_echo_summary_scalar(trainer, summary_spec=None,
                 else:
                     avg = mgr.average(k, trainer.runtime['inference_epoch_size'], meth=meth)
 
-                tag = '{}/{}'.format(k, meth)
+                # MJY(20170623): add stat prefix
+                tag = 'stat/{}/{}'.format(k, meth)
                 if avg != 'N/A':
                     extra_summary.value.add(tag=tag, simple_value=avg)
                 log_strs.append('  {} = {}'.format(tag, avg))
@@ -251,7 +254,7 @@ def enable_echo_summary_scalar(trainer, summary_spec=None,
             js_path = osp.join(get_env('dir.root'), 'summary.json')
         restored = 'restore_snapshot' in trainer.runtime
         if osp.exists(js_path) and not restored:
-            logger.warning('Removing old summary json: {}'.format(js_path))
+            logger.warn('Removing old summary json: {}.'.format(js_path))
             os.remove(js_path)
         trainer.runtime['json_summary_path'] = js_path
 
@@ -261,13 +264,13 @@ def enable_echo_summary_scalar(trainer, summary_spec=None,
             tb_path = osp.join(get_env('dir.root'), 'tensorboard')
         restored = 'restore_snapshot' in trainer.runtime
         if osp.exists(tb_path) and not restored:
-            logger.warning('Removing old tensorboard directory: {}'.format(tb_path))
+            logger.warn('Removing old tensorboard directory: {}.'.format(tb_path))
             shutil.rmtree(tb_path)
         io.mkdir(tb_path)
         trainer.runtime['tensorboard_summary_path'] = tb_path
         trainer._tensorboard_writer = tf.summary.FileWriter(tb_path, graph=trainer.env.graph)
         if enable_tensorboard_web:
-            port = random.randrange(49152, 65536)
+            port = random.randrange(49152, 65536.)
             port = trainer.runtime.get('tensorboard_web_port', port)
             trainer._tensorboard_webserver = threading.Thread(
                     target=_tensorboard_webserver_thread, args=['tensorboard', '--logdir', tb_path, '--port', str(port)],
@@ -306,4 +309,3 @@ def set_error_summary_key(trainer, key):
     if not key.startswith('train/'):
         key = 'train/' + key
     trainer.runtime['error_summary_key'] = key
-

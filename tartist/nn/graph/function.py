@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/31/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .node import __valid_tensor_types__, as_tftensor, as_varnode
 from ...core.logger import get_logger
@@ -44,7 +44,7 @@ class Function(object):
                 syms = [outputs[k] for k in names]
                 return cls(Function.OutputResultType.DICT, len(outputs), names), syms
             else:
-                raise ValueError('unsupported output type')
+                raise ValueError('Unsupported output type.')
 
         def format(self, outputs):
             outputs = outputs[:self._nr_outputs]
@@ -132,7 +132,7 @@ class Function(object):
 
     def compile(self, outputs, inputs=None):
         if self.__compiled:
-            logger.warn('function {} already compiled'.format(self))
+            logger.warn('Function {} already compiled.'.format(self))
 
         if len(self._extra_kwoutputs):
             assert isinstance(outputs, (dict, collections.OrderedDict))
@@ -149,21 +149,22 @@ class Function(object):
         self.__compiled = True
 
     def __call__(self, *args, output_raw=False, **kwargs):
-        if len(args) > 0:
-            assert self._inputs is not None
-            assert len(self._inputs) == len(args)
-            feed_dict = dict(zip(self._inputs, args))
-        else:
-            feed_dict = kwargs
+        with self.owner_env.with_func_lock():
+            if len(args) > 0:
+                assert self._inputs is not None
+                assert len(self._inputs) == len(args)
+                feed_dict = dict(zip(self._inputs, args))
+            else:
+                feed_dict = kwargs
 
-        for f in self._extra_kw_modifiers:
-            f(feed_dict)
-        feed_dict = self.canonize_feed_dict(feed_dict)
+            for f in self._extra_kw_modifiers:
+                f(feed_dict)
+            feed_dict = self.canonize_feed_dict(feed_dict)
 
-        outputs = self.session.run(self._outputs, feed_dict=feed_dict)
-        if output_raw:
-            return outputs
-        return self._output_manager.format(outputs)
+            outputs = self.session.run(self._outputs, feed_dict=feed_dict)
+            if output_raw:
+                return outputs
+            return self._output_manager.format(outputs)
 
     def call(self, *args, **kwargs):
         return self(*args, **kwargs)
@@ -190,4 +191,3 @@ class Function(object):
                 k += ':0'
             res[k] = v
         return res
-

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/21/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import collections
 import threading
@@ -12,6 +12,7 @@ import threading
 import numpy as np
 
 from tartist.core import get_env
+from tartist.app import rl
 
 PlayerHistory = collections.namedtuple('PlayerHistory', ('state', 'action', 'value', 'reward'))
 
@@ -28,7 +29,7 @@ def on_data_func(env, identifier, inp_data):
         if is_over:
             r = 0
             env.players_history[identifier] = []
-        elif num == get_env('a3c.acc_step') + 1:
+        elif num == get_env('a3c.nr_td_steps') + 1:
             history, last = history[:-1], history[-1]
             r = last.value
             env.players_history[identifier] = [last]
@@ -41,17 +42,18 @@ def on_data_func(env, identifier, inp_data):
             data_queue.put({'state': i.state, 'action': i.action, 'future_reward': r})
 
     def callback(action, predict_value):
-        router.send(identifier, action)
         player_history.append(PlayerHistory(state, action, predict_value, None))
-
-    task_queue.put((identifier, inp_data, callback))
+        router.send(identifier, action)
 
     if len(player_history) > 0:
         last = player_history[-1]
         player_history[-1] = PlayerHistory(last[0], last[1], last[2], reward)
         parse_history(player_history, is_over)
 
+    task_queue.put((identifier, inp_data, callback))
 
+
+# Not used.
 def inference_on_data_func(env, identifier, inp_data):
     router, task_queue = env.inference_player_master.router, env.inference_player_master.queue
 
@@ -69,23 +71,34 @@ def on_stat_func(env, identifier, inp_data):
                 mgr.put_async_scalar(k, v)
 
 
+# Not used.
 inference_on_stat_func = on_stat_func
 
 
+# Not used.
 def main_inference_play(trainer, epoch):
     nr_players = get_env('a3c.inference.nr_players')
     name = 'a3c-inference-player-epoch-{}'.format(epoch)
     trainer.env.inference_player_master.start(nr_players, name=name, daemon=False)
 
 
-def main_inference_play_multithread(trainer, make_player):
+def main_inference_play_multithread(trainer, make_player, inpkey='state', policykey='policy'):
     def runner():
         func = trainer.env.make_func()
-        func.compile(trainer.env.network.outputs)
+        func.compile(trainer.env.network.outputs[policykey])
         player = make_player(is_train=False)
 
+        if isinstance(player.action_space, rl.DiscreteActionSpace):
+            is_continuous = False
+        elif isinstance(player.action_space, rl.ContinuousActionSpace):
+            is_continuous = True
+        else:
+            raise AttributeError('Unknown action space: {}'.format(player.action_space))
+
         def get_action(inp, func=func):
-            action = func(state=inp[np.newaxis])['policy'][0].argmax()
+            action = func(**{inpkey: inp[np.newaxis]})[0]
+            if not is_continuous:
+                return action.argmax()
             return action
 
         player.play_one_episode(get_action)
@@ -95,10 +108,9 @@ def main_inference_play_multithread(trainer, make_player):
         if mgr is not None:
             mgr.put_async_scalar('async/inference/score', score)
 
-    nr_players = get_env('a3c.inference.nr_players')
+    nr_players = get_env('a3c.inference.nr_plays')
     pool = [threading.Thread(target=runner) for _ in range(nr_players)]
     for p in pool:
         p.start()
     for p in pool:
         p.join()
-
