@@ -1,6 +1,7 @@
 # -*- coding:utf8 -*-
-# File   : cem.py
-# Author : Jiayuan Mao # Email  : maojiayuan@gmail.com
+# File   : evolution.py
+# Author : Jiayuan Mao
+# Email  : maojiayuan@gmail.com
 # Date   : 10/08/2017
 # 
 # This file is part of TensorArtist.
@@ -16,11 +17,11 @@ from tartist.nn.train import TrainerBase
 import tensorflow as tf
 import numpy as np
 
-__all__ = ['CEMOptimizer', "CEMTrainer"]
+__all__ = ['EvolutionBasedOptimizerBase', 'CEMOptimizer', 'ESOptimizer', "EvolutionBasedTrainer"]
 
 
-class CEMOptimizer(CustomOptimizerBase):
-    _name_scope = 'cem_optimizer'
+class EvolutionBasedOptimizerBase(CustomOptimizerBase):
+    _name = 'evolution_optimizer'
     _var_list = None
 
     _param_nr_elems = None
@@ -30,26 +31,41 @@ class CEMOptimizer(CustomOptimizerBase):
 
     _populations = None
 
-    # Model parameters: public access
-    param_mean = None
-    param_std = None
-
-    def __init__(self, env, top_frac, initial_std=0.1):
+    def __init__(self, env):
         self._env = env
-        self._top_frac = top_frac
-        self._initial_std = initial_std
-
         self.__rng = random.gen_rng()
         self.__initialized = False
 
+    @property
+    def env(self):
+        return self._env
+
+    @property
+    def rng(self):
+        return self.__rng
+
     def minimize(self):
         """Analog to preparation call in typical gradient based optimizers."""
-
-        assert not self.__initialized, 'CEM Optimizer can only be used once.'
+        assert not self.__initialized, 'EvolutionOptimizer `{}` can only be used once.'.format(self._name)
 
         self._var_list = self._env.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
         self._initialize_ops(self._var_list)
         self._initialize_param()
+
+    def register_snapshot_parts(self, env):
+        env.add_snapshot_part(self._name, self._dump_param, self._load_param)
+
+    @notnone_property
+    def param_nr_elems(self):
+        return self._param_nr_elems
+
+    def get_flat_param(self):
+        return self._env.session.run([self._param_getter])[0]
+
+    def set_flat_param(self, params):
+        return self._env.session.run([self._param_setter], feed_dict={
+            self._param_provider: params
+        })
 
     def _initialize_ops(self, var_list):
         var_shapes = [as_tftensor(v).get_shape().as_list() for v in var_list]
@@ -60,7 +76,7 @@ class CEMOptimizer(CustomOptimizerBase):
 
         self._param_nr_elems = nr_total_elems
 
-        with self._env.name_scope(self._name_scope):
+        with self._env.name_scope(self._name):
             # Parameter getter
             flat_variables = [as_varnode(v).flatten(name='flat_{}'.format(escape_name(v))) for v in var_list]
             self._param_getter = as_tftensor(O.concat(flat_variables, axis=0))
@@ -80,33 +96,16 @@ class CEMOptimizer(CustomOptimizerBase):
             self._param_provider = as_tftensor(flat_variables_tensor)
 
     def _initialize_param(self):
-        self.param_mean = np.zeros(shape=(self._param_nr_elems, ), dtype='float32')
-        self.param_std = np.ones(shape=(self._param_nr_elems, ), dtype='float32')
-        self.param_std *= self._initial_std
+        raise NotImplementedError()
 
-    def get_flat_param(self):
-        return self._env.session.run([self._param_getter])[0]
+    def _dump_param(self):
+        raise NotImplementedError()
 
-    def set_flat_param(self, params):
-        return self._env.session.run([self._param_setter], feed_dict={
-            self._param_provider: params
-        })
+    def _load_param(self, param):
+        raise NotImplementedError()
 
     def sample_flat_param(self, i, n):
-        if not self._proportional:
-            return self.__rng.normal(self.param_mean, self.param_std, size=(self._param_nr_elems, ))
-        else:
-            raise NotImplementedError()
-
-    def register_snapshot_parts(self, env):
-        env.add_snapshot_part('cem_optimizer', self.__dump_param, self.__load_param)
-
-    def __dump_param(self):
-        return self.param_mean, self.param_std
-
-    def __load_param(self, p):
-        assert self._param_nr_elems == p[0].shape[0] == p[1].shape[0]
-        self.param_mean, self.param_std = p
+        raise NotImplementedError()
 
     def before_epoch(self):
         self._populations = []
@@ -114,6 +113,37 @@ class CEMOptimizer(CustomOptimizerBase):
     def on_epoch_data(self, param, score):
         i = len(self._populations)
         self._populations.append((score, i, param))
+
+    def after_epoch(self):
+        raise NotImplementedError()
+
+
+class CEMOptimizer(EvolutionBasedOptimizerBase):
+    _name = 'cem_optimizer'
+
+    # Model parameters: public access
+    param_mean = None
+    param_std = None
+
+    def __init__(self, env, top_frac, initial_std=0.1):
+        super().__init__(env)
+        self._top_frac = top_frac
+        self._initial_std = initial_std
+
+    def _initialize_param(self):
+        self.param_mean = np.zeros(shape=(self.param_nr_elems, ), dtype='float32')
+        self.param_std = np.ones(shape=(self.param_nr_elems, ), dtype='float32')
+        self.param_std *= self._initial_std
+
+    def _dump_param(self):
+        return self.param_mean, self.param_std
+
+    def _load_param(self, p):
+        assert self._param_nr_elems == p[0].shape[0] == p[1].shape[0]
+        self.param_mean, self.param_std = p
+
+    def sample_flat_param(self, i, n):
+        return self.rng.normal(self.param_mean, self.param_std, size=(self.param_nr_elems, ))
 
     def after_epoch(self):
         top_n = int(len(self._populations) * self._top_frac)
@@ -128,13 +158,62 @@ class CEMOptimizer(CustomOptimizerBase):
         self.set_flat_param(self.param_mean)
 
 
-class CEMTrainer(TrainerBase):
+class ESOptimizer(EvolutionBasedOptimizerBase):
+    _name = 'es_optimizer'
+
+    # Model parameters: public access
+    param_mean = None
+
+    def __init__(self, env, learning_rate, noise_std=0.1):
+        super().__init__(env)
+        self._learning_rate = learning_rate
+        self._noise_std = noise_std
+
+    @property
+    def learning_rate(self):
+        return self._learning_rate
+
+    def set_learning_rate(self, lr):
+        self._learning_rate = lr
+
+    @property
+    def noise_std(self):
+        return self._noise_std
+
+    def set_noise_std(self, std):
+        self._noise_std = std
+
+    def _initialize_param(self):
+        self.param_mean = np.zeros(shape=(self.param_nr_elems, ), dtype='float32')
+
+    def _dump_param(self):
+        return self.param_mean
+
+    def _load_param(self, p):
+        assert self._param_nr_elems == p.shape[0]
+        self.param_mean = p
+
+    def sample_flat_param(self, i, n):
+        return self.rng.normal(self.param_mean, self.noise_std, size=(self.param_nr_elems, ))
+
+    def after_epoch(self):
+        scores = np.array([p[0] for p in self._populations], dtype='float32')
+        advantage = (scores - np.mean(scores)) / np.std(scores)
+
+        gradient = np.zeros_like(self.param_mean)
+        for _, i, p in self._populations:
+            gradient += (p - self.param_mean) * advantage[i]
+
+        self.param_mean += self._learning_rate / (len(scores) * self._noise_std) * gradient
+
+
+class EvolutionBasedTrainer(TrainerBase):
     _pred_func = None
     _evaluator = None
 
     def initialize(self):
         """Actual initialization before the optimization steps."""
-        assert isinstance(self.optimizer, CEMOptimizer)
+        assert isinstance(self.optimizer, EvolutionBasedOptimizerBase)
 
         super().initialize()
         self._initialize_pred_func()
