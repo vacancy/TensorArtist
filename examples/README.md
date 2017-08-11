@@ -30,4 +30,5 @@ that example.
 #### Deep Reinforcement learning:
 + Basic A3C on Atari games: `gym/desc_a3c_atari_BreakoutV0.py`
 + Basic A3C on Box2D environment: `gym/desc_a3cc_box2d_LunarLanderContinuousV2.py`
++ Cross-Entropy method as gradient-free optimization for RL environments: `gym/desc_cem_classic_CartPoleV0.py`
 + RL Environment Simulator: `rl-sim/README.md`
