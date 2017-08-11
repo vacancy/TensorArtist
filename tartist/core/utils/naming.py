@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 11/23/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 # This file is part of NeuArtist2
 
 import os
@@ -43,4 +43,3 @@ def get_data_directory(dirname, prefix=None):
 
 def get_name_of_vars(var_list):
     return [v.name for v in var_list]
-

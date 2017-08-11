@@ -4,10 +4,10 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/26/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .imp import load_module_filename
-from ..environ import load_env
+from ..environ import load_env as load_env_
 
 import os
 import sys
@@ -31,9 +31,10 @@ def parse_devices(devs):
     return devs
 
 
-def load_desc(desc_filename):
+def load_desc(desc_filename, load_env=True):
     module = load_module_filename(desc_filename)
-    load_env(module)
+    if load_env:
+        load_env_(module)
     return module
 
 
@@ -56,7 +57,7 @@ def yes_or_no(question, default="yes"):
     elif default == "no":
         prompt = " [y/N] "
     else:
-        raise ValueError("invalid default answer: '%s'" % default)
+        raise ValueError("invalid default answer: '%s'." % default)
 
     while True:
         sys.stdout.write(question + prompt)
@@ -74,7 +75,15 @@ def maybe_mkdir(dirname):
     from ..io.fs import mkdir
 
     if not os.path.isdir(dirname):
-        if yes_or_no('dir {} does not exist, do you want to create?'.format(dirname)):
+        if yes_or_no('Directory {} does not exist, do you want to create?'.format(dirname)):
             mkdir(dirname)
     return dirname
 
+
+def parse_args(parser):
+    args, argv = parser.parse_known_args()
+    if argv:
+        argv = sys.argv[:1] + argv
+        print('Partial parsed argv:\n\tBefore: {}\n\tAfter: {}\t'.format(sys.argv, argv))
+        sys.argv = argv
+    return args

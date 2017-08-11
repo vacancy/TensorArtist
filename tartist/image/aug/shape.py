@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/14/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .. import imgproc
 from ...core.utils.shape import get_2dshape
@@ -85,4 +85,3 @@ def horizontal_flip_augment(img, prob):
     if random.rand() < prob:
         return img[:, ::-1]
     return img
-

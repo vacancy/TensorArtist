@@ -4,14 +4,14 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/23/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ...core.logger import get_logger
 import traceback
 import collections
 logger = get_logger(__file__)
 
-__all__ = ['DataFlowBase', 'SimpleDataFlowBase', 'AdvancedDataFlowBase']
+__all__ = ['DataFlowBase', 'SimpleDataFlowBase', 'ProxyDataFlowBase', 'AdvancedDataFlowBase']
 
 
 class DataFlowBase(object):
@@ -53,10 +53,26 @@ class SimpleDataFlowBase(DataFlowBase):
             for v in self._gen():
                 yield v
         except Exception as e:
-            logger.warn('{} got exception {} during iter: {}'.format(type(self), type(e), e))
+            logger.warn('{} got exception {} during iter: {}.'.format(type(self), type(e), e))
             traceback.print_exc()
         finally:
             self._finalize()
+
+
+class ProxyDataFlowBase(DataFlowBase):
+    def __init__(self, other):
+        self._unwrapped = other
+
+    @property
+    def unwrapped(self):
+        return self._unwrapped
+
+    def _gen(self):
+        for item in self._unwrapped:
+            yield item
+
+    def _len(self):
+        return len(self._unwrapped)
 
 
 class AdvancedDataFlowBase(DataFlowBase):
@@ -100,4 +116,3 @@ class AdvancedDataFlowBase(DataFlowBase):
 
     def _have_next(self):
         raise NotImplementedError()
-

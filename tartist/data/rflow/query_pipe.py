@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/19/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from . import configs, utils
@@ -104,7 +104,7 @@ class QueryRepPipe(object):
             pass
         except zmq.ZMQError as e:
             if self._tosock.closed:
-                logger.warn('Recv socket closed unexpectedly')
+                logger.warn('Recv socket closed unexpectedly.')
             else:
                 raise e
 
@@ -121,7 +121,7 @@ class QueryRepPipe(object):
             pass
         except zmq.ZMQError as e:
             if self._tosock.closed:
-                logger.warn('Send socket closed unexpectedly')
+                logger.warn('Send socket closed unexpectedly.')
             else:
                 raise e
 
@@ -169,4 +169,3 @@ class QueryReqPipe(object):
         if do_recv:
             out = loadb(self._frsock.recv(copy=False).bytes)
             return out
-

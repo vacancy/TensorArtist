@@ -4,8 +4,9 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 4/22/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
+from .maze_visualizer import render_maze
 from ..base import SimpleRLEnvironBase, DiscreteActionSpace
 from .... import random
 from ....core.utils.meta import notnone_property
@@ -51,7 +52,7 @@ class MazeEnv(SimpleRLEnvironBase):
     def __init__(self, map_size=14, visible_size=None, obs_ratio=0.3, enable_path_checking=True,
                  random_action_mapping=None, 
                  enable_noaction=False, dense_reward=False, 
-                 reward_move=None, reward_noaction=0, reward_final=10, reward_error=-2):
+                 reward_move=None, reward_noaction=0, reward_final=10, reward_error=-2, state_mode='DEFAULT'):
         """
         :param map_size: A single int or a tuple (h, w), representing the map size.
         :param visible_size: A single int or a tuple (h, w), representing the visible size. The agent will at the center
@@ -73,6 +74,7 @@ class MazeEnv(SimpleRLEnvironBase):
         :param reward_noaction: Reward for a no-action.
         :param reward_final: Reward when you arrive at the final point.
         :param reward_error: Reward when you perform an invalid move.
+        :param state_mode: State mode, either 'DEFAULT' or 'RENDER'.
         """
     
         super().__init__()
@@ -106,6 +108,8 @@ class MazeEnv(SimpleRLEnvironBase):
         if reward_move is None:
             reward_move = -1 if not dense_reward else 1
         self._rewards = (reward_move, reward_noaction, reward_final, reward_error)
+        assert state_mode in ('DEFAULT' ,'RENDER')
+        self._state_mode = state_mode
 
     @notnone_property
     def canvas(self):
@@ -371,6 +375,13 @@ class MazeEnv(SimpleRLEnvironBase):
     def _get_action_space(self):
         return self._action_space
 
+    def _set_current_state(self, o):
+        if self._state_mode == 'DEFAULT':
+            pass
+        elif self._state_mode == 'RENDER':
+            o = render_maze(o)
+        super()._set_current_state(o)
+
     def _action(self, action):
         if self._enable_noaction and action == 0:
             return self._rewards[1], False
@@ -501,4 +512,3 @@ class CustomLavaWorldEnv(MazeEnv):
             self._origin_canvas = self._canvas.copy()
             self._refresh_view()
             self._clear_distance_info()
-

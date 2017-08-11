@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 4/2/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 from . import configs, utils
@@ -127,4 +127,3 @@ def make_push_pair(name, nr_workers=None, mode='tcp', send_qsize=10):
     if nr_workers is None:
         return pull, pushs[0]
     return pull, pushs
-

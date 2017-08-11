@@ -6,7 +6,7 @@
 #          dhh19951@gmail.com
 # Date   : 3/18/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """This reproduction of A3C is based on ppwwyyxx's reproduction in his TensorPack framework.
 Credit to : https://github.com/ppwwyyxx/tensorpack/tree/master/examples/A3C-Gym"""
@@ -15,7 +15,6 @@ import collections
 import functools
 import os
 import queue
-import threading
 
 import numpy as np
 
@@ -36,14 +35,14 @@ __envs__ = {
 
     'a3c': {
         'env_name': 'Breakout-v0',
-
         'input_shape': (84, 84),
-        'frame_history': 4,
-        'limit_length': 40000,
 
-        # gamma and acc_step in future_reward
+        'nr_history_frames': 4,
+        'max_nr_steps': 40000,
+
+        # gamma and TD steps in future_reward
         'gamma': 0.99,
-        'acc_step': 5,
+        'nr_td_steps': 5,
 
         # async training data collector
         'nr_players': 50,
@@ -55,7 +54,7 @@ __envs__ = {
 
         'inference': {
             'nr_plays': 20,
-            'max_stuck_repeat': 30
+            'max_antistuck_repeat': 30
         },
         'demo': {
             'nr_plays': 5
@@ -68,9 +67,6 @@ __envs__ = {
         'batch_size': 128,
         'epoch_size': 1000,
         'nr_epochs': 200,
-    },
-    'demo': {
-        'customized': True
     }
 }
 
@@ -123,13 +119,13 @@ def make_network(env):
         net.add_output(policy, name='policy')
         net.add_output(value, name='value')
 
-        if env.phase is env.Phase.TRAIN:
+        if is_train:
             action = O.placeholder('action', shape=(None, ), dtype='int64')
             future_reward = O.placeholder('future_reward', shape=(None, ))
 
             log_policy = O.log(policy + 1e-6)
             log_pi_a_given_s = (log_policy * O.one_hot(action, get_player_nr_actions())).sum(axis=1)
-            advantage = future_reward - O.zero_grad(value, name='advantage')
+            advantage = (future_reward - O.zero_grad(value)).rename('advantage')
             policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
             xentropy_cost = (-policy * log_policy).sum(axis=1).mean(name='xentropy_cost')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
@@ -152,13 +148,13 @@ def make_player(is_train=True, dump_dir=None):
 
     p = rl.GymRLEnviron(get_env('a3c.env_name'), dump_dir=dump_dir)
     p = rl.MapStateProxyRLEnviron(p, resize_state)
-    p = rl.GymHistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
+    p = rl.HistoryFrameProxyRLEnviron(p, get_env('a3c.nr_history_frames'))
 
-    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
+    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.max_nr_steps'))
     if is_train:
         p = rl.AutoRestartProxyRLEnviron(p)
     else:
-        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('a3c.inference.max_stuck_repeat'), 1)
+        p = rl.GymPreventStuckProxyRLEnviron(p, get_env('a3c.inference.max_antistuck_repeat'), 1)
     return p
 
 
@@ -197,8 +193,8 @@ def get_player_nr_actions():
 @cached_result
 def get_input_shape():
     input_shape = get_env('a3c.input_shape')
-    frame_history = get_env('a3c.frame_history')
-    h, w, c = input_shape[0], input_shape[1], 3 * frame_history
+    nr_history_frames = get_env('a3c.nr_history_frames')
+    h, w, c = input_shape[0], input_shape[1], 3 * nr_history_frames
     return h, w, c
 
 
@@ -215,7 +211,7 @@ def player_func(pid, requester):
 
             if len(player.stats['score']) > 0:
                 score = player.stats['score'][-1]
-                requester.query('stat', {'async/score': score}, do_recv=False)
+                requester.query('stat', {'async/train/score': score}, do_recv=False)
                 player.clear_stats()
             state = player.current_state
 
@@ -253,13 +249,13 @@ def _predictor_func(pid, router, task_queue, func, is_inference=False):
             callbacks.append(callback)
             nr_total += 1
 
-        out = func(state=batched_state)
+        out = func(state=batched_state[:nr_total])
         for i in range(nr_total):
             policy = out['policy_explore'][i]
             if is_inference:
-                # during inference, policy should be out['policy'][i]
-                # but these two are equivalent under argmax operation
-                # and we can only compile 'policy_explore' in output
+                # During inference, policy should be out['policy'][i].
+                # However, these two are equivalent under argmax operation,
+                # so we can directly use 'policy_explore' in output.
                 action = policy.argmax()
             else:
                 action = random.choice(len(policy), p=policy)
@@ -287,17 +283,16 @@ def make_a3c_configs(env):
         env.inference_player_master.on_stat_func = inference_on_stat_func
 
     env.players_history = collections.defaultdict(list)
-    env.players_history_lock = threading.Lock()
 
 
 def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer, extra_summary_types={
-        'async/score': 'async_scalar',
+        'async/train/score': 'async_scalar',
         'async/inference/score': 'async_scalar'
     })
     summary.enable_echo_summary_scalar(trainer, summary_spec={
-        'async/score': ['avg', 'max'],
+        'async/train/score': ['avg', 'max'],
         'async/inference/score': ['avg', 'max']
     })
 
@@ -322,12 +317,12 @@ def main_train(trainer):
 
 def main_demo(env, func):
     dump_dir = get_env('dir.demo', os.path.join(get_env('dir.root'), 'demo'))
-    logger.info('demo dump dir: {}'.format(dump_dir))
+    logger.info('Demo dump dir: {}'.format(dump_dir))
     player = make_player(is_train=False, dump_dir=dump_dir)
     repeat_time = get_env('a3c.demo.nr_plays', 1)
 
     def get_action(inp, func=func):
-        action = func(**{'state':[[inp]]})['policy'][0].argmax()
+        action = func(state=inp[np.newaxis])['policy'][0].argmax()
         return action
 
     for i in range(repeat_time):

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/3/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 import fnmatch
@@ -76,4 +76,3 @@ class NameMatcher(object):
             p = re.compile(p, flags=re.IGNORECASE)
             self._compiled_rules.append((r, p, v))
         self._compiled = True
-

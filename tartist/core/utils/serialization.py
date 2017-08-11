@@ -4,13 +4,13 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 4/1/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
 try:
     from ..logger import get_logger
     logger = get_logger(__file__)
-    info = logger.warning
+    info = logger.warn
 except Exception as e:
     info = print
 
@@ -26,6 +26,6 @@ try:
 except ImportError:
     import pickle
 
-    info('Fail to import msgpack, use built-in pickle loads/dumps')
+    info('Fail to import msgpack, use built-in pickle loads/dumps.')
     loads = pickle.loads
     dumps = pickle.dumps

@@ -6,7 +6,7 @@
 #          dhh19951@gmail.com
 # Date   : 3/17/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import numpy as np
 
@@ -42,7 +42,6 @@ __envs__ = {
     },
 
     'demo': {
-        'customized': True,
         'mode': 'infogan',
         'infogan': {
             'grid_desc': ('5h', '2v', '5h', '5v')
@@ -216,4 +215,3 @@ def main_train(trainer):
     snapshot.enable_snapshot_saver(trainer)
 
     trainer.train()
-

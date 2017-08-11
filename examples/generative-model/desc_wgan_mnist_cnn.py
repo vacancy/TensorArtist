@@ -6,7 +6,7 @@
 #          dhh19951@gmail.com
 # Date   : 4/1/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.app import gan
 from tartist.app.gan import GANGraphKeys
@@ -159,4 +159,3 @@ def main_train(trainer):
     enable_param_clippping(trainer)
 
     trainer.train()
-

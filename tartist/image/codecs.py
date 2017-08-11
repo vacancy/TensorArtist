@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com 
 # Date   : 4/3/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """Image codecs utils"""
 
@@ -60,4 +60,3 @@ def imdecode(data, *, require_chl3=True, require_alpha=False):
         assert img.dtype == np.uint8
         img = np.concatenate([img, np.ones_like(img[:, :, :1]) * 255], axis=2)
     return img
-

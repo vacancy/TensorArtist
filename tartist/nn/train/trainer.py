@@ -4,10 +4,9 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/31/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .env import SimpleTrainerEnv
-from .. import summary
 from ..graph.env import Env
 from ..graph.tfqueue import QueuedInputFunction
 from ...core.event import EventManager, register_event, trigger_event
@@ -62,6 +61,10 @@ class TrainerBase(object):
     @property
     def iter(self):
         return self.runtime.get('iter', 0)
+
+    @property
+    def iter_in_epoch(self):
+        return self.iter % self.epoch_size
 
     @property
     def epoch_size(self):
@@ -136,16 +139,7 @@ class TrainerBase(object):
                 self.trigger_event('iter:after', inp, out)
                 self.trigger_event('epoch:after')
             else:
-                if self.runtime['iter'] % self.epoch_size == 1:
-                    self.trigger_event('epoch:before')
-                
-                inp = next(self._iter_train) if self._need_feed else {}
-                self.trigger_event('iter:before', inp)
-                out = self._run_step(inp)
-                self.trigger_event('iter:after', inp, out)
-
-                if self.runtime['iter'] % self.epoch_size == 0:
-                    self.trigger_event('epoch:after')
+                self._wrapped_run_step()
 
             self.runtime['iter'] += 1
             self.runtime['zero_iter'] = False
@@ -155,6 +149,18 @@ class TrainerBase(object):
         self.trigger_event('finalization:begin')
         self.finalize()
         self.trigger_event('finalization:after')
+
+    def _wrapped_run_step(self):
+        if self.runtime['iter'] % self.epoch_size == 1:
+            self.trigger_event('epoch:before')
+
+        inp = next(self._iter_train) if self._need_feed else {}
+        self.trigger_event('iter:before', inp)
+        out = self._run_step(inp)
+        self.trigger_event('iter:after', inp, out)
+
+        if self.runtime['iter'] % self.epoch_size == 0:
+            self.trigger_event('epoch:after')
 
     def _run_step(self, data):
         raise NotImplementedError()
@@ -171,8 +177,9 @@ class SimpleTrainer(TrainerBase):
     _fn_train = None
 
     def initialize(self):
-        super().initialize()
         self._initialize_train_func()
+        # MJY(20170728): First create the training func and then do variable initialization.
+        super().initialize()
 
     def _initialize_train_func(self):
         self._fn_train = self.env.make_optimizable_func(self.network.loss)
@@ -200,4 +207,3 @@ class SimpleTrainer(TrainerBase):
             summaries = tf.Summary.FromString(out['summaries'])
             self.runtime['summaries'] = summaries
         return out
-

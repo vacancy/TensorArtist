@@ -4,10 +4,10 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 01/17/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 
-from .helper import as_varnode, wrap_varnode_func, wrap_simple_named_op
+from .helper import as_varnode, wrap_named_op
 import tensorflow as tf
 
 __all__ = [
@@ -17,8 +17,7 @@ __all__ = [
     'AdvancedSlice', 'AdvancedSliceSetter']
 
 
-@wrap_simple_named_op
-@wrap_varnode_func
+@wrap_named_op
 def concat(inpvars, axis, name='concat'):
     # hack for scalar concat
     for i in inpvars:
@@ -28,17 +27,17 @@ def concat(inpvars, axis, name='concat'):
     return tf.concat(inpvars, axis=axis, name=name)
 
 
-@wrap_varnode_func
+@wrap_named_op(use_scope=False)
 def stack(inpvars, axis=0, name='stack'):
     return tf.stack(inpvars, axis=axis, name=name)
 
 
-@wrap_varnode_func
+@wrap_named_op(use_scope=False)
 def cond_take(tensor, mask, name='cond_take'):
     return tf.boolean_mask(tensor, mask, name=name)
 
 
-@wrap_varnode_func
+@wrap_named_op(use_scope=False)
 def one_hot(indices, depth, on_value=None, off_value=None, axis=None, dtype=None, name='one_hot'):
     return tf.one_hot(indices, depth, on_value=on_value, off_value=off_value, axis=axis, dtype=dtype, name=name)
 

@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/29/16
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 __all__ = ['CallbackManager']
 
@@ -113,4 +113,3 @@ class CallbackManager(object):
         elif self._fallback_callback is not None:
             return self._fallback_callback(self, name, *args, **kwargs)
         return None
-

@@ -17,10 +17,11 @@ that example.
 #### Generative models:
 + Basic MLP Variational Auto-Encoder (VAE) on MNIST: `generative-model/desc_vae_mnist_mlp_bernoulli_adam.py`
 + Basic MLP Generative Adverserial Netowrk (GAN) on MNIST: `generative-model/desc_gan_mnist_mlp.py`
-+ Basic Deep Convolutional Generative Adverserial Netowrk (DCGAN) on MNIST: `generative-model/desc_gan_mnist_cnn.py`
-+ Basic Wasserstein GAN (WGAN) on MNIST: `generative-model/desc_wgan_mnist_cnn.py`.
-+ Basic InfoGAN on MNIST: `generative-model/desc_infogan_mnist_cnn.py`
-+ Basic Deep Recurrent Attention Write (DRAW) on MNIST: `generative-model/desc_draw_mnist.py`
++ Deep Convolutional Generative Adverserial Netowrk (DCGAN) on MNIST: `generative-model/desc_gan_mnist_cnn.py`
++ Wasserstein GAN (WGAN) on MNIST: `generative-model/desc_wgan_mnist_cnn.py`
++ InfoGAN on MNIST: `generative-model/desc_infogan_mnist_cnn.py`
++ DiscoGAN on edges2shoes: `generative-model/desc_discogan_edges2shoes_cnn.py`
++ Deep Recurrent Attention Write (DRAW) on MNIST: `generative-model/desc_draw_mnist.py`
 
 #### Neural Art algorithms:
 + Neural Style: `neural-art/neural_style.py`
@@ -29,5 +30,5 @@ that example.
 #### Deep Reinforcement learning:
 + Basic A3C on Atari games: `gym/desc_a3c_atari_BreakoutV0.py`
 + Basic A3C on Box2D environment: `gym/desc_a3cc_box2d_LunarLanderContinuousV2.py`
++ Cross-Entropy method as gradient-free optimization for RL environments: `gym/desc_cem_classic_CartPoleV0.py`
 + RL Environment Simulator: `rl-sim/README.md`
-

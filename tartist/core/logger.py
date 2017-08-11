@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/17/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """logger module, borrow from jiakai's project"""
 
@@ -87,10 +87,8 @@ class TALogFormatter(logging.Formatter):
             removed = len(lines) - remain * 2
             if removed > 0:
                 mid_msg = self._color_omitted(
-                    '[{} log lines omitted (would be written to output file '
-                    'if set_output_file() has been called;\n'
-                    ' the threshold can be set at '
-                    'TALogFormatter.max_lines)]'.format(removed))
+                    '[{} log lines omitted (would be written to output file if set_output_file() has been called;\n'
+                    ' the threshold can be set at TALogFormatter.max_lines)].'.format(removed))
                 formatted = '\n'.join(
                     lines[:remain] + [mid_msg] + lines[-remain:])
 

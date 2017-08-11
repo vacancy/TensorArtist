@@ -4,9 +4,10 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 12/29/16
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import enum
+import threading
 import contextlib
 import tensorflow as tf
 
@@ -134,7 +135,7 @@ class Env(object):
         TEST = 2
 
     def __init__(self, phase=Phase.TEST, master_dev='/gpu:0', slave_devs=None, flags=None, dpflags=None,
-                 graph=None, session=None):
+                 graph=None, session=None, func_lock=None, sync_with=None):
         """
 
         :param phase: The phase, either TRAIN or TEST.
@@ -145,7 +146,15 @@ class Env(object):
         :param graph: A tf.Graph object, if not provided, a default graph will be created. This parameter is useful if
         you want to share a tf.Graph amount different envs.
         :param session: A tf.Session object. Similarly, a default one be use if not provided.
+        :param func_lock: A threading.Lock object.
+        :param sync_with: Synchronize everything with another env: graph, session and func_lock
         """
+
+        if sync_with is not None:
+            assert graph is None and session is None and func_lock is None
+            graph = sync_with.graph
+            session = sync_with.session
+            func_lock = sync_with.get_or_make_func_lock()
 
         self.__phase = phase
         self.__session = None
@@ -159,6 +168,7 @@ class Env(object):
         self._dpflags = dpflags or type(self).DataParallelFlag()
         self._dpsplitters = []
         self._graph = graph or tf.Graph()
+        self._func_lock = func_lock
 
         if session is not None:
             self.__session = session
@@ -209,6 +219,10 @@ class Env(object):
         if self.__session is None:
             self._make_session()
         return self.__session
+
+    def reuse_session(self, session):
+        self.__session = session
+        return self
 
     def _make_session(self):
         config = tf.ConfigProto()
@@ -296,6 +310,20 @@ class Env(object):
             else:
                 yield
 
+    def get_or_make_func_lock(self):
+        if self._func_lock is None:
+            self._func_lock = threading.Lock()
+        return self._func_lock
+
+    def share_func_lock_with(self, env):
+        self._func_lock = env.get_or_make_func_lock()
+        return self
+
+    def with_func_lock(self):
+        if self._func_lock is None:
+            return EmptyContext()
+        return self._func_lock
+
     def make_func(self):
         """Make a function associated with this Env, and register the data-parallel splitters."""
         if self._use_input_queue:
@@ -321,17 +349,19 @@ class Env(object):
         with self.graph.as_default():
             tf.train.start_queue_runners(sess=sess)
 
-    def clone(self, share_graph=True, share_session=True):
+    def clone(self, share_graph=True, share_session=True, share_func_lock=False):
         """
         Clone this graph.
 
         :param share_graph: Whether the new env will share the graph with this.
         :param share_session: Whether the new env will share the session with this.
+        :param share_func_lock: Whether the new env will share the func_lock with this.
         """
-        graph = self.graph if share_graph else None
-        sess = self.session if share_session else None
         return type(self)(self.phase, master_dev=self.master_device, slave_devs=self.slave_devices,
-                          flags=self.flags, dpflags=self.dpflags, graph=graph, session=sess)
+                          flags=self.flags, dpflags=self.dpflags,
+                          graph=self.graph if share_graph else None,
+                          session=self.session if share_session else None,
+                          func_lock=self.get_or_make_func_lock() if share_func_lock else None)
 
     def run(self, fetches, feed_dict=None, options=None, run_metadata=None):
         """Perform session.run use the default session."""
@@ -688,7 +718,7 @@ class Network(object):
             value = all_variables.get(clean_name(v), None)
             if value is not None:
                 if verbose:
-                    logger.info('Assign variable from external dict: {}'.format(clean_name(v)))
+                    logger.info('Assign variable from external dict: {}.'.format(clean_name(v)))
                 assign_variable(v, value, self.owner_env.session)
         return self
 

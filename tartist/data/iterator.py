@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/30/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import numpy as np
 
@@ -199,4 +199,3 @@ class DictOfArrayIterator(BatchBasedIterator):
         end = (idx + 1) * self._batch_size if not is_last else self._length
         res = {k: np.array(v[start:end]) for k, v in self._arrdict.items()}
         return res
-

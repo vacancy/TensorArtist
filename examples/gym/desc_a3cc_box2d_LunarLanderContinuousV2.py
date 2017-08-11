@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 5/31/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 """
 A3C-Continuous reproduction on Lunar Lander game. (OpenAI.Gym.Box2D.LunarLander)
@@ -23,7 +23,6 @@ import collections
 import functools
 import os
 import queue
-import threading
 
 import numpy as np
 
@@ -41,14 +40,11 @@ __envs__ = {
     'dir': {
         'root': get_dump_directory(__file__),
     },
-    'data': {
-    },
     'a3c': {
         'env_name': 'LunarLanderContinuous-v2',
 
-        'input_shape': (8,),
-        'frame_history': 4,
-        'limit_length': None, # no limit length
+        'nr_history_frames': 4,
+        'max_nr_steps': None, # no limit length
 
         # Action space used for exploration strategy sampling
         # Instead of sampling from a truncated Laplacian distribution, we perform a simplified version via
@@ -58,9 +54,9 @@ __envs__ = {
             np.linspace(-1, 1, 11)
         ], dtype='float32'),
 
-        # gamma and acc_step in future_reward
+        # gamma and TD steps in future_reward
         'gamma': 0.99,
-        'acc_step': 5,
+        'nr_td_steps': 5,
 
         # async training data collector
         'nr_players': 50,
@@ -72,7 +68,6 @@ __envs__ = {
 
         'inference': {
             'nr_plays': 20,
-            'max_stuck_repeat': 30
         },
         'demo': {
             'nr_plays': 5
@@ -84,9 +79,6 @@ __envs__ = {
         'batch_size': 128,
         'epoch_size': 200,
         'nr_epochs': 100,
-    },
-    'demo': {
-        'customized': True
     }
 }
 
@@ -175,14 +167,14 @@ def make_network(env):
         net.add_output(policy_output, name='policy')
         net.add_output(value, name='value')
 
-        if env.phase is env.Phase.TRAIN:
+        if is_train:
             action = O.placeholder('action', shape=(None, action_length), dtype='int64')
             future_reward = O.placeholder('future_reward', shape=(None, ))
 
             # Since we discretized the action space, use cross entropy here.
             log_policy = O.log(policy_explore + 1e-4)
             log_pi_a_given_s = (log_policy * O.one_hot(action, nr_bins)).sum(axis=2).sum(axis=1)
-            advantage = future_reward - O.zero_grad(value, name='advantage')
+            advantage = (future_reward - O.zero_grad(value)).rename('advantage')
 
             # Important trick: using only positive advantage to perform gradient assent. This stabilizes the training.
             advantage = advantage * O.zero_grad((advantage > 0.).astype('float32'))
@@ -208,8 +200,8 @@ def make_network(env):
 
 def make_player(is_train=True, dump_dir=None):
     p = rl.GymRLEnviron(get_env('a3c.env_name'), dump_dir=dump_dir)
-    p = rl.GymHistoryProxyRLEnviron(p, get_env('a3c.frame_history'))
-    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.limit_length'))
+    p = rl.HistoryFrameProxyRLEnviron(p, get_env('a3c.nr_history_frames'))
+    p = rl.LimitLengthProxyRLEnviron(p, get_env('a3c.max_nr_steps'))
     if is_train:
         p = rl.AutoRestartProxyRLEnviron(p)
     return p
@@ -262,7 +254,12 @@ def get_action_range():
 
 @cached_result
 def get_input_shape():
-    return get_env('a3c.input_shape')[0] * get_env('a3c.frame_history'),
+    p = make_player()
+    p.restart()
+    input_shape = p.current_state.shape
+    del p
+
+    return input_shape
 
 
 def sample_action(policy):
@@ -289,7 +286,7 @@ def player_func(pid, requester):
 
             if len(player.stats['score']) > 0:
                 score = player.stats['score'][-1]
-                requester.query('stat', {'async/score': score}, do_recv=False)
+                requester.query('stat', {'async/train/score': score}, do_recv=False)
                 player.clear_stats()
             state = player.current_state
 
@@ -314,7 +311,7 @@ def _predictor_func(pid, router, task_queue, func, is_inference=False):
             callbacks.append(callback)
             nr_total += 1
 
-        out = func(state=batched_state)
+        out = func(state=batched_state[:nr_total])
         for i in range(nr_total):
             if is_inference:
                 action = out['policy'][i]
@@ -334,17 +331,16 @@ def make_a3c_configs(env):
     env.player_master.on_stat_func = on_stat_func
 
     env.players_history = collections.defaultdict(list)
-    env.players_history_lock = threading.Lock()
 
 
 def main_train(trainer):
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer, extra_summary_types={
-        'async/score': 'async_scalar',
+        'async/train/score': 'async_scalar',
         'async/inference/score': 'async_scalar',
     })
     summary.enable_echo_summary_scalar(trainer, summary_spec={
-        'async/score': ['avg', 'max'],
+        'async/train/score': ['avg', 'max'],
         'async/inference/score': ['avg', 'max']
     })
 
@@ -369,12 +365,12 @@ def main_train(trainer):
 
 def main_demo(env, func):
     dump_dir = get_env('dir.demo', os.path.join(get_env('dir.root'), 'demo'))
-    logger.info('demo dump dir: {}'.format(dump_dir))
+    logger.info('Demo dump dir: {}'.format(dump_dir))
     player = make_player(is_train=False, dump_dir=dump_dir)
     repeat_time = get_env('a3c.demo.nr_plays', 1)
 
     def get_action(inp, func=func):
-        action = func(**{'state':[[inp]]})['policy'][0].argmax()
+        action = func(state=inp[np.newaxis])['policy'][0].argmax()
         return action
 
     for i in range(repeat_time):

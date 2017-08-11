@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/26/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import collections
 import json
@@ -216,7 +216,8 @@ def enable_echo_summary_scalar(trainer, summary_spec=None,
                 else:
                     avg = mgr.average(k, trainer.runtime['inference_epoch_size'], meth=meth)
 
-                tag = '{}/{}'.format(k, meth)
+                # MJY(20170623): add stat prefix
+                tag = 'stat/{}/{}'.format(k, meth)
                 if avg != 'N/A':
                     extra_summary.value.add(tag=tag, simple_value=avg)
                 log_strs.append('  {} = {}'.format(tag, avg))
@@ -253,7 +254,7 @@ def enable_echo_summary_scalar(trainer, summary_spec=None,
             js_path = osp.join(get_env('dir.root'), 'summary.json')
         restored = 'restore_snapshot' in trainer.runtime
         if osp.exists(js_path) and not restored:
-            logger.warning('Removing old summary json: {}'.format(js_path))
+            logger.warn('Removing old summary json: {}.'.format(js_path))
             os.remove(js_path)
         trainer.runtime['json_summary_path'] = js_path
 
@@ -263,13 +264,13 @@ def enable_echo_summary_scalar(trainer, summary_spec=None,
             tb_path = osp.join(get_env('dir.root'), 'tensorboard')
         restored = 'restore_snapshot' in trainer.runtime
         if osp.exists(tb_path) and not restored:
-            logger.warning('Removing old tensorboard directory: {}'.format(tb_path))
+            logger.warn('Removing old tensorboard directory: {}.'.format(tb_path))
             shutil.rmtree(tb_path)
         io.mkdir(tb_path)
         trainer.runtime['tensorboard_summary_path'] = tb_path
         trainer._tensorboard_writer = tf.summary.FileWriter(tb_path, graph=trainer.env.graph)
         if enable_tensorboard_web:
-            port = random.randrange(49152, 65536)
+            port = random.randrange(49152, 65536.)
             port = trainer.runtime.get('tensorboard_web_port', port)
             trainer._tensorboard_webserver = threading.Thread(
                     target=_tensorboard_webserver_thread, args=['tensorboard', '--logdir', tb_path, '--port', str(port)],
@@ -308,4 +309,3 @@ def set_error_summary_key(trainer, key):
     if not key.startswith('train/'):
         key = 'train/' + key
     trainer.runtime['error_summary_key'] = key
-

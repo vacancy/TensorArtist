@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/10/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import SimpleDataFlowBase
 from ..rflow import InputPipe, OutputPipe, control
@@ -88,4 +88,3 @@ class RemoteMonitorDataFlow(SimpleDataFlowBase):
             for data in self._df:
                 self._pipe.put_nowait({'data': data, 'time': time.time()})
                 yield data
-

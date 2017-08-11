@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 2/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from . import configs, utils
 from ...core.logger import get_logger
@@ -87,8 +87,9 @@ class NameServerControllerStorage(object):
 
 
 class NameServer(object):
-    def __init__(self):
+    def __init__(self, host=configs.NS_CTL_HOST, port=configs.NS_CTL_PORT, protocal=configs.NS_CTL_PROTOCAL):
         self.storage = NameServerControllerStorage()
+        self._addr = '{}://{}:{}'.format(protocal, host, port)
         self._context_lock = threading.Lock()
         self._context = zmq.Context()
         self._router = self._context.socket(zmq.ROUTER)
@@ -109,8 +110,7 @@ class NameServer(object):
             self.finalize()
 
     def initialize(self):
-        addr = '{}://{}:{}'.format(configs.NS_CTL_PROTOCAL, configs.NS_CTL_HOST, configs.NS_CTL_PORT)
-        self._router.bind(addr)
+        self._router.bind(self._addr)
         self._poller.register(self._router, zmq.POLLIN)
 
         self._dispatcher.register(configs.Actions.NS_REGISTER_CTL_REQ, self._on_ns_register_controller_req)
@@ -162,7 +162,7 @@ class NameServer(object):
                                     'uid': k
                                 },
                             })
-                        logger.info('Unregister timeout controller {}'.format(k))
+                        logger.info('Unregister timeout controller {}.'.format(k))
             time.sleep(configs.NS_CLEANUP_WAIT)
 
     def main(self):
@@ -200,7 +200,7 @@ class NameServer(object):
         self._req_socks.add(req_sock)
         self._poller.register(req_sock, zmq.POLLIN)
         utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_CTL_REP})
-        logger.info('Controller registered: {}'.format(msg['uid']))
+        logger.info('Controller registered: {}.'.format(msg['uid']))
 
     def _on_ns_register_pipe_req(self, identifier, msg):
         self.storage.register_pipes(msg)
@@ -222,7 +222,7 @@ class NameServer(object):
             })
         utils.router_send_json(self._router, identifier, {'action': configs.Actions.NS_REGISTER_PIPE_REP})
 
-        logger.info('Controller pipes registered: in={}, out={} (controller-uid={})'.format(
+        logger.info('Controller pipes registered: in={}, out={} (controller-uid={}).'.format(
             msg['ipipes'], msg['opipes'], msg['uid']))
 
     def _on_ns_query_opipe_req(self, identifier, msg):

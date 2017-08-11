@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/18/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist import random
 from tartist.core.utils.cache import cached_property
@@ -44,29 +44,38 @@ class RLEnvironBase(object):
     def action(self, action):
         return self._action(action)
 
-    def restart(self):
-        return self._restart()
+    def restart(self, *args, **kwargs):
+        return self._restart(*args, **kwargs)
 
-    def finish(self):
-        return self._finish()
+    def finish(self, *args, **kwargs):
+        return self._finish(*args, **kwargs)
 
-    def play_one_episode(self, func, ret_states=False):
+    def play_one_episode(self, func, ret_states=False, ret_actions=False, restart_kwargs=None, finish_kwargs=None):
         states = []
+        actions = []
 
-        self.restart()
+        self.restart(**(restart_kwargs or {}))
         while True:
             state = self.current_state
             action = func(state)
             r, is_over = self.action(action)
+            if ret_actions:
+                actions.append(action)
             if ret_states:
                 states.append(state)
             if is_over:
-                self.finish()
+                self.finish(**(finish_kwargs or {}))
                 break
 
         if ret_states:
             states.append(self.current_state)
-            return states
+
+        returns = []
+        if ret_states:
+            returns.append(states)
+        if ret_actions:
+            returns.append(actions)
+        return returns[0] if len(returns) == 1 else tuple(returns)
 
     def _get_action_space(self):
         return None
@@ -77,10 +86,10 @@ class RLEnvironBase(object):
     def _action(self, action):
         raise NotImplementedError()
 
-    def _restart(self):
+    def _restart(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def _finish(self):
+    def _finish(self, *args, **kwargs):
         pass
 
     @property
@@ -106,14 +115,15 @@ class SimpleRLEnvironBase(RLEnvironBase):
         self._reward_history.append(r) 
         return r, is_over
 
-    def restart(self):
-        rc = self._restart()
+    def restart(self, *args, **kwargs):
+        rc = self._restart(*args, **kwargs)
         self._reward_history = []
         return rc
 
-    def finish(self):
-        rc = self._finish()
+    def finish(self, *args, **kwargs):
+        rc = self._finish(*args, **kwargs)
         self.append_stat('score', sum(self._reward_history))
+        self.append_stat('length', len(self._reward_history))
         return rc
 
 
@@ -138,13 +148,13 @@ class ProxyRLEnvironBase(RLEnvironBase):
         self.__proxy.clear_stats()
         return self
 
-    @property
-    def action_space(self):
-        return self.__proxy.action_space
-
-    # directly override the action_space to disable cache
-    # def _get_action_space(self):
+    # MJY(20170623): REMOVED. Originally, directly override the action_space to disable cache.
+    # @property
+    # def action_space(self):
     #     return self.__proxy.action_space
+
+    def _get_action_space(self):
+        return self.__proxy.action_space
 
     def _get_current_state(self):
         return self.__proxy.current_state
@@ -152,11 +162,11 @@ class ProxyRLEnvironBase(RLEnvironBase):
     def _action(self, action):
         return self.__proxy.action(action)
 
-    def _restart(self):
-        return self.__proxy.restart()
+    def _restart(self, *args, **kwargs):
+        return self.__proxy.restart(*args, **kwargs)
 
-    def _finish(self):
-        return self.__proxy.finish()
+    def _finish(self, *args, **kwargs):
+        return self.__proxy.finish(*args, **kwargs)
 
     @property
     def unwrapped(self):
@@ -246,4 +256,3 @@ class ContinuousActionSpace(ActionSpaceBase):
             mu, std = theta
             return self.rng.randn(*self.shape) * std + mu
         return self.rng.uniform(self._low, self._high)
-

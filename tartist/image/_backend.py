@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/11/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from ..core.logger import get_logger
 import time
@@ -19,10 +19,10 @@ except ImportError:
     cv2 = None
     try:
         from PIL import Image
-        logger.warn('Fail to import OpenCV, use PIL library.')
+        logger.warn('Fail to import OpenCV; use PIL library.')
     except ImportError:
         Image = None
-        logger.error('Can not find either PIL or OpenCV, you can not use most function in tartist.image.')
+        logger.error('Can not find either PIL or OpenCV; you can not use most function in tartist.image.')
 
 
 def opencv_or_pil(func):
@@ -105,4 +105,3 @@ def resize(image, dsize, interpolation='LINEAR'):
         image = pil_nd2img(image)
         image = image.resize(dsize, resample=interpolation)
         return pil_img2nd(image)
-

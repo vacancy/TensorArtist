@@ -101,4 +101,3 @@ class Controller(object):
     def __release(self, event):
         with self.__lock:
             self.records[event.keysym_num] = False
-

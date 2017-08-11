@@ -6,7 +6,7 @@
 #          dhh19951@gmail.com
 # Date   : 3/17/17
 #
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from tartist.app import gan
 from tartist.app.gan import GANGraphKeys
@@ -160,4 +160,3 @@ def main_train(trainer):
     snapshot.enable_snapshot_saver(trainer)
 
     trainer.train()
-

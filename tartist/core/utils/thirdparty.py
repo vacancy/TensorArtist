@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/23/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 __all__ = ['get_tqdm_defaults']
 

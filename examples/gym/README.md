@@ -23,3 +23,11 @@ In this model, we included several tricks for the training:
 2. Positive advantage only update.
 
 Details can be found in the code.
+
+
+## Cross-Entropy Method for OpenAI-Gym
+
+```
+tart-train desc_cem_classic_CartPoleV0 -d cpu
+tart-demo desc_cem_classic_CartPoleV0 -d cpu [-w xxx.snapshot.pkl] [-e last]
+```

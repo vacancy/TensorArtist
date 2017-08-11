@@ -4,7 +4,8 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 1/28/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
+from .base import CustomOptimizerBase
 from .wrapper import OptimizerWrapper
 from . import base, grad_modifier

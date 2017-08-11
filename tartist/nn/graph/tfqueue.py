@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/21/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .function import Function
 from ..graph.node import as_tftensor

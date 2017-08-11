@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/21/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import collections
 import threading
@@ -29,7 +29,7 @@ def on_data_func(env, identifier, inp_data):
         if is_over:
             r = 0
             env.players_history[identifier] = []
-        elif num == get_env('a3c.acc_step') + 1:
+        elif num == get_env('a3c.nr_td_steps') + 1:
             history, last = history[:-1], history[-1]
             r = last.value
             env.players_history[identifier] = [last]
@@ -53,6 +53,7 @@ def on_data_func(env, identifier, inp_data):
     task_queue.put((identifier, inp_data, callback))
 
 
+# Not used.
 def inference_on_data_func(env, identifier, inp_data):
     router, task_queue = env.inference_player_master.router, env.inference_player_master.queue
 
@@ -70,9 +71,11 @@ def on_stat_func(env, identifier, inp_data):
                 mgr.put_async_scalar(k, v)
 
 
+# Not used.
 inference_on_stat_func = on_stat_func
 
 
+# Not used.
 def main_inference_play(trainer, epoch):
     nr_players = get_env('a3c.inference.nr_players')
     name = 'a3c-inference-player-epoch-{}'.format(epoch)
@@ -111,4 +114,3 @@ def main_inference_play_multithread(trainer, make_player, inpkey='state', policy
         p.start()
     for p in pool:
         p.join()
-

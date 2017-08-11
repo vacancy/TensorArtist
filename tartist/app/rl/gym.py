@@ -4,17 +4,21 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/18/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 from .base import SimpleRLEnvironBase, ProxyRLEnvironBase
 from .base import DiscreteActionSpace, ContinuousActionSpace
 from tartist.core import io
+from tartist.core import get_logger
+from tartist.core.utils.meta import run_once
 import copy
 import threading
 import numpy as np
 import collections
 import os
 import errno
+
+logger = get_logger(__file__)
 
 try:
     import gym
@@ -29,7 +33,6 @@ def get_env_lock():
     return _ENV_LOCK
 
 __all__ = ['GymRLEnviron', 'GymHistoryProxyRLEnviron', 'GymPreventStuckProxyRLEnviron']
-
 
 
 class GymRLEnviron(SimpleRLEnvironBase):
@@ -69,7 +72,7 @@ class GymRLEnviron(SimpleRLEnvironBase):
 
         if isinstance(spc, gym.spaces.discrete.Discrete):
             try:
-                action_meanings = self._gym.get_action_meanings()
+                action_meanings = self._gym.unwrapped.get_action_meanings()
             except AttributeError:
                 if 'Atari' in self._gym.unwrapped.__class__.__name__:
                     from gym.envs.atari.atari_env import ACTION_MEANING
@@ -99,40 +102,14 @@ class GymRLEnviron(SimpleRLEnvironBase):
         self._gym.close()
 
 
-class GymHistoryProxyRLEnviron(ProxyRLEnvironBase):
-    def __init__(self, other, history_length):
-        super().__init__(other)
-        self._history = collections.deque(maxlen=history_length)
+GymHistoryProxyRLEnviron_warning = run_once(lambda: logger.warn('GymHistoryProxyRLEnviron ' + GymHistoryProxyRLEnviron.__doc__))
+from .utils import HistoryFrameProxyRLEnviron as HistoryFrameProxyRLEnviron_
+class GymHistoryProxyRLEnviron(HistoryFrameProxyRLEnviron_):
+    """DEPRECATED: (2017-12-23) Use HistoryFrameProxyRLEnviron instead."""
 
-    def _get_current_state(self):
-        while len(self._history) != self._history.maxlen:
-            assert len(self._history) > 0
-            v = self._history[-1]
-            self._history.appendleft(np.zeros_like(v, dtype=v.dtype))
-        return np.concatenate(self._history, axis=-1)
-
-    def _set_current_state(self, state):
-        if len(self._history) == self._history.maxlen:
-            self._history.popleft()
-        self._history.append(state)
-
-    def _copy_history(self):
-        return copy.copy(self._history)
-
-    def _restore_history(self, history):
-        assert isinstance(history, collections.deque)
-        assert history.maxlen == self._history.maxlen
-        self._history = copy.copy(history)
-
-    def _action(self, action):
-        r, is_over = self.proxy.action(action)
-        self._set_current_state(self.proxy.current_state)
-        return r, is_over
-
-    def _restart(self):
-        self.proxy.restart()
-        self._history.clear()
-        self._set_current_state(self.proxy.current_state)
+    def __init__(self, *args, **kwargs):
+        GymHistoryProxyRLEnviron_warning()
+        super().__init__(*args, **kwargs)
 
 
 class GymPreventStuckProxyRLEnviron(ProxyRLEnvironBase):
@@ -150,7 +127,6 @@ class GymPreventStuckProxyRLEnviron(ProxyRLEnvironBase):
             self._action_list.clear()
         return r, is_over
 
-    def _restart(self):
-        self.proxy.restart()
+    def _restart(self, *args, **kwargs):
+        super()._restart(*args, **kwargs)
         self._action_list.clear()
-

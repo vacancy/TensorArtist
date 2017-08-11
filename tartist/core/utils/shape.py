@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/14/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 import collections
 
@@ -41,4 +41,3 @@ def get_4dshape(x, default=None, type=int):
     else:
         x = type(x)
         return 1, x, x, 1
-

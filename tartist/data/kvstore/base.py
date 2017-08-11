@@ -4,7 +4,7 @@
 # Email  : maojiayuan@gmail.com
 # Date   : 3/30/17
 # 
-# This file is part of TensorArtist
+# This file is part of TensorArtist.
 
 __all__ = ['KVStoreBase', 'MemKVStore']
 
@@ -23,7 +23,7 @@ class KVStoreBase(object):
         return self._get(key, default=default)
 
     def put(self, key, value, replace=True):
-        assert not self.readonly, 'KVStore is readonly: {}'.format(self)
+        assert not self.readonly, 'KVStore is readonly: {}.'.format(self)
         return self._put(key, value, replace=replace)
 
     def transaction(self, *args, **kwargs):
@@ -42,7 +42,7 @@ class KVStoreBase(object):
         raise NotImplementedError()
 
     def _keys(self):
-        assert False, 'KVStore does not support keys access'
+        assert False, 'KVStore does not support keys access.'
 
 
 class MemKVStore(KVStoreBase):
@@ -64,4 +64,3 @@ class MemKVStore(KVStoreBase):
     
     def _keys(self):
         return self._store.keys()
-
