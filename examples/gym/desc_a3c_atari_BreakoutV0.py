@@ -317,12 +317,12 @@ def main_train(trainer):
 
 def main_demo(env, func):
     dump_dir = get_env('dir.demo', os.path.join(get_env('dir.root'), 'demo'))
-    logger.info('demo dump dir: {}'.format(dump_dir))
+    logger.info('Demo dump dir: {}'.format(dump_dir))
     player = make_player(is_train=False, dump_dir=dump_dir)
     repeat_time = get_env('a3c.demo.nr_plays', 1)
 
     def get_action(inp, func=func):
-        action = func(**{'state':[[inp]]})['policy'][0].argmax()
+        action = func(state=inp[np.newaxis])['policy'][0].argmax()
         return action
 
     for i in range(repeat_time):
