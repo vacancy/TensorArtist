@@ -12,7 +12,8 @@ import functools
 import tensorflow as tf
 
 
-__all__ = ['make_optimizer_variable', 'get_optimizer_variable,'
+__all__ = ['make_optimizer_variable', 'get_optimizer_variable',
+           'CustomOptimizerBase',
            'SGDOptimizer', 'MomentumOptimizer', 'AdamOptimizer', 'AdagradOptimizer', 'RMSPropOptimizer'
 ]
 
@@ -37,6 +38,11 @@ def _migrate_lr_based_optimizer(tf_optimizer):
             learning_rate = make_optimizer_variable(OptimizerWrapper.learning_rate_variable_name, learning_rate)
         return tf_optimizer(learning_rate, *args, **kwargs)
     return opt
+
+
+class CustomOptimizerBase(object):
+    def minimize(self, *args, **kwargs):
+        raise NotImplementedError()
 
 SGDOptimizer = _migrate_lr_based_optimizer(tf.train.GradientDescentOptimizer)
 MomentumOptimizer = _migrate_lr_based_optimizer(tf.train.MomentumOptimizer)

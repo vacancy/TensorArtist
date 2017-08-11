@@ -63,6 +63,10 @@ class TrainerBase(object):
         return self.runtime.get('iter', 0)
 
     @property
+    def iter_in_epoch(self):
+        return self.iter % self.epoch_size
+
+    @property
     def epoch_size(self):
         return self.runtime.get('epoch_size', 1)
 
@@ -135,16 +139,7 @@ class TrainerBase(object):
                 self.trigger_event('iter:after', inp, out)
                 self.trigger_event('epoch:after')
             else:
-                if self.runtime['iter'] % self.epoch_size == 1:
-                    self.trigger_event('epoch:before')
-                
-                inp = next(self._iter_train) if self._need_feed else {}
-                self.trigger_event('iter:before', inp)
-                out = self._run_step(inp)
-                self.trigger_event('iter:after', inp, out)
-
-                if self.runtime['iter'] % self.epoch_size == 0:
-                    self.trigger_event('epoch:after')
+                self._wrapped_run_step()
 
             self.runtime['iter'] += 1
             self.runtime['zero_iter'] = False
@@ -154,6 +149,18 @@ class TrainerBase(object):
         self.trigger_event('finalization:begin')
         self.finalize()
         self.trigger_event('finalization:after')
+
+    def _wrapped_run_step(self):
+        if self.runtime['iter'] % self.epoch_size == 1:
+            self.trigger_event('epoch:before')
+
+        inp = next(self._iter_train) if self._need_feed else {}
+        self.trigger_event('iter:before', inp)
+        out = self._run_step(inp)
+        self.trigger_event('iter:after', inp, out)
+
+        if self.runtime['iter'] % self.epoch_size == 0:
+            self.trigger_event('epoch:after')
 
     def _run_step(self, data):
         raise NotImplementedError()

@@ -28,6 +28,11 @@ def clean_name(tensor, suffix=':0'):
     return name
 
 
+def escape_name(tensor):
+    name = tensor.name
+    return re.sub(':|/', '_', name)
+
+
 def clean_summary_suffix(name):
     return re.sub('_\d+$', '', name)
 

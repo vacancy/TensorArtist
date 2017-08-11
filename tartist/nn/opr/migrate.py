@@ -124,6 +124,7 @@ cond = migrate_opr('cond', _tf.cond)
 
 # control
 zero_grad = migrate_opr('zero_grad', _tf.stop_gradient)
+group = migrate_opr('group', _tf.group)
 
 # softmax related
 softmax = migrate_opr('softmax', _tf.nn.softmax)
@@ -136,3 +137,6 @@ clip_by_value = migrate_opr('clip_by_value', _tf.clip_by_value)
 clip_by_norm = migrate_opr('clip_by_norm', _tf.clip_by_norm)
 clip_by_global_norm = migrate_opr('clip_by_global_norm', _tf.clip_by_global_norm)
 clip_by_average_norm = migrate_opr('clip_by_average_norm', _tf.clip_by_average_norm)
+
+# assignment
+assign = migrate_opr('assign', _tf.assign)

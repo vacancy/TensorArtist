@@ -41,7 +41,7 @@ def main():
         set_output_file(os.path.join(get_env('dir.root'), 'train.log'))
 
     devices = parse_devices(args.devices)
-    assert len(devices) > 0, 'Must provide at least one devices'
+    assert len(devices) > 0, 'Must provide at least one devices.'
 
     env_cls = getattr(desc, '__trainer_env_cls__', train.SimpleTrainerEnv)
     env = env_cls(Env.Phase.TRAIN, devices[0])
@@ -51,7 +51,7 @@ def main():
 
     with env.as_default(activate_session=False):
         if args.use_queue:
-            logger.warn('Using input queue for training is now experimental')
+            logger.warn('Using input queue for training is now experimental.')
             with env.use_input_queue():
                 desc.make_network(env)
         else:
@@ -60,7 +60,8 @@ def main():
 
     nr_iters = get_env('trainer.nr_iters', get_env('trainer.epoch_size', 1) * get_env('trainer.nr_epochs', 0))
     trainer_cls = getattr(desc, '__trainer_cls__', train.SimpleTrainer)
-    trainer = trainer_cls(nr_iters, env=env, data_provider=desc.make_dataflow_train, desc=desc)
+    trainer = trainer_cls(nr_iters, env=env, desc=desc,
+                          data_provider=getattr(desc, 'make_dataflow_train', None))
     trainer.set_epoch_size(get_env('trainer.epoch_size', 1))
 
     from tartist.plugins.trainer_enhancer import snapshot

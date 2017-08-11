@@ -6,5 +6,6 @@
 # 
 # This file is part of TensorArtist.
 
+from .base import CustomOptimizerBase
 from .wrapper import OptimizerWrapper
 from . import base, grad_modifier
