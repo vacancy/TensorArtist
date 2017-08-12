@@ -37,7 +37,7 @@ class GymRLEnviron(SimpleRLEnvironBase):
         super().__init__()
 
         with get_env_lock():
-            self._gym = gym.make(name)
+            self._gym = self._make_env(name)
 
         if dump_dir:
             io.mkdir(dump_dir)
@@ -45,6 +45,9 @@ class GymRLEnviron(SimpleRLEnvironBase):
 
         assert state_mode in ('DEFAULT', 'RENDER', 'BOTH')
         self._state_mode = state_mode
+
+    def _make_env(name):
+        return gym.make(name)
 
     @property
     def gym(self):
