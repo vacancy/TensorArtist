@@ -54,7 +54,7 @@ def make_network(env):
 
 def make_player(dump_dir=None):
     p = rl.GymRLEnviron(get_env('cem.env_name'), dump_dir=dump_dir)
-    p = rl.LimitLengthProxyRLEnviron(p, get_env('env.max_nr_steps'))
+    p = rl.LimitLengthProxyRLEnviron(p, get_env('cem.max_nr_steps'))
     return p
 
 

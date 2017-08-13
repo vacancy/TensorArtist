@@ -6,6 +6,8 @@
 # 
 # This file is part of TensorArtist.
 
+from .utils import make_param_gs
+
 from tartist import random
 from tartist.core.utils.meta import notnone_property
 from tartist.nn import opr as O
@@ -68,32 +70,8 @@ class EvolutionBasedOptimizerBase(CustomOptimizerBase):
         })
 
     def _initialize_ops(self, var_list):
-        var_shapes = [as_tftensor(v).get_shape().as_list() for v in var_list]
-        for vs, v in zip(var_shapes, var_list):
-            assert None not in vs, 'Could not determine the shape for optimizable variable: {}.'.format(v)
-        var_nr_elems = [as_tftensor(v).get_shape().num_elements() for v in var_list]
-        nr_total_elems = sum(var_nr_elems)
-
-        self._param_nr_elems = nr_total_elems
-
-        with self._env.name_scope(self._name):
-            # Parameter getter
-            flat_variables = [as_varnode(v).flatten(name='flat_{}'.format(escape_name(v))) for v in var_list]
-            self._param_getter = as_tftensor(O.concat(flat_variables, axis=0))
-
-            # Parameter setter
-            flat_variables_tensor = O.placeholder('flat_variable_tensor', shape=(nr_total_elems, ))
-            variable_assigns = []
-
-            index = 0
-            for v, vs, vn in zip(var_list, var_shapes, var_nr_elems):
-                value = flat_variables_tensor[index:index+vn].reshape(vs)
-                # Use tf.assign because tf.group use non-3rdparty-compatible codes.
-                variable_assigns.append(tf.assign(v, value, name='assign_{}'.format(escape_name(v))))
-                index += vn
-
-            self._param_setter = tf.group(*variable_assigns)
-            self._param_provider = as_tftensor(flat_variables_tensor)
+        self._param_nr_elems, self._param_getter, self._param_setter, self._param_provider = make_param_gs(
+            self._env, var_list, self._name)
 
     def _initialize_param(self):
         raise NotImplementedError()

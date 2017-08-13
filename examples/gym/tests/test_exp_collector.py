@@ -33,6 +33,7 @@ def get_input_shape():
 
     return input_shape
 
+
 @cached_result
 def get_action_shape():
     return 1
