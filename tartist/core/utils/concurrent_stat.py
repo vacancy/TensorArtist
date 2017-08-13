@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : concurrent_monitor.py
+# File   : concurrent_stat.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 6/21/17
@@ -11,7 +11,7 @@ import threading
 import collections
 import time
 
-__all__ = ['TSCounter', 'TSCounterMonitor']
+__all__ = ['TSCounter', 'TSCounterBasedEvent', 'TSCounterMonitor']
 
 
 class TSCounter(object):
@@ -28,7 +28,32 @@ class TSCounter(object):
         ref = next(self._iter_ref)
         cnt = next(self._iter_cnt)
         return cnt - ref
-    
+
+
+class TSCounterBasedEvent(object):
+    """Thread-safe counter-based callback invoker. When the counter is incremented, the system will check whether
+    the counter has reached a target value. If so, the event will be set."""
+    def __init__(self, target):
+        self._cnt = itertools.count()
+        self._iter_cnt = iter(self._cnt)
+
+        self._target = target
+        self._event = threading.Event()
+
+    def tick(self):
+        value = next(self._iter_cnt)
+        if value >= self._target:
+            self._event.set()
+
+    def is_set(self):
+        return self._event.is_set()
+
+    def clear(self):
+        self._event.clear()
+
+    def wait(self, timeout=None):
+        return self._event.wait(timeout=timeout)
+
 
 class TSCounterMonitor(object):
     _displayer = None

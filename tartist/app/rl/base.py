@@ -216,7 +216,7 @@ class ContinuousActionSpace(ActionSpaceBase):
                     shape, v.shape)
             return v
 
-        assert type(v) in (int, float), 'Invalid type for boudn value'
+        assert type(v) in (int, float), 'Invalid type for bound value.'
         return np.ones(shape=shape, dtype='float32') * v
 
     def __init__(self, low, high=None, shape=None, action_meanings=None):
@@ -226,9 +226,9 @@ class ContinuousActionSpace(ActionSpaceBase):
             low, high = -low, low
 
         if shape is None:
-            assert low is not None and high is not None, 'Must provide low and high'
+            assert low is not None and high is not None, 'Must provide low and high.'
             low, high = np.array(low), np.array(high)
-            assert low.shape == high.shape, 'Low and high must have smae shape, got: {} and {}'.format(
+            assert low.shape == high.shape, 'Low and high must have same shape, got: {} and {}.'.format(
                     low.shape, high.shape)
 
             self._low = low
