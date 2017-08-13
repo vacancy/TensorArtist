@@ -46,7 +46,7 @@ class GymRLEnviron(SimpleRLEnvironBase):
         assert state_mode in ('DEFAULT', 'RENDER', 'BOTH')
         self._state_mode = state_mode
 
-    def _make_env(name):
+    def _make_env(self, name):
         return gym.make(name)
 
     @property
