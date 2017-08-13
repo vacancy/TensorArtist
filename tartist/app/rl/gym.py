@@ -11,12 +11,9 @@ from .base import DiscreteActionSpace, ContinuousActionSpace
 from tartist.core import io
 from tartist.core import get_logger
 from tartist.core.utils.meta import run_once
-import copy
 import threading
 import numpy as np
 import collections
-import os
-import errno
 
 logger = get_logger(__file__)
 
@@ -49,7 +46,7 @@ class GymRLEnviron(SimpleRLEnvironBase):
         assert state_mode in ('DEFAULT', 'RENDER', 'BOTH')
         self._state_mode = state_mode
 
-    def _make_env(name):
+    def _make_env(self, name):
         return gym.make(name)
 
     @property
@@ -105,8 +102,11 @@ class GymRLEnviron(SimpleRLEnvironBase):
         self._gym.close()
 
 
-GymHistoryProxyRLEnviron_warning = run_once(lambda: logger.warn('GymHistoryProxyRLEnviron ' + GymHistoryProxyRLEnviron.__doc__))
+GymHistoryProxyRLEnviron_warning = run_once(lambda: logger.warn(
+    'GymHistoryProxyRLEnviron ' + GymHistoryProxyRLEnviron.__doc__))
 from .utils import HistoryFrameProxyRLEnviron as HistoryFrameProxyRLEnviron_
+
+
 class GymHistoryProxyRLEnviron(HistoryFrameProxyRLEnviron_):
     """DEPRECATED: (2017-12-23) Use HistoryFrameProxyRLEnviron instead."""
 

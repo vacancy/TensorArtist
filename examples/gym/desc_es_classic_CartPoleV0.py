@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : desc_cem_classic_CartPoleV0.py
+# File   : desc_es_classic_CartPoleV0.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 10/08/2017
@@ -24,9 +24,9 @@ __envs__ = {
     'dir': {
         'root': get_dump_directory(__file__),
     },
-    'cem': {
+    'es': {
         'env_name': 'CartPole-v0',
-        'top_frac': 0.2,
+        'noise_std': 0.1,
         'max_nr_steps': 200,
 
         'inference': {
@@ -37,6 +37,7 @@ __envs__ = {
         },
     },
     'trainer': {
+        'learning_rate': 0.1,
         'epoch_size': 200,
         'nr_epochs': 50,
     }
@@ -53,13 +54,15 @@ def make_network(env):
 
 
 def make_player(dump_dir=None):
-    p = rl.GymRLEnviron(get_env('cem.env_name'), dump_dir=dump_dir)
-    p = rl.LimitLengthProxyRLEnviron(p, get_env('cem.max_nr_steps'))
+    p = rl.GymRLEnviron(get_env('es.env_name'), dump_dir=dump_dir)
+    p = rl.LimitLengthProxyRLEnviron(p, get_env('es.max_nr_steps'))
     return p
 
 
 def make_optimizer(env):
-    optimizer = rl.train.CEMOptimizer(env, top_frac=get_env('cem.top_frac'))
+    optimizer = rl.train.ESOptimizer(env,
+                                     learning_rate=get_env('trainer.learning_rate'),
+                                     noise_std=get_env('es.noise_std'))
     env.set_optimizer(optimizer)
 
 
@@ -106,7 +109,7 @@ def main_inference_play_multithread(trainer):
         if mgr is not None:
             mgr.put_async_scalar('inference/score', score)
 
-    nr_players = get_env('cem.inference.nr_plays')
+    nr_players = get_env('es.inference.nr_plays')
     pool = [threading.Thread(target=runner) for _ in range(nr_players)]
     map_exec(threading.Thread.start, pool)
     map_exec(threading.Thread.join, pool)
@@ -136,16 +139,11 @@ def main_train(trainer):
     from tartist.plugins.trainer_enhancer import snapshot
     snapshot.enable_snapshot_saver(trainer, save_interval=1)
 
-    def on_epoch_before(trainer):
-        v = max(5 - trainer.epoch / 10, 0)
-        trainer.optimizer.param_std += v
-
     def on_epoch_after(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
             main_inference_play_multithread(trainer)
 
     # this one should run before monitor
-    trainer.register_event('epoch:before', on_epoch_before, priority=5)
     trainer.register_event('epoch:after', on_epoch_after, priority=5)
 
     trainer.train()
@@ -155,7 +153,7 @@ def main_demo(env, func):
     dump_dir = get_env('dir.demo', os.path.join(get_env('dir.root'), 'demo'))
     logger.info('Demo dump dir: {}'.format(dump_dir))
     player = make_player(dump_dir=dump_dir)
-    repeat_time = get_env('cem.demo.nr_plays', 1)
+    repeat_time = get_env('es.demo.nr_plays', 1)
 
     def get_action(inp, func=func):
         policy = func(state=inp[np.newaxis])['policy'][0]

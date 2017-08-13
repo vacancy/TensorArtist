@@ -66,7 +66,7 @@ class GANTrainerEnv(TrainerEnvBase):
             d_func = self.make_func()
             scope = GANGraphKeys.DISCRIMINATOR_VARIABLES + '/.*'
             d_var_list = self.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
-            d_func.add_extra_op(self.g_optimizer.minimize(d_loss, var_list=d_var_list))
+            d_func.add_extra_op(self.d_optimizer.minimize(d_loss, var_list=d_var_list))
             return g_func, d_func
 
 

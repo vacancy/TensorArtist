@@ -55,9 +55,22 @@ class DistributionBase(object):
         return -log_likelihood.mean(name='out')
 
     @wrap_named_op_method
+    def kl(self, theta_p, theta_q, process_theta=False):
+        shape_p = theta_p.static_shape
+        shape_q = theta_q.static_shape
+
+        assert len(shape_p) == len(shape_q) == 2 and shape_p[1] == shape_q[1] == self.param_size
+
+        if process_theta:
+            theta_p = self._get_true_theta(theta_p)
+            theta_q = self._get_true_theta(theta_q)
+
+        return self._get_kl(theta_p, theta_q)
+
+    @wrap_named_op_method
     def sample(self, batch_size, theta, process_theta=False):
         shape = theta.static_shape
-        assert len(shape) in [1, 2] and shape[-1] == self.param_size , shape
+        assert len(shape) in [1, 2] and shape[-1] == self.param_size, shape
         if len(shape) == 1:
             theta = O.tile(theta.add_axis(0), [batch_size, 1])
         elif type(batch_size) is int and shape[0] is not None:
@@ -88,6 +101,9 @@ class DistributionBase(object):
         raise NotImplementedError()
 
     def _get_entropy(self, theta):
+        raise NotImplementedError()
+
+    def _get_kl(self, theta_p, theta_q):
         raise NotImplementedError()
 
     def _get_true_theta(self, theta):
@@ -133,6 +149,11 @@ class MergedDistribution(DistributionBase):
     def _get_entropy(self, theta):
         at, bt = self.__split(theta, True)
         return self._x.entropy(at) + self._y.entropy(bt)
+
+    def _get_kl(self, theta_p, theta_q):
+        ap, bp = self.__split(theta_p, True)
+        aq, bq = self.__split(theta_q, True)
+        return self._x.kl(ap, aq) + self._y.kl(bp, bq)
 
     def _get_true_theta(self, theta):
         at, bt = self.__split(theta, True)
