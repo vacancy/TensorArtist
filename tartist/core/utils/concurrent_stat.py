@@ -8,6 +8,7 @@
 
 import itertools
 import threading
+import queue
 import collections
 import time
 
@@ -28,6 +29,29 @@ class TSCounter(object):
         ref = next(self._iter_ref)
         cnt = next(self._iter_cnt)
         return cnt - ref
+
+
+class TSCoordinatorEvent(object):
+    def __init__(self, nr_workers):
+        self._event = threading.Event()
+        self._queue = queue.Queue()
+        self._nr_workers = nr_workers
+
+    def broadcast(self):
+        self._event.set()
+        for i in range(self._nr_workers):
+            self._queue.get()
+        self._event.clear()
+
+    def wait(self):
+        self._event.wait()
+        self._queue.put(1)
+
+    def check(self):
+        rc = self._event.is_set()
+        if rc:
+            self._queue.put(1)
+        return rc
 
 
 class TSCounterBasedEvent(object):

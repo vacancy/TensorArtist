@@ -7,7 +7,7 @@
 # This file is part of TensorArtist.
 
 from tartist.core.utils.meta import map_exec
-from tartist.core.utils.concurrent_stat import TSCounterBasedEvent
+from tartist.core.utils.concurrent_stat import TSCounterBasedEvent, TSCoordinatorEvent
 
 from threading import Thread
 
@@ -58,9 +58,8 @@ class SynchronizedExperienceCollector(object):
         self._predictor_output_names = predictor_output_names
         self._predictor_batch_size = predictor_batch_size
 
-        self._task_start = threading.Event()
-        self._task_end = threading.Event()
-        self._task_end_queue = queue.Queue()
+        self._task_start = TSCoordinatorEvent(self._nr_workers)
+        self._task_end = TSCoordinatorEvent(self._nr_workers)
 
         self._prediction_queue = queue.Queue()
         self._trajectories = []
@@ -70,6 +69,10 @@ class SynchronizedExperienceCollector(object):
     def owner_env(self):
         return self._owner_env
 
+    @property
+    def mode(self):
+        return self._mode
+
     def initialize(self):
         workers = [Thread(target=self._worker_thread, args=(i, ), daemon=True) for i in range(self._nr_workers)]
         predictors = [Thread(target=self._predictor_thread, daemon=True) for i in range(self._nr_predictors)]
@@ -77,19 +80,18 @@ class SynchronizedExperienceCollector(object):
         map_exec(Thread.start, workers)
         map_exec(Thread.start, predictors)
 
-    def run(self, target):
+    def collect(self, target):
         self._trajectories = [[] for _ in range(self._nr_workers)]
         self._trajectories_counter = TSCounterBasedEvent(target)
 
-        # Start all workers
-        self._task_start.set()
+        # Start all workers.
+        self._task_start.broadcast()
 
         self._trajectories_counter.wait()
+        self._trajectories_counter.clear()
 
         # Acquire stop.
-        self._task_end.set()
-        for i in range(self._nr_workers):
-            self._task_end_queue.get()
+        self._task_end.broadcast()
 
         # Reduce all outputs.
         if self._mode == 'EPISODE':
@@ -110,8 +112,7 @@ class SynchronizedExperienceCollector(object):
             this_episode = []
 
             while True:
-                if self._task_end.is_set():
-                    self._task_end_queue.put(worker_id)
+                if self._task_end.check():
                     break
 
                 state = player.current_state

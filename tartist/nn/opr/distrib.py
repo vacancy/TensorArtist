@@ -13,6 +13,7 @@ See https://github.com/ppwwyyxx/tensorpack/blob/master/tensorpack/tfutils/distri
 
 from .helper import wrap_named_op_method, lazy_O as O
 import numpy as np
+import tensorflow as tf
 
 __all__ = [
     'DistributionBase',
@@ -65,7 +66,8 @@ class DistributionBase(object):
             theta_p = self._get_true_theta(theta_p)
             theta_q = self._get_true_theta(theta_q)
 
-        return self._get_kl(theta_p, theta_q)
+        kl = self._get_kl(theta_p, theta_q)
+        return O.identity(kl, name='out')
 
     @wrap_named_op_method
     def sample(self, batch_size, theta, process_theta=False):
@@ -189,6 +191,9 @@ class CategoricalDistribution(DistributionBase):
     def _get_log_likelihood(self, x, theta):
         return O.reduce_sum(O.log(theta + self._eps) * x, 1)
 
+    def _get_kl(self, theta_p, theta_q):
+        return (theta_p * (O.log(theta_p) - O.log(theta_q + self._eps))).sum(axis=1)
+
     def _get_true_theta(self, theta):
         return O.softmax(theta)
 
@@ -211,7 +216,7 @@ class CategoricalDistribution(DistributionBase):
 
 class GaussianDistribution(DistributionBase):
     _eps = 1e-8
-    _fixed_std_val = 1
+    _fixed_std_val = 1.
 
     def __init__(self, name, size, fixed_std=True, nr_num_samples=10):
         super().__init__(name)
@@ -221,29 +226,22 @@ class GaussianDistribution(DistributionBase):
 
     def _get_log_likelihood(self, x, theta):
         if self._fixed_std:
-            mean, stddev = theta, O.ones_like(theta)
-            exponent = (x - mean)
+            mean, stddev = theta, O.ones_like(theta) * self._fixed_std_val
+            exponent = (x - mean) / self._fixed_std_val
         else:
             mean, stddev = O.split(theta, 2, axis=1)
             exponent = (x - mean) / (stddev + self._eps)
 
         return -(0.5 * np.log(2 * np.pi) + O.log(stddev + self._eps) + 0.5 * O.sqr(exponent)).sum(axis=1)
 
-    def _get_true_theta(self, theta):
-        if self._fixed_std:
-            return theta
-        else:
-            mean, stddev = O.split(theta, 2, axis=1)
-            stddev = O.sqrt(O.exp(stddev))
-            return O.concat([mean, stddev], axis=1)
+    def _get_kl(self, theta_p, theta_q):
+        mean_p, stddev_p = self.__split_theta(theta_p)
+        mean_q, stddev_q = self.__split_theta(theta_q)
 
-    def _get_sample(self, batch_size, theta):
-        if self._fixed_std:
-            mean, stddev = theta, self._fixed_std_val
-        else:
-            mean, stddev = O.split(theta, 2, axis=1)
-        e = O.random_normal(mean.shape)
-        return mean + e * stddev
+        var_p, var_q = O.sqr(stddev_p), O.sqr(stddev_q)
+        logstddev_p, logstddev_q = map(O.log, (stddev_p, stddev_q))
+        kl = (logstddev_q - logstddev_p + (var_p + O.sqr(mean_p - mean_q)) / (2 * var_q) - 0.5).sum(axis=1)
+        return kl
 
     def _get_entropy(self, theta):
         if self._fixed_std:
@@ -251,6 +249,21 @@ class GaussianDistribution(DistributionBase):
         else:
             mean, stddev = O.split(theta, 2, axis=1)
             return (0.5 * np.log(2 * np.pi) + O.log(stddev + self._eps) + 0.5).sum(axis=1)
+
+    def _get_true_theta(self, theta):
+        if self._fixed_std:
+            return theta
+        else:
+            mean, stddev = O.split(theta, 2, axis=1)
+            # MJY:: FUCK
+            # stddev = O.sqrt(O.exp(stddev))
+            stddev = O.exp(stddev)
+            return O.concat([mean, stddev], axis=1)
+
+    def _get_sample(self, batch_size, theta):
+        mean, stddev = self.__split_theta(theta)
+        e = O.random_normal(mean.shape)
+        return mean + e * stddev
 
     def _get_numerical_sample(self, theta):
         assert self._size == 1
@@ -262,6 +275,12 @@ class GaussianDistribution(DistributionBase):
 
     def _get_sample_size(self):
         return self._size
+
+    def __split_theta(self, theta):
+        if self._fixed_std:
+            return theta, self._fixed_std_val
+        else:
+            return O.split(theta, 2, axis=1)
 
 
 class GaussianDistributionWithUniformSample(GaussianDistribution):

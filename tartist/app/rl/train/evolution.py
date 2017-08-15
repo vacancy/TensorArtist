@@ -55,7 +55,7 @@ class EvolutionBasedOptimizerBase(CustomOptimizerBase):
         self._initialize_param()
 
     def register_snapshot_parts(self, env):
-        env.add_snapshot_part(self._name, self._dump_param, self._load_param)
+        env.add_snapshot_part(self._name, self._dump_params, self._load_params)
 
     @notnone_property
     def param_nr_elems(self):
@@ -76,10 +76,10 @@ class EvolutionBasedOptimizerBase(CustomOptimizerBase):
     def _initialize_param(self):
         raise NotImplementedError()
 
-    def _dump_param(self):
+    def _dump_params(self):
         raise NotImplementedError()
 
-    def _load_param(self, param):
+    def _load_params(self, param):
         raise NotImplementedError()
 
     def sample_flat_param(self, i, n):
@@ -113,10 +113,10 @@ class CEMOptimizer(EvolutionBasedOptimizerBase):
         self.param_std = np.ones(shape=(self.param_nr_elems, ), dtype='float32')
         self.param_std *= self._initial_std
 
-    def _dump_param(self):
+    def _dump_params(self):
         return self.param_mean, self.param_std
 
-    def _load_param(self, p):
+    def _load_params(self, p):
         assert self._param_nr_elems == p[0].shape[0] == p[1].shape[0]
         self.param_mean, self.param_std = p
 
@@ -164,10 +164,10 @@ class ESOptimizer(EvolutionBasedOptimizerBase):
     def _initialize_param(self):
         self.param_mean = np.zeros(shape=(self.param_nr_elems, ), dtype='float32')
 
-    def _dump_param(self):
+    def _dump_params(self):
         return self.param_mean
 
-    def _load_param(self, p):
+    def _load_params(self, p):
         assert self._param_nr_elems == p.shape[0]
         self.param_mean = p
 

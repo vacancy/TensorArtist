@@ -85,9 +85,11 @@ def _or_event_set(self):
     self._set()
     self.changed()
 
+
 def _or_event_clear(self):
     self._clear()
     self.changed()
+
 
 def _orify(e, changed_callback):
     e._set = e.set

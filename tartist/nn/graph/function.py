@@ -149,6 +149,8 @@ class Function(object):
         self.__compiled = True
 
     def __call__(self, *args, output_raw=False, **kwargs):
+        assert self.__compiled
+
         with self.owner_env.with_func_lock():
             if len(args) > 0:
                 assert self._inputs is not None
