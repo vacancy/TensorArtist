@@ -6,8 +6,8 @@
 # 
 # This file is part of TensorArtist.
 
-from .utils import vectorize_var_list, make_param_gs
-from ..math_utils import discount_cumsum
+from .utils import vectorize_var_list
+from ..math_utils import normalize_advantage
 from tartist.core.utils.meta import notnone_property
 from tartist.data.flow import SimpleDataFlowBase
 from tartist.nn import summary
@@ -77,7 +77,9 @@ class TRPODataFlow(SimpleDataFlowBase):
             for k, v in data.items():
                 data[k] = np.array(v)
 
-        data_list.append(data)
+            if len(t) > 0:
+                data_list.append(data)
+
         return data_list
 
 
@@ -302,6 +304,8 @@ class TRPOTrainer(TrainerBase):
         feed_dict = {}
         for k in ['step', 'state', 'action', 'theta_old', 'return_', 'advantage']:
             feed_dict[k] = np.concatenate([data[k] for data in data_list])
+
+        feed_dict['advantage'] = normalize_advantage(feed_dict['advantage'])
         avg_score = sum([data['score'] for data in data_list]) / len(data_list)
 
         # Fit the baseline.

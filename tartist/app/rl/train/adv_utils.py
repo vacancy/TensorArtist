@@ -6,11 +6,7 @@
 # 
 # This file is part of TensorArtist.
 
-from .math_utils import discount_cumsum, compute_gae
-
-
-def _normalize(adv):
-    return (adv - adv.mean()) / adv.std()
+from ..math_utils import discount_cumsum, compute_gae
 
 
 class AdvantageComputerBase(object):
@@ -22,31 +18,25 @@ class AdvantageComputerBase(object):
 
 
 class DiscountedAdvantageComputer(AdvantageComputerBase):
-    def __init__(self, gamma, normalize=True):
+    def __init__(self, gamma):
         self._gamma = gamma
-        self._normalize = normalize
 
     def _compute(self, data):
         return_ = discount_cumsum(data['reward'], self._gamma)
         advantage = return_ - data['value']
-        if self._normalize:
-            advantage = _normalize(advantage)
 
         data['return_'] = return_
         data['advantage'] = advantage
 
 
 class GAEComputer(AdvantageComputerBase):
-    def __init__(self, td, gae, normalize=True):
+    def __init__(self, td, gae):
         self._td = td
         self._gae = gae
-        self._normalize = normalize
 
     def _compute(self, data):
         return_ = discount_cumsum(data['reward'], self._td)
         advantage = compute_gae(data['reward'], data['value'], 0, self._td, self._gae)
-        if self._normalize:
-            advantage = _normalize(advantage)
 
         data['return_'] = return_
         data['advantage'] = advantage

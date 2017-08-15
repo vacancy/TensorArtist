@@ -8,13 +8,14 @@
 
 import os
 import threading
+
 import numpy as np
 
 from tartist.app import rl
 from tartist.core import get_env, get_logger
 from tartist.core.utils.cache import cached_result
-from tartist.core.utils.naming import get_dump_directory
 from tartist.core.utils.meta import map_exec
+from tartist.core.utils.naming import get_dump_directory
 from tartist.nn import opr as O, optimizer, summary
 
 logger = get_logger(__file__)
@@ -217,7 +218,7 @@ def main_inference_play_multithread(trainer):
 
 
 def main_train(trainer):
-    from tartist.app.rl.adv_utils import DiscountedAdvantageComputer
+    from tartist.app.rl.train.adv_utils import DiscountedAdvantageComputer
     trainer.set_adv_computer(DiscountedAdvantageComputer(get_env('trpo.gamma')))
 
     # Register plugins

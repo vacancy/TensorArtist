@@ -26,6 +26,10 @@ def discount_return(x, discount):
     return np.sum(x * (discount ** np.arange(len(x))))
 
 
+def normalize_advantage(adv):
+    return (adv - adv.mean()) / adv.std()
+
+
 class ObservationNormalizer(object):
     _eps = 1e-6
 
