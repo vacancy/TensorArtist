@@ -86,3 +86,18 @@ class LinearValueRegressor(object):
 
     def _load_params(self, coeffs):
         self.coeffs = coeffs
+
+
+def compute_gae(rewards, values, next_val, td_gamma, gae_gamma):
+    assert len(rewards) == len(values)
+    size = len(rewards)
+    adv_batch = np.empty((size, ), dtype='float32')
+
+    td_i = rewards[size - 1] + gae_gamma * next_val - values[size - 1]
+    adv_batch[size - 1] = td_i
+
+    for i in range(size - 2, -1, -1):
+        td_i = rewards[i] + gae_gamma * values[i+1] - values[i] + td_gamma * gae_gamma * td_i
+        adv_batch[i] = td_i
+
+    return adv_batch

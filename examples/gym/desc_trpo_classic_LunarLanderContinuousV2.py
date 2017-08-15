@@ -157,10 +157,7 @@ def make_dataflow_train(env):
     )
 
     use_linear_vr = get_env('trpo.use_linear_vr')
-    return rl.train.TRPODataFlow(collector,
-                                 target=get_env('trpo.collector.target'),
-                                 gamma=get_env('trpo.gamma'),
-                                 compute_adv=not use_linear_vr)
+    return rl.train.TRPODataFlow(collector, target=get_env('trpo.collector.target'), incl_value=not use_linear_vr)
 
 
 @cached_result
@@ -220,6 +217,9 @@ def main_inference_play_multithread(trainer):
 
 
 def main_train(trainer):
+    from tartist.app.rl.adv_utils import DiscountedAdvantageComputer
+    trainer.set_adv_computer(DiscountedAdvantageComputer(get_env('trpo.gamma')))
+
     # Register plugins
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer, extra_summary_types={

@@ -31,13 +31,10 @@ class TRPOGraphKeys:
 
 
 class TRPODataFlow(SimpleDataFlowBase):
-    def __init__(self, collector, target, gamma, compute_adv=True, normalize_adv=True):
+    def __init__(self, collector, target, incl_value):
         self._collector = collector
         self._target = target
-
-        self._gamma = gamma
-        self._compute_adv = compute_adv
-        self._normalize_adv = normalize_adv
+        self._incl_value = incl_value
 
         assert self._collector.mode == 'EPISODE'
 
@@ -51,51 +48,37 @@ class TRPODataFlow(SimpleDataFlowBase):
             yield data
 
     def _process(self, raw_data):
-        data = dict(
-            state=[],
-            action=[],
-            advantage=[],
-            theta_old=[],
-            step=[],
-            return_=[],
-            scores=[]
-        )
+        data_list = []
         for t in raw_data:
-            rewards = np.array([e.reward for e in t])
-            score = rewards.sum()
-            returns = discount_cumsum(rewards, self._gamma)
+            data = dict(
+                step=[],
+                state=[],
+                action=[],
+                theta_old=[],
+                reward=[],
+                value=[],
+                score=0
+            )
 
             for i, e in enumerate(t):
+                data['step'].append(i)
                 data['state'].append(e.state)
                 data['action'].append(e.action)
                 data['theta_old'].append(e.outputs['theta'])
-                data['step'].append(i)
-                data['return_'].append(returns[i])
+                data['reward'].append(e.reward)
+                data['score'] += e.reward
 
-                if self._compute_adv:
-                    data['advantage'].append(returns[i] - e.outputs['value'])
+                if self._incl_value:
+                    data['value'].append(e.outputs['value'])
 
-            data['scores'].append(score)
+            if not self._incl_value:
+                del data['value']
 
-        for k, v in data.items():
-            data[k] = np.array(v)
+            for k, v in data.items():
+                data[k] = np.array(v)
 
-        if self._compute_adv:
-            if self._normalize_adv:
-                data['advantage'] = self.__normalize_advantage(data['advantage'])
-
-            if len(data['advantage'].shape) == 2:
-                data['advantage'] = data['advantage'][:, 0]
-        else:
-            del data['advantage']
-
-        return data
-
-    @staticmethod
-    def __normalize_advantage(adv):
-        mean = adv.mean()
-        std = adv.std()
-        return (adv - mean) / std
+        data_list.append(data)
+        return data_list
 
 
 class TRPOOptimizer(CustomOptimizerBase):
@@ -258,6 +241,7 @@ class TRPOTrainerEnv(TrainerEnvBase):
 class TRPOTrainer(TrainerBase):
     _p_func = None
     _v_func = None
+    _adv_computer = None
 
     def _has_value_regressor(self):
         return self._value_regressor is not None
@@ -265,6 +249,13 @@ class TRPOTrainer(TrainerBase):
     @property
     def _value_regressor(self):
         return self.env.value_regressor
+
+    @notnone_property
+    def adv_computer(self):
+        return self._adv_computer
+
+    def set_adv_computer(self, adv):
+        self._adv_computer = adv
 
     def initialize(self):
         with self.env.as_default():
@@ -297,32 +288,37 @@ class TRPOTrainer(TrainerBase):
             self._compile_func_with_summary(
                 self._v_func, {'v_loss': self.env.value_loss}, TRPOGraphKeys.VALUE_SUMMARIES)
 
-    def _run_step(self, data):
-        scores = data.pop('scores')
-        score = scores.mean()
+    def _run_step(self, data_list):
+        for data in data_list:
+            if self._has_value_regressor():
+                if 'value' not in data:
+                    data['value'] = self._value_regressor.predict(data['state'], data['step'])
+            else:
+                assert 'value' in data
 
-        if self._value_regressor is not None:
-            if 'advantage' not in data:
-                value_predict = self._value_regressor.predict(data['state'], data['step'])
-                adv = data['return_'] - value_predict
-                data['advantage'] = (adv - adv.mean()) / adv.std()
+        for data in data_list:
+            self.adv_computer(data)
 
-            # Fit the baseline.
-            self._value_regressor.fit(data['state'], data['step'], data['return_'])
+        feed_dict = {}
+        for k in ['step', 'state', 'action', 'theta_old', 'return_', 'advantage']:
+            feed_dict[k] = np.concatenate([data[k] for data in data_list])
+        avg_score = sum([data['score'] for data in data_list]) / len(data_list)
+
+        # Fit the baseline.
+        if self._has_value_regressor():
+            self._value_regressor.fit(feed_dict['state'], feed_dict['step'], feed_dict['return_'])
             v_outputs = None
         else:
-            assert 'advantage' in data
-            # Fit the baseline.
-            v_outputs = self._v_func(state=data['state'], value_label=data['return_'])
+            v_outputs = self._v_func(state=feed_dict['state'], value_label=feed_dict['return_'])
 
         # Policy gradient
-        p_outputs = self._p_func(state=data['state'], action=data['action'],
-                                 advantage=data['advantage'], theta_old=data['theta_old'])
+        p_outputs = self._p_func(state=feed_dict['state'], action=feed_dict['action'],
+                                 advantage=feed_dict['advantage'], theta_old=feed_dict['theta_old'])
 
         summaries = tf.Summary()
-        summaries.value.add(tag='train/score', simple_value=score)
+        summaries.value.add(tag='train/score', simple_value=avg_score)
 
-        output = dict(score=score, p_loss=p_outputs['p_loss'], p_kl=p_outputs['p_kl'])
+        output = dict(score=avg_score, p_loss=p_outputs['p_loss'], p_kl=p_outputs['p_kl'])
         if v_outputs is not None:
             if 'summaries' in v_outputs:
                 summaries.value.MergeFrom(tf.Summary.FromString(v_outputs['summaries']).value)
