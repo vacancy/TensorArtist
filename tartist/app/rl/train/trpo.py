@@ -163,10 +163,10 @@ class TRPOOptimizer(CustomOptimizerBase):
         # and then stepdir * [above] is computed manually.
         # step * Hessian * step
         fvp = vectorize_var_list(tf.gradients(
-            tf.reduce_sum(tf.stop_gradient(p) * kl_grads),
+            tf.reduce_sum(tf.stop_gradient(stepdir) * kl_grads),
             var_list
         ))
-        shs = 0.5 * tf.reduce_sum(p * fvp)
+        shs = 0.5 * tf.reduce_sum(stepdir * fvp)
 
         lm = tf.sqrt(max_kl / (shs + 1e-8))
         full_step = stepdir * lm
