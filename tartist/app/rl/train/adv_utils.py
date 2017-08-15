@@ -30,13 +30,13 @@ class DiscountedAdvantageComputer(AdvantageComputerBase):
 
 
 class GAEComputer(AdvantageComputerBase):
-    def __init__(self, td, gae):
-        self._td = td
-        self._gae = gae
+    def __init__(self, gamma, lambda_):
+        self._gamma = gamma
+        self._lambda = lambda_
 
     def _compute(self, data):
-        return_ = discount_cumsum(data['reward'], self._td)
-        advantage = compute_gae(data['reward'], data['value'], 0, self._td, self._gae)
+        return_ = discount_cumsum(data['reward'], self._gamma)
+        advantage = compute_gae(data['reward'], data['value'], 0, self._gamma, self._lambda)
 
         data['return_'] = return_
         data['advantage'] = advantage

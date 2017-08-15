@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : desc_trpo_classic_LunarLanderContinuousV2.py
+# File   : desc_trpo_box2d_LunarLanderContinuousV2.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/08/2017
@@ -29,6 +29,7 @@ __envs__ = {
         'max_nr_steps': 200,
 
         'gamma': 0.99,
+
         'max_kl': 0.001,
         'cg': {
             'damping': 0.001
