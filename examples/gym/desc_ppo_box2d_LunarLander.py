@@ -1,8 +1,8 @@
 # -*- coding:utf8 -*-
-# File   : desc_trpo_gae_box2d_LunarLanderContinuousV2.py
+# File   : desc_ppo_box2d_LunarLander.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
-# Date   : 12/08/2017
+# Date   : 15/08/2017
 # 
 # This file is part of TensorArtist.
 
@@ -24,7 +24,7 @@ __envs__ = {
     'dir': {
         'root': get_dump_directory(__file__),
     },
-    'trpo': {
+    'ppo': {
         'env_name': 'LunarLanderContinuous-v2',
         'max_nr_steps': 200,
 
@@ -33,10 +33,7 @@ __envs__ = {
             'lambda': 0.95,
         },
 
-        'max_kl': 0.001,
-        'cg': {
-            'damping': 0.001
-        },
+        'epsilon': 0.2,
 
         'use_linear_vr': True,
 
@@ -56,18 +53,23 @@ __envs__ = {
         },
    },
     'trainer': {
+        'policy_learning_rate': 0.0003,
         'value_learning_rate': 0.001,
         'epoch_size': 5,
         'nr_epochs': 200,
+
+        # Parameters for PPO optimizer.
+        'batch_size': 64,
+        'data_repeat': 10,
     }
 }
 
-__trainer_cls__ = rl.train.TRPOTrainer
-__trainer_env_cls__ = rl.train.TPROTrainerEnv
+__trainer_cls__ = rl.train.PPOTrainer
+__trainer_env_cls__ = rl.train.PPOTrainerEnv
 
 
 def make_network(env):
-    use_linear_vr = get_env('trpo.use_linear_vr')
+    use_linear_vr = get_env('ppo.use_linear_vr')
 
     with env.create_network() as net:
         net.dist = O.distrib.GaussianDistribution('policy', size=get_action_shape()[0], fixed_std=False)
@@ -109,18 +111,11 @@ def make_network(env):
             log_prob = net.dist.log_likelihood(action, theta, process_theta=True)
             log_prob_old = net.dist.log_likelihood(action, theta_old, process_theta=True)
 
-            # Importance sampling of surrogate loss (L in paper).
             ratio = O.exp(log_prob - log_prob_old)
             policy_loss = -O.reduce_mean(ratio * advantage)
-
-            kl = net.dist.kl(theta_p=theta_old, theta_q=theta, process_theta=True).mean()
-            kl_self = net.dist.kl(theta_p=O.zero_grad(theta), theta_q=theta, process_theta=True).mean()
             entropy = net.dist.entropy(theta, process_theta=True).mean()
 
             net.add_output(policy_loss, name='policy_loss')
-            net.add_output(kl, name='kl')
-            net.add_output(kl_self, name='kl_self')
-
             summary.scalar('policy_entropy', entropy, collections=[rl.train.ACGraphKeys.POLICY_SUMMARIES])
 
         if not use_linear_vr:
@@ -135,16 +130,20 @@ def make_network(env):
 
 
 def make_player(dump_dir=None):
-    p = rl.GymRLEnviron(get_env('trpo.env_name'), dump_dir=dump_dir)
-    p = rl.LimitLengthProxyRLEnviron(p, get_env('trpo.max_nr_steps'))
+    p = rl.GymRLEnviron(get_env('ppo.env_name'), dump_dir=dump_dir)
+    p = rl.LimitLengthProxyRLEnviron(p, get_env('ppo.max_nr_steps'))
     return p
 
 
 def make_optimizer(env):
-    opt = rl.train.TRPOOptimizer(env, max_kl=get_env('trpo.max_kl'), cg_damping=get_env('trpo.cg.damping'))
-    env.set_policy_optimizer(opt)
+    wrapper = optimizer.OptimizerWrapper()
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('trainer.policy_learning_rate'), epsilon=1e-3))
+    wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
+        ('*/b', 2.0),
+    ]))
+    env.set_policy_optimizer(wrapper)
 
-    use_linear_vr = get_env('trpo.use_linear_vr')
+    use_linear_vr = get_env('ppo.use_linear_vr')
     if not use_linear_vr:
         wrapper = optimizer.OptimizerWrapper()
         wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('trainer.value_learning_rate'), epsilon=1e-3))
@@ -158,11 +157,11 @@ def make_dataflow_train(env):
     collector = rl.train.SynchronizedExperienceCollector(
         env, make_player, _outputs2action,
         nr_workers=8, nr_predictors=2,
-        predictor_output_names=get_env('trpo.collector.predictor_output_names')
+        predictor_output_names=get_env('ppo.collector.predictor_output_names')
     )
 
-    use_linear_vr = get_env('trpo.use_linear_vr')
-    return rl.train.SynchronizedTrajectoryDataFlow(collector, target=get_env('trpo.collector.target'), incl_value=not use_linear_vr)
+    use_linear_vr = get_env('ppo.use_linear_vr')
+    return rl.train.SynchronizedTrajectoryDataFlow(collector, target=get_env('ppo.collector.target'), incl_value=not use_linear_vr)
 
 
 @cached_result
@@ -215,7 +214,7 @@ def main_inference_play_multithread(trainer):
         if mgr is not None:
             mgr.put_async_scalar('inference/score', score)
 
-    nr_players = get_env('trpo.inference.nr_plays')
+    nr_players = get_env('ppo.inference.nr_plays')
     pool = [threading.Thread(target=runner) for _ in range(nr_players)]
     map_exec(threading.Thread.start, pool)
     map_exec(threading.Thread.join, pool)
@@ -223,7 +222,9 @@ def main_inference_play_multithread(trainer):
 
 def main_train(trainer):
     from tartist.app.rl.train.adv_utils import GAEComputer
-    trainer.set_adv_computer(GAEComputer(get_env('trpo.gamma'), get_env('trpo.gae.lambda')))
+    from tartist.app.rl.train.surr import TrajectoryBatchSampler
+    trainer.set_adv_computer(GAEComputer(get_env('ppo.gamma'), get_env('ppo.gae.lambda')))
+    trainer.set_batch_sampler(TrajectoryBatchSampler(get_env('trainer.batch_size'), get_env('trainer.data_repeat')))
 
     # Register plugins
     from tartist.plugins.trainer_enhancer import summary
@@ -256,7 +257,7 @@ def main_demo(env, func):
     dump_dir = get_env('dir.demo', os.path.join(get_env('dir.root'), 'demo'))
     logger.info('Demo dump dir: {}'.format(dump_dir))
     player = make_player(dump_dir=dump_dir)
-    repeat_time = get_env('trpo.demo.nr_plays', 1)
+    repeat_time = get_env('ppo.demo.nr_plays', 1)
 
     def get_action(inp, func=func):
         policy = func(state=inp[np.newaxis])['theta'][0]

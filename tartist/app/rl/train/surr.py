@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : trpo.py
+# File   : surr.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/08/2017
@@ -8,6 +8,7 @@
 
 from .utils import vectorize_var_list
 from ..math_utils import normalize_advantage
+from tartist import random
 from tartist.core.utils.meta import notnone_property
 from tartist.data.flow import SimpleDataFlowBase
 from tartist.nn import summary
@@ -19,10 +20,16 @@ from tartist.nn.train import TrainerEnvBase, TrainerBase
 import numpy as np
 import tensorflow as tf
 
-__all__ = ['TRPOGraphKeys', 'TRPODataFlow', 'TRPOOptimizer', 'TRPOTrainerEnv', 'TRPOTrainer']
+__all__ = [
+    'ACGraphKeys',
+    'SynchronizedTrajectoryDataFlow', 'TrajectoryBatchSampler',
+    'TRPOOptimizer',
+    'ACOptimizationTrainerEnv', 'TRPOTrainerEnv', 'PPOTrainerEnv',
+    'SurrPolicyOptimizationTrainer', 'TRPOTrainer', 'PPOTrainer'
+]
 
 
-class TRPOGraphKeys:
+class ACGraphKeys:
     POLICY_VARIABLES = 'policy'
     VALUE_VARIABLES = 'value'
 
@@ -30,7 +37,7 @@ class TRPOGraphKeys:
     VALUE_SUMMARIES = 'value_summaries'
 
 
-class TRPODataFlow(SimpleDataFlowBase):
+class SynchronizedTrajectoryDataFlow(SimpleDataFlowBase):
     def __init__(self, collector, target, incl_value):
         self._collector = collector
         self._target = target
@@ -81,6 +88,28 @@ class TRPODataFlow(SimpleDataFlowBase):
                 data_list.append(data)
 
         return data_list
+
+
+class TrajectoryBatchSampler(object):
+    def __init__(self, batch_size, nr_repeat, rng=None):
+        self._batch_size = batch_size
+        self._nr_repeat = nr_repeat
+        self._rng = rng or random.gen_rng()
+
+    def _gen(self, data, keys):
+        n = len(data[keys[0]])
+
+        for i in range(self._nr_repeat):
+            idx = self._rng.permutation(n)
+            for j in range(n // self._batch_size):
+                this = {
+                    k: data[k][idx[j * self._batch_size:j * self._batch_size + self._batch_size]]
+                    for k in keys
+                }
+                yield this
+
+    def __call__(self, data, keys):
+        return self._gen(data, keys)
 
 
 class TRPOOptimizer(CustomOptimizerBase):
@@ -177,7 +206,7 @@ class TRPOOptimizer(CustomOptimizerBase):
         return full_step, negg_dot_stepdir
 
 
-class TRPOTrainerEnv(TrainerEnvBase):
+class ACOptimizationTrainerEnv(TrainerEnvBase):
     _policy_optimizer = None
     _value_optimizer = None
 
@@ -191,7 +220,6 @@ class TRPOTrainerEnv(TrainerEnvBase):
 
     def set_policy_optimizer(self, opt):
         self._policy_optimizer = opt
-        assert isinstance(self._policy_optimizer, TRPOOptimizer)
         return self
 
     @notnone_property
@@ -207,10 +235,6 @@ class TRPOTrainerEnv(TrainerEnvBase):
         return self.network.outputs['policy_loss']
 
     @notnone_property
-    def policy_kl(self):
-        return self.network.outputs['kl']
-
-    @notnone_property
     def value_loss(self):
         return self.network.outputs['value_loss']
 
@@ -218,30 +242,58 @@ class TRPOTrainerEnv(TrainerEnvBase):
     def value_regressor(self):
         return getattr(self.network, 'value_regressor', None)
 
+
+class TRPOTrainerEnv(ACOptimizationTrainerEnv):
+    @notnone_property
+    def policy_kl(self):
+        return self.network.outputs['kl']
+
     def make_optimizable_func(self, policy_loss=None, kl_self=None, value_loss=None):
+        assert isinstance(self._policy_optimizer, TRPOOptimizer)
         with self.as_default():
-            policy_loss = policy_loss or self.network.outputs['policy_loss']
-            kl_self = kl_self or self.network.outputs['kl_self']
+            policy_loss = policy_loss or self.policy_loss
+            kl_self = kl_self or self.policy_kl
 
             p_func = self.make_func()
-            scope = TRPOGraphKeys.POLICY_VARIABLES + '/.*'
+            scope = ACGraphKeys.POLICY_VARIABLES + '/.*'
             p_var_list = self.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
             p_func.add_extra_op(self.policy_optimizer.minimize(policy_loss, kl_self, var_list=p_var_list))
 
             if self.value_regressor is not None:
                 return p_func
 
-            value_loss = value_loss or self.network.outputs['value_loss']
+            value_loss = value_loss or self.value_loss
 
             v_func = self.make_func()
-            scope = TRPOGraphKeys.VALUE_VARIABLES + '/.*'
+            scope = ACGraphKeys.VALUE_VARIABLES + '/.*'
             v_var_list = self.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
             v_func.add_extra_op(self.value_optimizer.minimize(value_loss, var_list=v_var_list))
             return p_func, v_func
 
 
-class TRPOTrainer(TrainerBase):
+class PPOTrainerEnv(ACOptimizationTrainerEnv):
+    def make_optimizable_func(self, policy_loss=None, value_loss=None):
+        with self.as_default():
+            policy_loss = policy_loss or self.policy_loss
+            p_func = self.make_func()
+            scope = ACGraphKeys.POLICY_VARIABLES + '/.*'
+            p_var_list = self.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+            p_func.add_extra_op(self.policy_optimizer.minimize(policy_loss, var_list=p_var_list))
+
+            if self.value_regressor is not None:
+                return p_func
+
+            value_loss = value_loss or self.network.outputs['value_loss']
+            v_func = self.make_func()
+            scope = ACGraphKeys.VALUE_VARIABLES + '/.*'
+            v_var_list = self.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+            v_func.add_extra_op(self.value_optimizer.minimize(value_loss, var_list=v_var_list))
+            return p_func, v_func
+
+
+class SurrPolicyOptimizationTrainer(TrainerBase):
     _p_func = None
+    _p_func_inference = None
     _v_func = None
     _adv_computer = None
 
@@ -260,37 +312,57 @@ class TRPOTrainer(TrainerBase):
         self._adv_computer = adv
 
     def initialize(self):
-        with self.env.as_default():
-            summary.scalar('policy_loss', self.env.policy_loss, collections=[TRPOGraphKeys.POLICY_SUMMARIES])
-            summary.scalar('policy_kl', self.env.policy_kl, collections=[TRPOGraphKeys.POLICY_SUMMARIES])
-            if not self._has_value_regressor():
-                summary.scalar('value_loss', self.env.value_loss, collections=[TRPOGraphKeys.VALUE_SUMMARIES])
-
+        self._initialize_summaries()
         super().initialize()
         self._initialize_opt_func()
         self._initialize_snapshot_parts()
 
+        self._compile_fn_train()
+
+    def _initialize_summaries(self):
+        raise NotImplementedError()
+
     def _initialize_opt_func(self):
-        assert isinstance(self.env, TRPOTrainerEnv)
+        assert isinstance(self.env, ACOptimizationTrainerEnv)
         if self._has_value_regressor():
             self._p_func = self.env.make_optimizable_func()
         else:
             self._p_func, self._v_func = self.env.make_optimizable_func()
-        self._compile_fn_train()
+        self._p_func_inference = self.env.make_func()
 
     def _initialize_snapshot_parts(self):
         if self._has_value_regressor():
             self._value_regressor.register_snapshot_parts(self.env)
 
     def _compile_fn_train(self):
-        self._compile_func_with_summary(
-            self._p_func, {'p_loss': self.env.policy_loss, 'p_kl': self.env.policy_kl}, TRPOGraphKeys.POLICY_SUMMARIES)
-
-        if self._value_regressor is None:
-            self._compile_func_with_summary(
-                self._v_func, {'v_loss': self.env.value_loss}, TRPOGraphKeys.VALUE_SUMMARIES)
+        raise NotImplementedError()
 
     def _run_step(self, data_list):
+        self._gen_advantage(data_list)
+        feed_dict = self._get_feed_dict(data_list)
+        v_outputs = self._run_step_v(feed_dict)
+        p_outputs = self._run_step_p(feed_dict)
+
+        # Summaries
+        avg_score = sum([data['score'] for data in data_list]) / len(data_list)
+        output = dict(score=avg_score)
+        summaries = tf.Summary()
+        summaries.value.add(tag='train/score', simple_value=avg_score)
+
+        if v_outputs is not None:
+            if 'summaries' in v_outputs:
+                summaries.value.MergeFrom(tf.Summary.FromString(v_outputs['summaries']).value)
+            output.update(v_outputs)
+
+        if 'summaries' in p_outputs:
+            summaries.value.MergeFrom(tf.Summary.FromString(p_outputs['summaries']).value)
+            output.update(p_outputs)
+
+        self.runtime['summaries'] = summaries
+        return output
+
+    def _gen_advantage(self, data_list):
+        # Compute the value estimation and advantage.
         for data in data_list:
             if self._has_value_regressor():
                 if 'value' not in data:
@@ -301,35 +373,82 @@ class TRPOTrainer(TrainerBase):
         for data in data_list:
             self.adv_computer(data)
 
+    def _get_feed_dict(self, data_list):
         feed_dict = {}
         for k in ['step', 'state', 'action', 'theta_old', 'return_', 'advantage']:
             feed_dict[k] = np.concatenate([data[k] for data in data_list])
-
         feed_dict['advantage'] = normalize_advantage(feed_dict['advantage'])
-        avg_score = sum([data['score'] for data in data_list]) / len(data_list)
+        return feed_dict
 
+    def _run_step_v(self, feed_dict):
         # Fit the baseline.
         if self._has_value_regressor():
             self._value_regressor.fit(feed_dict['state'], feed_dict['step'], feed_dict['return_'])
             v_outputs = None
         else:
             v_outputs = self._v_func(state=feed_dict['state'], value_label=feed_dict['return_'])
+        return v_outputs
 
-        # Policy gradient
-        p_outputs = self._p_func(state=feed_dict['state'], action=feed_dict['action'],
-                                 advantage=feed_dict['advantage'], theta_old=feed_dict['theta_old'])
+    def _run_step_p(self, feed_dict):
+        raise NotImplementedError()
 
-        summaries = tf.Summary()
-        summaries.value.add(tag='train/score', simple_value=avg_score)
 
-        output = dict(score=avg_score, p_loss=p_outputs['p_loss'], p_kl=p_outputs['p_kl'])
-        if v_outputs is not None:
-            if 'summaries' in v_outputs:
-                summaries.value.MergeFrom(tf.Summary.FromString(v_outputs['summaries']).value)
-            output['v_loss'] = v_outputs['v_loss']
+class TRPOTrainer(SurrPolicyOptimizationTrainer):
+    _p_feed_dict_keys = ['state', 'action', 'advantage', 'theta_old']
 
-        if 'summaries' in p_outputs:
-            summaries.value.MergeFrom(tf.Summary.FromString(p_outputs['summaries']).value)
+    def _initialize_summaries(self):
+        with self.env.as_default():
+            summary.scalar('policy_loss', self.env.policy_loss, collections=[ACGraphKeys.POLICY_SUMMARIES])
+            summary.scalar('policy_kl', self.env.policy_kl, collections=[ACGraphKeys.POLICY_SUMMARIES])
+            if not self._has_value_regressor():
+                summary.scalar('value_loss', self.env.value_loss, collections=[ACGraphKeys.VALUE_SUMMARIES])
 
-        self.runtime['summaries'] = summaries
-        return output
+    def _compile_fn_train(self):
+        self._p_func.compile([])
+        self._compile_func_with_summary(
+            self._p_func_inference, {'p_loss': self.env.policy_loss, 'p_kl': self.env.policy_kl},
+            ACGraphKeys.POLICY_SUMMARIES)
+
+        if self._value_regressor is None:
+            self._compile_func_with_summary(
+                self._v_func, {'v_loss': self.env.value_loss}, ACGraphKeys.VALUE_SUMMARIES)
+
+    def _run_step_p(self, feed_dict):
+        feed_dict = {k: feed_dict[k] for k in self._p_feed_dict_keys}
+        self._p_func.call_args(feed_dict)
+        p_outputs = self._p_func_inference.call_args(feed_dict)
+        return p_outputs
+
+
+class PPOTrainer(SurrPolicyOptimizationTrainer):
+    _p_feed_dict_keys = ['state', 'action', 'advantage', 'theta_old']
+    _batch_sampler = None
+
+    def _initialize_summaries(self):
+        with self.env.as_default():
+            summary.scalar('policy_loss', self.env.policy_loss, collections=[ACGraphKeys.POLICY_SUMMARIES])
+            if not self._has_value_regressor():
+                summary.scalar('value_loss', self.env.value_loss, collections=[ACGraphKeys.VALUE_SUMMARIES])
+
+    def _compile_fn_train(self):
+        self._p_func.compile([])
+        self._compile_func_with_summary(
+            self._p_func_inference, {'p_loss': self.env.policy_loss},
+            ACGraphKeys.POLICY_SUMMARIES)
+
+        if self._value_regressor is None:
+            self._compile_func_with_summary(
+                self._v_func, {'v_loss': self.env.value_loss}, ACGraphKeys.VALUE_SUMMARIES)
+
+    @notnone_property
+    def batch_sampler(self):
+        return self._batch_sampler
+
+    def set_batch_sampler(self, sampler):
+        self._batch_sampler = sampler
+
+    def _run_step_p(self, feed_dict):
+        for batch in self.batch_sampler(feed_dict, self._p_feed_dict_keys):
+            self._p_func.call_args(batch)
+        p_outputs = self._p_func_inference.call_args({k: feed_dict[k] for k in self._p_feed_dict_keys})
+        return p_outputs

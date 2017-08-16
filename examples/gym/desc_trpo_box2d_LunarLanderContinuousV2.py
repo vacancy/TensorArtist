@@ -118,7 +118,7 @@ def make_network(env):
             net.add_output(kl, name='kl')
             net.add_output(kl_self, name='kl_self')
 
-            summary.scalar('policy_entropy', entropy, collections=[rl.train.TRPOGraphKeys.POLICY_SUMMARIES])
+            summary.scalar('policy_entropy', entropy, collections=[rl.train.ACGraphKeys.POLICY_SUMMARIES])
 
         if not use_linear_vr:
             with env.variable_scope('value'):
@@ -159,7 +159,7 @@ def make_dataflow_train(env):
     )
 
     use_linear_vr = get_env('trpo.use_linear_vr')
-    return rl.train.TRPODataFlow(collector, target=get_env('trpo.collector.target'), incl_value=not use_linear_vr)
+    return rl.train.SynchronizedTrajectoryDataFlow(collector, target=get_env('trpo.collector.target'), incl_value=not use_linear_vr)
 
 
 @cached_result
