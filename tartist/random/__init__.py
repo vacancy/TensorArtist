@@ -103,6 +103,7 @@ def list_shuffle(l, rng=None):
     rng = rng or _rng
     if isndarray(l):
         rng.shuffle(l)
+        return
 
     assert type(l) is list
     _random.shuffle(l, random=rng.random_sample)
