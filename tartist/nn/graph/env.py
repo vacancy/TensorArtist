@@ -181,6 +181,9 @@ class Env(object):
         """Get the current network, raise Exception if the network hasn't yet been created."""
         return self.__network
 
+    def has_current_dpc(self):
+        return self.__current_dpc is not None
+
     @notnone_property
     def current_dpc(self):
         """Current data-parallel controller"""

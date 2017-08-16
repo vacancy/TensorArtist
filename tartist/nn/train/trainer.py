@@ -172,6 +172,16 @@ class TrainerBase(object):
         self.env.load_snapshot(snapshot)
         return self
 
+    def _compile_func_with_summary(self, func, outputs, summary_scope=None):
+        if not func.compiled:
+            if summary_scope is None:
+                summaries = self.network.merged_summaries
+            else:
+                summaries = self.network.get_merged_summaries(summary_scope)
+            if summaries is not None:
+                func.add_extra_kwoutput('summaries', summaries)
+            func.compile(outputs)
+
 
 class SimpleTrainer(TrainerBase):
     _fn_train = None
@@ -192,10 +202,7 @@ class SimpleTrainer(TrainerBase):
 
     def _compile_fn_train(self):
         if not self._fn_train.compiled:
-            summaries = self.network.merged_summaries
-            if summaries is not None:
-                self._fn_train.add_extra_kwoutput('summaries', summaries)
-            self._fn_train.compile({'loss': self.network.loss})
+            self._compile_func_with_summary(self._fn_train, {'loss': self.network.loss})
             if isinstance(self._fn_train, QueuedInputFunction):
                 self._fn_train.serve(self.data_provider(self.env))
 

@@ -47,10 +47,26 @@ Similar to CEM optimizer, the ESOptimizer works on CPU, but you can still use Te
 
 Note that the implementation is *NOT* scalable, it does actually serial data collection (not distributed). You should
 only this code for simple tests. For the official distributed implementation: refer to
-https://github.com/openai/evolution-strategies-starter .
+https://github.com/openai/evolution-strategies-starter
 
 ```
 tart-train desc_es_classic_CartPoleV0 -d cpu
 tart-demo desc_es_classic_CartPoleV0 -d cpu [-w xxx.snapshot.pkl] [-e last]
 ```
+
+## Trust-Region Policy Optimization and Generalized Advantage Estimation
+
+Parallel (multi-threading only) implementation for TRPO and GAE: 
+[1502.05477] Trust Region Policy Optimization (https://arxiv.org/abs/1502.05477); 
+[1506.02438] High-Dimensional Continuous Control Using Generalized Advantage Estimation (https://arxiv.org/abs/1506.02438).
+
+```
+tart-train desc_trpo_gae_box2d_LunarLanderContinuousV2.py -d cpu
+tart-demo desc_trpo_gae_box2d_LunarLanderContinuousV2.py -d cpu [-w xxx.snapshot.pkl] [-e last]
+```
+
+Thank you authors of the following repos and blogs:
+- https://github.com/kvfrans/parallel-trpo
+- https://github.com/steveKapturowski/tensorflow-rl
+- http://kvfrans.com/speeding-up-trpo-through-parallelization-and-parameter-adaptation
 

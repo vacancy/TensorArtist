@@ -112,17 +112,10 @@ class GANTrainer(TrainerBase):
         return self._d_func
 
     def _compile_fn_train(self):
-        if not self._g_func.compiled:
-            summaries = self.network.get_merged_summaries(GANGraphKeys.GENERATOR_SUMMARIES)
-            if summaries is not None:
-                self._g_func.add_extra_kwoutput('summaries', summaries)
-            self._g_func.compile({'g_loss': self.env.g_loss})
-
-        if not self._d_func.compiled:
-            summaries = self.network.get_merged_summaries(GANGraphKeys.DISCRIMINATOR_SUMMARIES)
-            if summaries is not None:
-                self._d_func.add_extra_kwoutput('summaries', summaries)
-            self._d_func.compile({'d_loss': self.env.d_loss})
+        self._compile_func_with_summary(self._g_func, {'g_loss': self.env.g_loss},
+                                        summary_scope=GANGraphKeys.GENERATOR_SUMMARIES)
+        self._compile_func_with_summary(self._d_func, {'d_loss': self.env.d_loss},
+                                        summary_scope=GANGraphKeys.DISCRIMINATOR_SUMMARIES)
 
     def _run_step(self, data):
         self._compile_fn_train()

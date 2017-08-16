@@ -6,9 +6,9 @@
 # 
 # This file is part of TensorArtist.
 
-from tartist.core import register_event
 from tartist.core.utils.thirdparty import get_tqdm_defaults
 import tqdm
+import numpy as np
 
 
 def enable_epoch_progress(trainer):
@@ -25,7 +25,7 @@ def enable_epoch_progress(trainer):
             desc += ', error={:.4f}'.format(trainer.runtime['error'])
         for k in sorted(out.keys()):
             v = out[k]
-            if type(v) in (str, int, float):
+            if isinstance(v, (str, int, float, np.ndarray, np.float32, np.float64, np.int32, np.int64)):
                 try:
                     v = float(v)
                     desc += ', {}={:.4f}'.format(k, v)

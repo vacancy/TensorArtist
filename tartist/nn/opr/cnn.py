@@ -180,7 +180,9 @@ def batch_norm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dty
     if len(shape) == 2:
         xn = O.remove_axis(xn, [1, 2])
 
-    if env.flags.compute_update_batch_normalization(name) and env.current_dpc.is_master_device:
+    if env.flags.compute_update_batch_normalization(name) and \
+            (not env.has_current_dpc() or env.current_dpc.is_master_device):
+
         update_mean_op = assign_moving_average(moving_mean.impl, batch_mean, decay, zero_debias=False, name='mean_ema_op')
         update_var_op = assign_moving_average(moving_var.impl, batch_var, decay, zero_debias=False, name='var_ema_op')
 
