@@ -26,7 +26,7 @@ __envs__ = {
     },
     'ppo': {
         'env_name': 'LunarLanderContinuous-v2',
-        'max_nr_steps': 200,
+        'max_nr_steps': 2000,
 
         'gamma': 0.99,
         'gae': {
@@ -112,7 +112,10 @@ def make_network(env):
             log_prob_old = net.dist.log_likelihood(action, theta_old, process_theta=True)
 
             ratio = O.exp(log_prob - log_prob_old)
-            policy_loss = -O.reduce_mean(ratio * advantage)
+            epsilon = get_env('ppo.epsilon')
+            surr1 = ratio * advantage # surrogate from conservative policy iteration
+            surr2 = O.clip_by_value(ratio, 1.0 - epsilon, 1.0 + epsilon) * advantage
+            policy_loss = -O.reduce_mean(O.min(surr1, surr2))  # PPO's pessimistic surrogate (L^CLIP)
             entropy = net.dist.entropy(theta, process_theta=True).mean()
 
             net.add_output(policy_loss, name='policy_loss')

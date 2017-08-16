@@ -26,7 +26,7 @@ __envs__ = {
     },
     'trpo': {
         'env_name': 'LunarLanderContinuous-v2',
-        'max_nr_steps': 200,
+        'max_nr_steps': 2000,
 
         'gamma': 0.99,
         'gae': {
