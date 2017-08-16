@@ -63,7 +63,7 @@ __envs__ = {
 }
 
 __trainer_cls__ = rl.train.TRPOTrainer
-__trainer_env_cls__ = rl.train.TPROTrainerEnv
+__trainer_env_cls__ = rl.train.TRPOTrainerEnv
 
 
 def make_network(env):
