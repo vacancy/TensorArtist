@@ -53,7 +53,7 @@ class SynchronizedExperienceCollector(object):
         self._nr_workers = nr_workers
         self._nr_predictors = nr_predictors
         self._mode = mode
-        assert self._mode in ('EPISODE', 'STEP')
+        assert self._mode in ('EPISODE', 'EPISODE-STEP', 'STEP')
 
         self._predictor_output_names = predictor_output_names
         self._predictor_batch_size = predictor_batch_size
@@ -94,7 +94,7 @@ class SynchronizedExperienceCollector(object):
         self._task_end.broadcast()
 
         # Reduce all outputs.
-        if self._mode == 'EPISODE':
+        if self._mode.startswith('EPISODE'):
             outputs = []
             for ts in self._trajectories:
                 outputs.extend(ts)
@@ -110,6 +110,7 @@ class SynchronizedExperienceCollector(object):
             self._task_start.wait()
             player.restart()
             this_episode = []
+            self._trajectories[worker_id].append(this_episode)
 
             while True:
                 if self._task_end.check():
@@ -121,8 +122,10 @@ class SynchronizedExperienceCollector(object):
                 reward, is_over = player.action(prediction.action)
                 exp = Experience(state, prediction.action, prediction.outputs, reward, is_over)
 
-                if self._mode == 'EPISODE':
+                if self._mode.startswith('EPISODE'):
                     this_episode.append(exp)
+                    if self._mode == 'EPISODE-STEP':
+                        self._trajectories_counter.tick()
                 else:
                     self._trajectories[worker_id].append(exp)
                     self._trajectories_counter.tick()
@@ -131,7 +134,6 @@ class SynchronizedExperienceCollector(object):
                     player.restart()
                     this_episode = []
                     if self._mode == 'EPISODE':
-                        self._trajectories[worker_id].append(this_episode)
                         self._trajectories_counter.tick()
 
     def _predictor_thread(self):

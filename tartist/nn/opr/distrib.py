@@ -255,7 +255,7 @@ class GaussianDistribution(DistributionBase):
             return theta
         else:
             mean, stddev = O.split(theta, 2, axis=1)
-            # MJY:: FUCK
+            # MJY(20170814):: change (mean, logvar) to (mean, logstd)
             # stddev = O.sqrt(O.exp(stddev))
             stddev = O.exp(stddev)
             return O.concat([mean, stddev], axis=1)

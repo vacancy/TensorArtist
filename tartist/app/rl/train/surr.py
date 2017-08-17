@@ -43,7 +43,7 @@ class SynchronizedTrajectoryDataFlow(SimpleDataFlowBase):
         self._target = target
         self._incl_value = incl_value
 
-        assert self._collector.mode == 'EPISODE'
+        assert self._collector.mode.startswith('EPISODE')
 
     def _initialize(self):
         self._collector.initialize()
@@ -116,8 +116,9 @@ class TRPOOptimizer(CustomOptimizerBase):
     _name = 'trpo_optimizer'
 
     _cg_max_nr_iters = 10
-    _cg_residual_tol = 1e-8
-    _cg_eps = 1e-8
+    _cg_residual_tol = 1e-10
+    # _cg_eps = 1e-8
+    _cg_eps = 0
 
     def __init__(self, env, max_kl, cg_damping):
         self._env = env
@@ -195,7 +196,8 @@ class TRPOOptimizer(CustomOptimizerBase):
             tf.reduce_sum(tf.stop_gradient(stepdir) * kl_grads),
             var_list
         ))
-        shs = 0.5 * tf.reduce_sum(stepdir * fvp)
+        z = fvp + cg_damping * stepdir
+        shs = 0.5 * tf.reduce_sum(stepdir * z)
 
         lm = tf.sqrt(max_kl / (shs + 1e-8))
         full_step = stepdir * lm

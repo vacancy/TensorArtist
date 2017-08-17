@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : desc_trpo_box2d_LunarLanderContinuousV2.py
+# File   : desc_trpo_gae_box2d_RoboschoolHopperV1.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/08/2017
@@ -8,6 +8,7 @@
 
 import os
 import threading
+import roboschool
 
 import numpy as np
 
@@ -25,12 +26,15 @@ __envs__ = {
         'root': get_dump_directory(__file__),
     },
     'trpo': {
-        'env_name': 'LunarLanderContinuous-v2',
+        'env_name': 'RoboschoolHopper-v1',
         'max_nr_steps': 2000,
 
-        'gamma': 0.99,
+        'gamma': 0.995,
+        'gae': {
+            'lambda': 0.97,
+        },
 
-        'max_kl': 0.001,
+        'max_kl': 0.01,
         'cg': {
             'damping': 0.001
         },
@@ -38,8 +42,8 @@ __envs__ = {
         'use_linear_vr': True,
 
         'collector': {
-            'target': 20,
-            'nr_workers': 8,
+            'target': 25000,
+            'nr_workers': 4,
             'nr_predictors': 2,
 
             # Add 'value' if you don't use a linear value regressor.
@@ -54,8 +58,8 @@ __envs__ = {
    },
     'trainer': {
         'value_learning_rate': 0.001,
-        'epoch_size': 5,
-        'nr_epochs': 200,
+        'epoch_size': 10,
+        'nr_epochs': 300,
     }
 }
 
@@ -85,7 +89,7 @@ def make_network(env):
             with O.argscope(O.fc):
                 _ = O.fc('fc1', _, 64, nonlin=O.relu)
                 _ = O.fc('fc2', _, 64, nonlin=O.relu)
-                mu = O.fc('fc_mu', _, net.dist.sample_size)
+                mu = O.fc('fc_mu', _, net.dist.sample_size, nonlin=O.tanh)
                 logstd = O.variable('logstd', O.truncated_normal_initializer(stddev=0.01),
                                     shape=(net.dist.sample_size, ), trainable=True)
 
@@ -154,12 +158,14 @@ def make_optimizer(env):
 def make_dataflow_train(env):
     collector = rl.train.SynchronizedExperienceCollector(
         env, make_player, _outputs2action,
-        nr_workers=8, nr_predictors=2,
-        predictor_output_names=get_env('trpo.collector.predictor_output_names')
+        nr_workers=get_env('trpo.collector.nr_workers'), nr_predictors=get_env('trpo.collector.nr_predictors'),
+        predictor_output_names=get_env('trpo.collector.predictor_output_names'),
+        mode='EPISODE-STEP'
     )
 
     use_linear_vr = get_env('trpo.use_linear_vr')
-    return rl.train.SynchronizedTrajectoryDataFlow(collector, target=get_env('trpo.collector.target'), incl_value=not use_linear_vr)
+    return rl.train.SynchronizedTrajectoryDataFlow(
+        collector, target=get_env('trpo.collector.target'), incl_value=not use_linear_vr)
 
 
 @cached_result
@@ -219,8 +225,9 @@ def main_inference_play_multithread(trainer):
 
 
 def main_train(trainer):
-    from tartist.app.rl.train.adv_utils import DiscountedAdvantageComputer
-    trainer.set_adv_computer(DiscountedAdvantageComputer(get_env('trpo.gamma')))
+    from tartist.app.rl.train.adv_utils import DiscountedAdvantageComputer, GAEComputer
+    # trainer.set_adv_computer(DiscountedAdvantageComputer(get_env('trpo.gamma')))
+    trainer.set_adv_computer(GAEComputer(get_env('trpo.gamma'), get_env('trpo.gae.lambda')))
 
     # Register plugins
     from tartist.plugins.trainer_enhancer import summary
