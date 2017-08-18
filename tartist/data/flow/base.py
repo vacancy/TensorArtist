@@ -59,7 +59,7 @@ class SimpleDataFlowBase(DataFlowBase):
             self._finalize()
 
 
-class ProxyDataFlowBase(DataFlowBase):
+class ProxyDataFlowBase(SimpleDataFlowBase):
     def __init__(self, other):
         self._unwrapped = other
 
