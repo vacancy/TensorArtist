@@ -97,7 +97,7 @@ class RLEnvironBase(object):
         return self
 
     def evaluate_one_episode(self, func):
-        self.play_one_episode(func=lambda state: func(state=state[np.newaxis])['max_q'][0])
+        self.play_one_episode(func)
         score = self.stats['score'][-1]
         self.clear_stats()
         return score

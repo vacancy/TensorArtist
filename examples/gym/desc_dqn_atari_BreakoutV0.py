@@ -188,7 +188,7 @@ def main_inference_play_multithread(trainer):
         func = trainer.env.make_func()
         func.compile(trainer.env.network.outputs['argmax_q'])
         player = make_player()
-        score = player.evaluate_one_episode(lambda state: func(statae=state[np.newaxis])[0])
+        score = player.evaluate_one_episode(lambda state: func(state=state[np.newaxis])[0])
 
         mgr = trainer.runtime.get('summary_histories', None)
         if mgr is not None:
