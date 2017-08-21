@@ -144,8 +144,8 @@ def main_train(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
             main_inference_play_multithread(trainer)
 
-    # this one should run before monitor
     trainer.register_event('epoch:before', on_epoch_before, priority=5)
+    # This one should run before monitor.
     trainer.register_event('epoch:after', on_epoch_after, priority=5)
 
     trainer.train()

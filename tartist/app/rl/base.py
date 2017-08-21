@@ -96,6 +96,12 @@ class RLEnvironBase(object):
     def unwrapped(self):
         return self
 
+    def evaluate_one_episode(self, func):
+        self.play_one_episode(func=lambda state: func(state=state[np.newaxis])['max_q'][0])
+        score = self.stats['score'][-1]
+        self.clear_stats()
+        return score
+
 
 class SimpleRLEnvironBase(RLEnvironBase):
     _current_state = None

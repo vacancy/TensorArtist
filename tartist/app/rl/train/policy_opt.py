@@ -1,28 +1,25 @@
 # -*- coding:utf8 -*-
-# File   : surr.py
+# File   : policy_opt.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/08/2017
 # 
 # This file is part of TensorArtist.
 
-from .utils import vectorize_var_list
-from ..math_utils import normalize_advantage
-from tartist import random
-from tartist.core.utils.meta import notnone_property
-from tartist.data.flow import SimpleDataFlowBase
-from tartist.nn import summary
-from tartist.nn.graph import as_tftensor
-from tartist.nn.tfutils import escape_name
-from tartist.nn.optimizer import CustomOptimizerBase
-from tartist.nn.train import TrainerEnvBase, TrainerBase
-
 import numpy as np
 import tensorflow as tf
 
+from tartist.app.rl.utils.math import normalize_advantage
+from tartist.core.utils.meta import notnone_property
+from tartist.nn import summary
+from tartist.nn.graph import as_tftensor
+from tartist.nn.optimizer import CustomOptimizerBase
+from tartist.nn.tfutils import escape_name
+from tartist.nn.train import TrainerEnvBase, TrainerBase
+from .opr import vectorize_var_list
+
 __all__ = [
     'ACGraphKeys',
-    'SynchronizedTrajectoryDataFlow', 'TrajectoryBatchSampler',
     'TRPOOptimizer',
     'ACOptimizationTrainerEnv', 'TRPOTrainerEnv', 'PPOTrainerEnv',
     'SurrPolicyOptimizationTrainer', 'TRPOTrainer', 'PPOTrainer'
@@ -35,81 +32,6 @@ class ACGraphKeys:
 
     POLICY_SUMMARIES = 'policy_summaries'
     VALUE_SUMMARIES = 'value_summaries'
-
-
-class SynchronizedTrajectoryDataFlow(SimpleDataFlowBase):
-    def __init__(self, collector, target, incl_value):
-        self._collector = collector
-        self._target = target
-        self._incl_value = incl_value
-
-        assert self._collector.mode.startswith('EPISODE')
-
-    def _initialize(self):
-        self._collector.initialize()
-
-    def _gen(self):
-        while True:
-            data = self._collector.collect(self._target)
-            data = self._process(data)
-            yield data
-
-    def _process(self, raw_data):
-        data_list = []
-        for t in raw_data:
-            data = dict(
-                step=[],
-                state=[],
-                action=[],
-                theta_old=[],
-                reward=[],
-                value=[],
-                score=0
-            )
-
-            for i, e in enumerate(t):
-                data['step'].append(i)
-                data['state'].append(e.state)
-                data['action'].append(e.action)
-                data['theta_old'].append(e.outputs['theta'])
-                data['reward'].append(e.reward)
-                data['score'] += e.reward
-
-                if self._incl_value:
-                    data['value'].append(e.outputs['value'])
-
-            if not self._incl_value:
-                del data['value']
-
-            for k, v in data.items():
-                data[k] = np.array(v)
-
-            if len(t) > 0:
-                data_list.append(data)
-
-        return data_list
-
-
-class TrajectoryBatchSampler(object):
-    def __init__(self, batch_size, nr_repeat, rng=None):
-        self._batch_size = batch_size
-        self._nr_repeat = nr_repeat
-        self._rng = rng or random.gen_rng()
-
-    def _gen(self, data, keys):
-        n = len(data[keys[0]])
-
-        for i in range(self._nr_repeat):
-            idx = self._rng.permutation(n)
-            for j in range(n // self._batch_size):
-                this = {
-                    k: data[k][idx[j * self._batch_size:j * self._batch_size + self._batch_size]]
-                    for k in keys
-                }
-                yield this
-
-    def __call__(self, data, keys):
-        return self._gen(data, keys)
 
 
 class TRPOOptimizer(CustomOptimizerBase):

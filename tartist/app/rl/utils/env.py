@@ -1,12 +1,12 @@
 # -*- coding:utf8 -*-
-# File   : utils.py
+# File   : opr.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 3/18/17
 # 
 # This file is part of TensorArtist.
 
-from .base import ProxyRLEnvironBase
+from tartist.app.rl.base import ProxyRLEnvironBase
 from tartist.core import get_logger 
 from tartist.core.utils.meta import run_once
 import copy

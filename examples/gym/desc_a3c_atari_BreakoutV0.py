@@ -272,7 +272,7 @@ def make_a3c_configs(env):
     env.player_master.on_data_func = on_data_func
     env.player_master.on_stat_func = on_stat_func
 
-    # currently we don't use multi-proc inference, so these settings are not used at all
+    # Currently we don't use multi-proc inference, so these settings are not used at all.
     if False:
         from common_a3c import inference_on_data_func, inference_on_stat_func
         inference_predictor_func = functools.partial(_predictor_func, is_inference=True)
@@ -309,7 +309,7 @@ def main_train(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
             main_inference_play_multithread(trainer, make_player=make_player)
 
-    # this one should run before monitor
+    # This one should run before monitor.
     register_event(trainer, 'epoch:after', on_epoch_after, priority=5)
 
     trainer.train()

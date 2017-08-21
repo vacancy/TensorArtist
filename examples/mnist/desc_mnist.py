@@ -57,7 +57,7 @@ def make_network(env):
             dpc.set_input_maker(inputs).set_forward_func(forward)
 
         _ = dpc.outputs['feature']
-        _ = O.fc('fc1', _, 64)
+        _ = O.fc('fc1', _, 64, nonlin=O.relu)
         _ = O.fc('fc2', _, 10)
 
         # it's safe to use tf.xxx and O.xx together

@@ -420,7 +420,8 @@ def make_a3c_configs(env):
         devices=[env.master_device] * get_env('rpredictor.nr_ensembles'),
         nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'),
         retrain_thresh=get_env('rpredictor.retrain_thresh'))
-    env.set_pcollector(libhpref.PreferenceCollector(rpredictor, get_env('pcollector.web_configs'),
+    env.set_pcollector(libhpref.PreferenceCollector(
+        rpredictor, get_env('pcollector.web_configs'),
         video_length=get_env('pcollector.video_length'), window_length=get_env('pcollector.window_length'),
         pool_size=get_env('pcollector.pool_size')))
 
@@ -451,7 +452,6 @@ def main_train(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
             main_inference_play_multithread(trainer, make_player=make_player)
 
-    # this one should run before monitor
     register_event(trainer, 'epoch:after', on_epoch_after, priority=5)
 
     trainer.train()

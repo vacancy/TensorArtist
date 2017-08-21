@@ -2,11 +2,11 @@
 # File   : __init__.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
-# Date   : 3/19/17
+# Date   : 17/08/2017
 # 
 # This file is part of TensorArtist.
 
-from .a3c import *
-from .evolution import *
-from .experience import *
-from .policy_opt import *
+
+from .adv import *
+from .data import *
+from .env import *

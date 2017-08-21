@@ -19,6 +19,8 @@ from tartist.core.utils.meta import map_exec
 from tartist.core.utils.naming import get_dump_directory
 from tartist.nn import opr as O, optimizer, summary
 
+assert roboschool
+
 logger = get_logger(__file__)
 
 __envs__ = {
@@ -73,7 +75,7 @@ def make_network(env):
     with env.create_network() as net:
         net.dist = O.distrib.GaussianDistribution('policy', size=get_action_shape()[0], fixed_std=False)
         if use_linear_vr:
-            from tartist.app.rl.math_utils import LinearValueRegressor
+            from tartist.app.rl.utils.math import LinearValueRegressor
             net.value_regressor = LinearValueRegressor()
 
         state = O.placeholder('state', shape=(None, ) + get_input_shape())
@@ -156,6 +158,9 @@ def make_optimizer(env):
 
 
 def make_dataflow_train(env):
+    def _outputs2action(outputs):
+        return outputs['policy']
+
     collector = rl.train.SynchronizedExperienceCollector(
         env, make_player, _outputs2action,
         nr_workers=get_env('trpo.collector.nr_workers'), nr_predictors=get_env('trpo.collector.nr_predictors'),
@@ -164,7 +169,7 @@ def make_dataflow_train(env):
     )
 
     use_linear_vr = get_env('trpo.use_linear_vr')
-    return rl.train.SynchronizedTrajectoryDataFlow(
+    return rl.utils.SynchronizedTrajectoryDataFlow(
         collector, target=get_env('trpo.collector.target'), incl_value=not use_linear_vr)
 
 
@@ -184,10 +189,6 @@ def get_action_shape():
     n = p.action_space.shape
     del p
     return tuple(n)
-
-
-def _outputs2action(outputs):
-    return outputs['policy']
 
 
 def _theta2action(theta):
@@ -225,11 +226,11 @@ def main_inference_play_multithread(trainer):
 
 
 def main_train(trainer):
-    from tartist.app.rl.train.adv_utils import DiscountedAdvantageComputer, GAEComputer
+    from tartist.app.rl.utils.adv import GAEComputer
     # trainer.set_adv_computer(DiscountedAdvantageComputer(get_env('trpo.gamma')))
     trainer.set_adv_computer(GAEComputer(get_env('trpo.gamma'), get_env('trpo.gae.lambda')))
 
-    # Register plugins
+    # Register plugins.
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer, extra_summary_types={
         'inference/score': 'async_scalar',
@@ -248,7 +249,7 @@ def main_train(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
             main_inference_play_multithread(trainer)
 
-    # this one should run before monitor
+    # This one should run before monitor.
     trainer.register_event('epoch:after', on_epoch_after, priority=5)
 
     trainer.train()

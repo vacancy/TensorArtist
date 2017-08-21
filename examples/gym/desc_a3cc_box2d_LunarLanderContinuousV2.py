@@ -248,7 +248,7 @@ def get_action_range():
     l, h = p.action_space.low, p.action_space.high
     del p
 
-    # Convert it to float32 to match the network's data type
+    # Convert it to float32 to match the network's data type.
     return l.astype('float32'), h.astype('float32')
 
 
@@ -357,7 +357,7 @@ def main_train(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
             main_inference_play_multithread(trainer, make_player=make_player)
 
-    # this one should run before monitor
+    # This one should run before monitor.
     register_event(trainer, 'epoch:after', on_epoch_after, priority=5)
 
     trainer.train()

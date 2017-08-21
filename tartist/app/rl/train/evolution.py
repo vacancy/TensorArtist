@@ -6,13 +6,10 @@
 # 
 # This file is part of TensorArtist.
 
-from .utils import make_param_gs
+from .opr import make_param_gs
 
 from tartist import random
 from tartist.core.utils.meta import notnone_property
-from tartist.nn import opr as O
-from tartist.nn.tfutils import escape_name
-from tartist.nn.graph import as_varnode, as_tftensor
 from tartist.nn.optimizer import CustomOptimizerBase
 from tartist.nn.train import TrainerBase
 
