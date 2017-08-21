@@ -169,7 +169,7 @@ def make_dataflow_train(env):
     )
 
     use_linear_vr = get_env('trpo.use_linear_vr')
-    return rl.utils.SynchronizedTrajectoryDataFlow(
+    return rl.train.SynchronizedTrajectoryDataFlow(
         collector, target=get_env('trpo.collector.target'), incl_value=not use_linear_vr)
 
 

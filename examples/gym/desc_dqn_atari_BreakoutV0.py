@@ -1,26 +1,23 @@
 # -*- coding:utf8 -*-
-# File   : desc_dqn_roboschool_HopperV1.py
+# File   : desc_dqn_atari_Breakout.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
-# Date   : 15/08/2017
+# Date   : 20/08/2017
 # 
 # This file is part of TensorArtist.
 
 import os
 import threading
-import roboschool
 
 import numpy as np
 
-from tartist import image
+from tartist import image, random
 from tartist.app import rl
 from tartist.core import get_env, get_logger
 from tartist.core.utils.cache import cached_result
 from tartist.core.utils.meta import map_exec
 from tartist.core.utils.naming import get_dump_directory
 from tartist.nn import opr as O, optimizer, summary
-
-assert roboschool
 
 logger = get_logger(__file__)
 
@@ -41,7 +38,7 @@ __envs__ = {
 
         'collector': {
             'target': 64000,
-            'nr_workers': 4,
+            'nr_workers': 8,
             'nr_predictors': 2,
 
             # Add 'value' if you don't use a linear value regressor.
@@ -57,8 +54,7 @@ __envs__ = {
         }
     },
     'trainer': {
-        'policy_learning_rate': 0.0003,
-        'value_learning_rate': 0.001,
+        'learning_rate': 0.001,
         'nr_epochs': 200,
 
         # Parameters for Q-learner.
@@ -71,9 +67,6 @@ __envs__['trainer']['epoch_size'] = (
     __envs__['dqn']['collector']['target'] // __envs__['trainer']['batch_size'] *
     __envs__['trainer']['data_repeat']
 )
-
-__trainer_cls__ = rl.train.PPOTrainer
-__trainer_env_cls__ = rl.train.PPOTrainerEnv
 
 
 def make_network(env):
@@ -118,7 +111,11 @@ def make_network(env):
 
         if is_train:
             q_label = O.placeholder('q_value', shape=(None, ), dtype='float32')
-            q_loss = O.raw_l2_loss('raw_q_loss', q_pred, q_label).mean(name='q_loss')
+            action = O.placeholder('action', shape=(None, ), dtype='int64')
+            q_loss = (
+                O.raw_l2_loss('raw_q_loss', q_pred, q_label.add_axis(1)) * 
+                O.one_hot(action, get_player_nr_actions())
+            ).mean(name='q_loss')
             net.set_loss(q_loss)
 
     if is_train:
@@ -152,8 +149,10 @@ def make_optimizer(env):
 
 
 def make_dataflow_train(env):
+    rng = random.gen_rng()
+
     def _outputs2action(outputs):
-        return outputs['max_q']
+        return outputs['argmax_q'] if rng.rand() < 0.05 else rng.choice(get_player_nr_actions())
 
     collector = rl.train.SynchronizedExperienceCollector(
         env, make_player, _outputs2action,
@@ -162,9 +161,10 @@ def make_dataflow_train(env):
         mode='EPISODE-STEP'
     )
 
-    return rl.utils.QLearningDataFlow(collector, target=get_env('dqn.collector.target'),
-                                      gamma=get_env('dqn.gamma'), nr_td_steps=get_env('dqn.nr_td_steps'),
-                                      batch_size=get_env('trainer.batch_size'), nr_repeat=get_env('trainer.nr_repeat'))
+    return rl.train.QLearningDataFlow(
+        collector, target=get_env('dqn.collector.target'),
+        gamma=get_env('dqn.gamma'), nr_td_steps=get_env('dqn.nr_td_steps'),
+        batch_size=get_env('trainer.batch_size'), nr_repeat=get_env('trainer.data_repeat'))
 
 
 @cached_result
@@ -186,9 +186,9 @@ def get_input_shape():
 def main_inference_play_multithread(trainer):
     def runner():
         func = trainer.env.make_func()
-        func.compile({'theta': trainer.env.network.outputs['theta']})
+        func.compile(trainer.env.network.outputs['argmax_q'])
         player = make_player()
-        score = player.evaluate_one_episode(func)
+        score = player.evaluate_one_episode(lambda state: func(statae=state[np.newaxis])[0])
 
         mgr = trainer.runtime.get('summary_histories', None)
         if mgr is not None:
@@ -227,17 +227,13 @@ def main_train(trainer):
 
 
 def main_demo(env, func):
-    func.compile({'theta': env.network.outputs['theta']})
+    func.compile(env.network.outputs['argmax_q'])
 
     dump_dir = get_env('dir.demo', os.path.join(get_env('dir.root'), 'demo'))
     logger.info('Demo dump dir: {}'.format(dump_dir))
     player = make_player(dump_dir=dump_dir)
     repeat_time = get_env('dqn.demo.nr_plays', 1)
 
-    def get_action(inp, func=func):
-        action = func(state=inp[np.newaxis])['max_q'][0]
-        return action
-
     for i in range(repeat_time):
-        player.play_one_episode(get_action)
+        player.play_one_episode(func=lambda state: func(state=state[np.newaxis])[0])
         logger.info('#{} play score={}'.format(i, player.stats['score'][-1]))

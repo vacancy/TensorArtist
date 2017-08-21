@@ -8,6 +8,8 @@
 
 from .rng import gen_rng
 
+__all__ = ['SimpleBatchSampler']
+
 
 class SimpleBatchSampler(object):
     def __init__(self, batch_size, nr_repeat, rng=None):
@@ -17,6 +19,7 @@ class SimpleBatchSampler(object):
 
     def _gen(self, data, keys):
         n = len(data[keys[0]])
+        print(n)
 
         for i in range(self._nr_repeat):
             idx = self._rng.permutation(n)

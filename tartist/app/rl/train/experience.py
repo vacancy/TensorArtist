@@ -64,6 +64,7 @@ class SynchronizedExperienceCollector(object):
         self._prediction_queue = queue.Queue()
         self._trajectories = []
         self._trajectories_counter = None
+        self._collect_mutex = threading.Lock()
 
     @property
     def owner_env(self):
@@ -81,6 +82,10 @@ class SynchronizedExperienceCollector(object):
         map_exec(Thread.start, predictors)
 
     def collect(self, target):
+        with self._collect_mutex:
+            return self.__collect(target)
+
+    def __collect(self, target):
         self._trajectories = [[] for _ in range(self._nr_workers)]
         self._trajectories_counter = TSCounterBasedEvent(target)
 
@@ -100,7 +105,7 @@ class SynchronizedExperienceCollector(object):
                 outputs.extend(ts)
             return outputs
         else:
-            return self._trajectories
+            return self._trajectories.copy()
 
     def _worker_thread(self, worker_id):
         player = self._make_player()
@@ -109,8 +114,10 @@ class SynchronizedExperienceCollector(object):
         while True:
             self._task_start.wait()
             player.restart()
+
             this_episode = []
-            self._trajectories[worker_id].append(this_episode)
+            if self._mode.startswith('EPISODE'):
+                self._trajectories[worker_id].append(this_episode)
 
             while True:
                 if self._task_end.check():
@@ -132,7 +139,10 @@ class SynchronizedExperienceCollector(object):
 
                 if is_over:
                     player.restart()
+
                     this_episode = []
+                    if self._mode.startswith('EPISODE'):
+                        self._trajectories[worker_id].append(this_episode)
                     if self._mode == 'EPISODE':
                         self._trajectories_counter.tick()
 

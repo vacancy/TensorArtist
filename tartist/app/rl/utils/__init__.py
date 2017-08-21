@@ -8,5 +8,4 @@
 
 
 from .adv import *
-from .data import *
 from .env import *

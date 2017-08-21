@@ -66,7 +66,7 @@ class SynchronizedTrajectoryDataFlow(SimpleDataFlowBase):
         return data_list
 
 
-class QLearningDataFlow(object):
+class QLearningDataFlow(SimpleDataFlowBase):
     _data_keys = ('state', 'action', 'q_value')
 
     def __init__(self, collector, target, gamma, batch_size, nr_repeat, nr_td_steps=1):
@@ -91,7 +91,9 @@ class QLearningDataFlow(object):
     def _process(self, raw_data):
         data = {k: [] for k in self._data_keys}
 
-        for t in raw_data:
+        for tid, t in enumerate(raw_data):
+            print(tid, len(t))
+
             for i in range(len(t) - self._nr_td_steps, -1, -1):
                 e = t[i]
 
