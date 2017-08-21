@@ -6,6 +6,7 @@
 # 
 # This file is part of TensorArtist.
 
+from ..core.utils.nd import gather_list_batch
 from .rng import gen_rng
 
 __all__ = ['SimpleBatchSampler']
@@ -19,14 +20,15 @@ class SimpleBatchSampler(object):
 
     def _gen(self, data, keys):
         n = len(data[keys[0]])
-        print(n)
 
         for i in range(self._nr_repeat):
             idx = self._rng.permutation(n)
             for j in range(n // self._batch_size):
                 this = {
-                    k: data[k][idx[j * self._batch_size:j * self._batch_size + self._batch_size]]
-                    for k in keys
+                    k: gather_list_batch(
+                        data[k],
+                        idx[j * self._batch_size:j * self._batch_size + self._batch_size]
+                    ) for k in keys
                 }
                 yield this
 

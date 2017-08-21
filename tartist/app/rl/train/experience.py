@@ -6,15 +6,20 @@
 # 
 # This file is part of TensorArtist.
 
+from tartist.core import get_logger
 from tartist.core.utils.meta import map_exec
 from tartist.core.utils.concurrent_stat import TSCounterBasedEvent, TSCoordinatorEvent
+from tartist.core.utils.thirdparty import get_tqdm_defaults
 
 from threading import Thread
+from tqdm import tqdm
 
 import queue
 import threading
 import collections
 import numpy as np
+
+logger = get_logger(__file__)
 
 __all__ = ['SynchronizedExperienceCollector']
 
@@ -83,11 +88,13 @@ class SynchronizedExperienceCollector(object):
 
     def collect(self, target):
         with self._collect_mutex:
+            logger.critical('Trajectory collecting begins: target={}.'.format(target))
             return self.__collect(target)
+            logger.critical('Trajectory collecting finished.')
 
     def __collect(self, target):
         self._trajectories = [[] for _ in range(self._nr_workers)]
-        self._trajectories_counter = TSCounterBasedEvent(target)
+        self._trajectories_counter = TSCounterBasedEvent(target, tqdm=tqdm(total=target, **get_tqdm_defaults()))
 
         # Start all workers.
         self._task_start.broadcast()

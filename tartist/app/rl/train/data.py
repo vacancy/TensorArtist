@@ -92,8 +92,6 @@ class QLearningDataFlow(SimpleDataFlowBase):
         data = {k: [] for k in self._data_keys}
 
         for tid, t in enumerate(raw_data):
-            print(tid, len(t))
-
             for i in range(len(t) - self._nr_td_steps, -1, -1):
                 e = t[i]
 
@@ -104,8 +102,9 @@ class QLearningDataFlow(SimpleDataFlowBase):
                 data['state'].append(e.state)
                 data['action'].append(e.action)
                 data['q_value'].append(q)
-
-        for k, v in data.items():
-            data[k] = np.array(v)[:self._target]
+        
+        # Use advanced gather_list_batch, so we don't need to convert the result to an ndarray.
+        # for k, v in data.items():
+        #     data[k] = np.array(v)[:self._target]
 
         return data
