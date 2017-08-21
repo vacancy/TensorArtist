@@ -6,6 +6,7 @@
 # 
 # This file is part of TensorArtist.
 
+from .base import DiscreteActionSpace
 from .base import ProxyRLEnvironBase
 from tartist.core import get_logger 
 from tartist.core.utils.meta import run_once
@@ -21,8 +22,8 @@ __all__ = [
         'TransparentAttributeProxyRLEnviron',
         'AutoRestartProxyRLEnviron', 
         'RepeatActionProxyRLEnviron', 'NOPFillProxyRLEnviron',
-        'LimitLengthProxyRLEnviron', 
-        'MapStateProxyRLEnviron', 'HistoryFrameProxyRLEnviron',
+        'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron',
+        'MapActionProxyRLEnviron', 'HistoryFrameProxyRLEnviron',
         'ManipulateRewardProxyRLEnviron', 'manipulate_reward', 
         'remove_proxies', 'find_proxy']
 
@@ -105,6 +106,26 @@ class MapStateProxyRLEnviron(ProxyRLEnvironBase):
 
     def _get_current_state(self):
         return self._func(self.proxy.current_state)
+
+
+class MapActionProxyRLEnviron(ProxyRLEnvironBase):
+    def __init__(self, other, mapping):
+        super().__init__(other)
+        assert type(mapping) in [tuple, list]
+        for i in mapping:
+            assert type(i) is int
+        self._mapping = mapping
+        action_space = other.action_space
+        assert isinstance(action_space, DiscreteActionSpace)
+        action_meanings = [action_space.action_meanings[i] for i in mapping]
+        self._action_space = DiscreteActionSpace(len(mapping), action_meanings)
+
+    def _get_action_space(self):
+        return self._action_space
+
+    def _action(self, action):
+        assert action < len(self._mapping)
+        return self.proxy.action(self._mapping[action])
 
 
 HistoryFrameProxyRLEnviron_copy_warning = run_once(lambda: logger.warn('HistoryFrameProxyRLEnviron._copy' +
