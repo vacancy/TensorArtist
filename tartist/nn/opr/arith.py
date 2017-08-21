@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : aris.py
+# File   : arith.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 2/27/17
