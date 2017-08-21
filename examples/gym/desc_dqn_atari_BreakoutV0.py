@@ -115,7 +115,7 @@ def make_network(env):
             q_loss = (
                 O.raw_l2_loss('raw_q_loss', q_pred, q_label.add_axis(1)) * 
                 O.one_hot(action, get_player_nr_actions())
-            ).mean(name='q_loss')
+            ).sum(axis=1).mean(name='q_loss')
             net.set_loss(q_loss)
 
     if is_train:
