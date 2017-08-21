@@ -119,9 +119,6 @@ range = migrate_opr('range', _tf.range)
 where = migrate_opr('where', _tf.where)
 meshgrid = migrate_opr('meshgrid', _tf.meshgrid)
 
-# condition, loop
-cond = migrate_opr('cond', _tf.cond)
-
 # control
 zero_grad = migrate_opr('zero_grad', _tf.stop_gradient)
 group = migrate_opr('group', _tf.group)
