@@ -9,7 +9,8 @@
 import numpy as np
 
 from tartist.data.flow import SimpleDataFlowBase
-from tartist.random.sampler import SimpleBatchSampler
+from tartist.random.sampler import EpochBatchSampler
+from collections import deque
 
 __all__ = ['SynchronizedTrajectoryDataFlow', 'QLearningDataFlow']
 
@@ -67,44 +68,49 @@ class SynchronizedTrajectoryDataFlow(SimpleDataFlowBase):
 
 
 class QLearningDataFlow(SimpleDataFlowBase):
-    _data_keys = ('state', 'action', 'q_value')
+    _data_keys = ('state', 'action', 'next_state', 'reward', 'is_over')
+    _memory = None
 
-    def __init__(self, collector, target, gamma, batch_size, nr_repeat, nr_td_steps=1):
+    def __init__(self, collector, target, maxsize, batch_size, epoch_size, nr_td_steps=1, gamma=1, reward_cb=None):
         self._collector = collector
         self._target = target
-        self._gamma = gamma
+        self._maxsize = maxsize
+        self._sampler = EpochBatchSampler(batch_size, epoch_size)
+
         self._nr_td_steps = nr_td_steps
-        self._sampler = SimpleBatchSampler(batch_size, nr_repeat)
+        self._gamma = gamma
+        self._reward_cb = reward_cb
 
         assert self._collector.mode.startswith('EPISODE')
 
     def _initialize(self):
         self._collector.initialize()
+        self._memory = {k: deque(maxlen=self._maxsize) for k in self._data_keys}
 
     def _gen(self):
         while True:
             data = self._collector.collect(self._target)
-            data = self._process(data)
-            for batch in self._sampler(data, keys=self._data_keys):
+            self._add_to_memory(data)
+            for batch in self._sampler(self._memory, keys=self._data_keys):
                 yield batch
 
-    def _process(self, raw_data):
-        data = {k: [] for k in self._data_keys}
+    def _process_reward(self, r):
+        if self._reward_cb is None:
+            return r
+        return self._reward_cb(r)
 
-        for tid, t in enumerate(raw_data):
-            for i in range(len(t) - self._nr_td_steps, -1, -1):
-                e = t[i]
+    def _add_to_memory(self, raw_data):
+        for t in raw_data:
+            for i, e in enumerate(t):
+                j = min(i + self._nr_td_steps, len(t))
+                f = t[j - 1]
 
-                q = t[i + self._nr_td_steps].outputs['max_q'] if i + self._nr_td_steps < len(t) else 0
-                for j in range(self._nr_td_steps - 1, -1, -1):
-                    q = q * self._gamma + t[i + j].reward
+                reward = 0
+                for k in range(j-1, i-1, -1):
+                    reward = reward * self._gamma + self._process_reward(t[k].reward)
 
-                data['state'].append(e.state)
-                data['action'].append(e.action)
-                data['q_value'].append(q)
-        
-        # Use advanced gather_list_batch, so we don't need to convert the result to an ndarray.
-        # for k, v in data.items():
-        #     data[k] = np.array(v)[:self._target]
-
-        return data
+                self._memory['state'].append(e.state)
+                self._memory['action'].append(e.action)
+                self._memory['next_state'].append(f.state)
+                self._memory['reward'].append(reward)
+                self._memory['is_over'].append(e.is_over)

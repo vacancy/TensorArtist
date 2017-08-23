@@ -93,7 +93,7 @@ def make_network(env):
             with O.argscope(O.fc):
                 _ = O.fc('fc1', _, 64, nonlin=O.relu)
                 _ = O.fc('fc2', _, 64, nonlin=O.relu)
-                mu = O.fc('fc_mu', _, net.dist.sample_size)
+                mu = O.fc('fc_mu', _, net.dist.sample_size, nonlin=O.tanh)
                 logstd = O.variable('logstd', O.truncated_normal_initializer(stddev=0.01),
                                     shape=(net.dist.sample_size, ), trainable=True)
 

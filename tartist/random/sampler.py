@@ -9,7 +9,37 @@
 from ..core.utils.nd import gather_list_batch
 from .rng import gen_rng
 
-__all__ = ['SimpleBatchSampler']
+__all__ = ['EpochBatchSampler', 'SimpleBatchSampler']
+
+
+class _SizedGenerator(object):
+    def __init__(self, generator, length):
+        self._generator = generator
+        self._length = length
+
+    def __iter__(self):
+        for i in self._generator:
+            yield i
+
+    def __len__(self):
+        return self._length
+
+
+class EpochBatchSampler(object):
+    def __init__(self, batch_size, epoch_size, rng=None):
+        self._batch_size = batch_size
+        self._epoch_size = epoch_size
+        self._rng = rng or gen_rng()
+
+    def _gen(self, data, keys):
+        n = len(data[keys[0]])
+        for i in range(self._epoch_size):
+            this_idx = self._rng.randint(n, size=self._batch_size)
+            this = {k: gather_list_batch(data[k], this_idx) for k in keys}
+            yield this
+
+    def __call__(self, data, keys):
+        return _SizedGenerator(self._gen(data, keys), self._epoch_size)
 
 
 class SimpleBatchSampler(object):
@@ -24,13 +54,13 @@ class SimpleBatchSampler(object):
         for i in range(self._nr_repeat):
             idx = self._rng.permutation(n)
             for j in range(n // self._batch_size):
-                this = {
-                    k: gather_list_batch(
-                        data[k],
-                        idx[j * self._batch_size:j * self._batch_size + self._batch_size]
-                    ) for k in keys
-                }
+                this_idx = idx[j * self._batch_size:j * self._batch_size + self._batch_size]
+                this = {k: gather_list_batch(data[k], this_idx) for k in keys}
                 yield this
 
+    def _len(self, data, keys):
+        n = len(data[keys[0]])
+        return self._nr_repeat * (n // self._batch_size)
+
     def __call__(self, data, keys):
-        return self._gen(data, keys)
+        return _SizedGenerator(self._gen(data, keys), self._len(data, keys))

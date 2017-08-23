@@ -94,7 +94,8 @@ class SynchronizedExperienceCollector(object):
 
     def __collect(self, target):
         self._trajectories = [[] for _ in range(self._nr_workers)]
-        self._trajectories_counter = TSCounterBasedEvent(target, tqdm=tqdm(total=target, **get_tqdm_defaults()))
+        self._trajectories_counter = TSCounterBasedEvent(
+                target, tqdm=tqdm(total=target, desc='Trajectory collecting', **get_tqdm_defaults()))
 
         # Start all workers.
         self._task_start.broadcast()

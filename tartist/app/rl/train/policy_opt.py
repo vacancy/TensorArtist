@@ -6,17 +6,19 @@
 # 
 # This file is part of TensorArtist.
 
-import numpy as np
-import tensorflow as tf
-
+from .opr import vectorize_var_list
 from tartist.app.rl.utils.math import normalize_advantage
 from tartist.core.utils.meta import notnone_property
+from tartist.core.utils.thirdparty import get_tqdm_defaults
 from tartist.nn import summary
 from tartist.nn.graph import as_tftensor
 from tartist.nn.optimizer import CustomOptimizerBase
 from tartist.nn.tfutils import escape_name
 from tartist.nn.train import TrainerEnvBase, TrainerBase
-from .opr import vectorize_var_list
+
+import numpy as np
+import tensorflow as tf
+from tqdm import tqdm
 
 __all__ = [
     'ACGraphKeys',
@@ -372,7 +374,14 @@ class PPOTrainer(SurrPolicyOptimizationTrainer):
         self._batch_sampler = sampler
 
     def _run_step_p(self, feed_dict):
-        for batch in self.batch_sampler(feed_dict, self._p_feed_dict_keys):
+        iterator = self.batch_sampler(feed_dict, self._p_feed_dict_keys)
+        for batch in tqdm(
+                iterator,
+                desc='Proximal policy optimizing',
+                total=len(iterator),
+                **get_tqdm_defaults()
+            ):
+
             self._p_func.call_args(batch)
         p_outputs = self._p_func_inference.call_args({k: feed_dict[k] for k in self._p_feed_dict_keys})
         return p_outputs
