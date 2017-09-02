@@ -3,7 +3,7 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 02/09/2017
-# 
+#
 # This file is part of TensorArtist.
 
 import logging
