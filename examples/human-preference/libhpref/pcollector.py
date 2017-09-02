@@ -60,6 +60,9 @@ class PreferenceCollector(object):
         self._webserver = WebServer(self, configs=web_configs)
         self._webserver_thread = None
 
+    def ready_for_step(self, epoch):
+        return self._rpredictor.ready_for_step(epoch)
+
     def initialize(self):
         self.__restore_preferences()
         self._webserver_thread = threading.Thread(target=self._webserver.mainloop, daemon=True)

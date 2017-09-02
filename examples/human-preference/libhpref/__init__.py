@@ -7,5 +7,6 @@
 # This file is part of TensorArtist.
 
 from .pcollector import *
+from .pcollector_schedule import *
 from .rpredictor import *
 from .train import *

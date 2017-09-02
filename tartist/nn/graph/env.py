@@ -44,16 +44,19 @@ def select_device(devid, env):
     return tf.device(env.slave_devices[devid - 1])
 
 
-def reuse_context(activate=True):
+def reuse_context(activate=True, name=None):
     """
     enable variable reuse context, without any name
 
     :param activate: whether use or not, this is useful when you have some conditional parameters to enable
     parameter reuse
+    :param name: if provided, use as the name for variable_scope
     :return: if active, return a reuse variable scope, otherwise an empty context
     """
+    name = name or tf.get_variable_scope()
+
     if activate:
-        return tf.variable_scope(tf.get_variable_scope(), reuse=True)
+        return tf.variable_scope(name, reuse=True)
     else:
         return EmptyContext()
 

@@ -184,19 +184,24 @@ class AllOprGetter(object):
 lazy_O = AllOprGetter()
 
 
-def auto_reuse(func):
-    used_graphs = set()
+def auto_reuse(*args, name=None):
+    def wrapper(func):
+        used_graphs = set()
 
-    @functools.wraps(func)
-    def wrapped(*args, **kwargs):
-        g = tf.get_default_graph()
-        if g not in used_graphs:
-            used_graphs.add(g)
-            reuse = False
-        else:
-            reuse = True
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            g = tf.get_default_graph()
+            if g not in used_graphs:
+                used_graphs.add(g)
+                reuse = False
+            else:
+                reuse = True
 
-        with reuse_context(activate=reuse):
-            return func(*args, **kwargs)
+            with reuse_context(activate=reuse, name=name):
+                return func(*args, **kwargs)
 
-    return wrapped
+        return wrapped
+
+    if len(args) == 1 and callable(args[0]):
+        return wrapper(args[0])
+    return wrapper

@@ -414,8 +414,9 @@ def make_a3c_configs(env):
 
     predictor_desc = libhpref.PredictorDesc(make_rpredictor_network, make_rpredictor_optimizer,
                                             None, None, None)
+    scheduler = libhpref.ExponentialDecayCollectorScheduler(1000, 200, get_env('trainer.nr_epochs'))
     env.player_master.rpredictor = rpredictor = libhpref.EnsemblePredictor(
-        env, predictor_desc,
+        env, scheduler, predictor_desc,
         nr_ensembles=get_env('rpredictor.nr_ensembles'),
         devices=[env.master_device] * get_env('rpredictor.nr_ensembles'),
         nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'),

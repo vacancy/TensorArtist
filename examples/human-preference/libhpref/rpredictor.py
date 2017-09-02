@@ -9,6 +9,7 @@
 from tartist import random
 from tartist.core import get_logger, register_event
 from tartist.core.utils.meta import map_exec
+from tartist.core.utils.logging import EveryNSecondLogger
 from tartist.data.flow import PoolRandomSampleDataFlow, PoolDataFlow
 from tartist.nn.train import SimpleTrainerEnv, SimpleTrainer
 import threading
@@ -113,15 +114,20 @@ class PredictorBase(object):
     def predict_batch(self, state_batch, action_batch):
         raise NotImplementedError()
 
+    def ready_for_step(self, epoch):
+        raise NotImplementedError()
+
 
 class EnsemblePredictor(PredictorBase):
     _validation_ratio = 1 / 2.718281828
     _network_output_name = 'reward'
 
-    def __init__(self, owner_env, desc, nr_ensembles, devices,
+    def __init__(self, owner_env, scheduler, desc, nr_ensembles, devices,
                  nr_epochs, epoch_size, retrain_thresh=10):
 
         self._owner_env = owner_env
+        self._scheduler = scheduler
+        self._schedule_logger = EveryNSecondLogger(logger, 2)
         self._desc = desc
         self._nr_ensembles = nr_ensembles
         self._devices = devices
@@ -136,6 +142,7 @@ class EnsemblePredictor(PredictorBase):
         self._dataflows = []
 
         self._data_pool = []
+        # number of data points used for training last time step
         self._data_pool_last = 0
         self._data_pool_lock = threading.Lock()
         # list of list of data
@@ -205,6 +212,14 @@ class EnsemblePredictor(PredictorBase):
 
             result = [_compute_e_var(r, ret_variance=ret_variance) for r in rs]
             return result
+
+    def ready_for_step(self, epoch):
+        with self._data_pool_lock:
+            target, curr = self._scheduler.get_target(epoch), self._data_pool_last
+        if curr < target:
+            self._schedule_logger.info('Insufficient data for epoch {}: {}/{}.'.format(epoch, curr, target))
+            return False
+        return True
 
     @property
     def _make_network(self):
