@@ -264,6 +264,9 @@ class EnsemblePredictor(PredictorBase):
         with self._funcs_predict_lock:
             self.__make_predictors()
 
+    def train_again(self):
+        return self._try_train_again()
+
     def _try_train_again(self):
         """Try to run the training. If the predictors are being trained, do nothing"""
         rc = self._training_lock.acquire(blocking=False)
@@ -272,6 +275,8 @@ class EnsemblePredictor(PredictorBase):
             t = threading.Thread(target=self.__do_train_again)
             t.start()
             self._training_lock.release()
+
+        return rc
 
     def __do_train_again(self):
         """Do the actual training."""

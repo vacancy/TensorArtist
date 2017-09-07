@@ -29,7 +29,7 @@ __envs__ = {
         'env_name': 'BreakoutNoFrameskip-v4',
         'input_shape': (84, 84),
 
-        'nr_history_frames': 1,
+        'nr_history_frames': 4,
         'max_nr_steps': 40000,
         'frame_skip': 4,
 

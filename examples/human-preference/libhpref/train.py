@@ -10,6 +10,7 @@ from tartist.app.rl.train import A3CMaster, A3CTrainer, A3CTrainerEnv
 from tartist.core import get_env
 from tartist.core.utils.meta import notnone_property
 
+import time
 import threading
 
 __all__ = ['HPA3CMaster', 'HPA3CTrainerEnv', 'HPA3CTrainer']
@@ -85,4 +86,6 @@ class HPA3CTrainer(A3CTrainer):
         if self.env.pcollector.ready_for_step(self.epoch):
             super()._wrapped_run_step()
             return True
+
+        time.sleep(1)
         return False

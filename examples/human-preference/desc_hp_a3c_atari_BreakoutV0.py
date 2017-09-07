@@ -420,7 +420,8 @@ def make_a3c_configs(env):
         nr_ensembles=get_env('rpredictor.nr_ensembles'),
         devices=[env.master_device] * get_env('rpredictor.nr_ensembles'),
         nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'),
-        retrain_thresh=get_env('rpredictor.retrain_thresh'))
+        # retrain_thresh=get_env('rpredictor.retrain_thresh'))
+        retrain_thresh=100000)  # disable auto retrain
     env.set_pcollector(libhpref.PreferenceCollector(
         rpredictor, get_env('pcollector.web_configs'),
         video_length=get_env('pcollector.video_length'), window_length=get_env('pcollector.window_length'),
