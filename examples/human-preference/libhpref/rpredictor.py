@@ -7,8 +7,8 @@
 # This file is part of TensorArtist.
 
 from tartist import random
-from tartist.core import get_logger, register_event
-from tartist.core.utils.meta import map_exec
+from tartist.core import get_logger
+from tartist.core.utils.meta import map_exec, cond_with, run_once
 from tartist.core.utils.logging import EveryNSecondLogger
 from tartist.data.flow import PoolRandomSampleDataFlow, PoolDataFlow
 from tartist.nn.train import SimpleTrainerEnv, SimpleTrainer
@@ -114,7 +114,7 @@ class PredictorBase(object):
     def predict_batch(self, state_batch, action_batch):
         raise NotImplementedError()
 
-    def ready_for_step(self, epoch):
+    def wait(self, epoch):
         raise NotImplementedError()
 
 
@@ -123,41 +123,41 @@ class EnsemblePredictor(PredictorBase):
     _network_output_name = 'reward'
 
     def __init__(self, owner_env, scheduler, desc, nr_ensembles, devices,
-                 nr_epochs, epoch_size, retrain_thresh=10):
+                 nr_epochs, epoch_size):
 
         self._owner_env = owner_env
         self._scheduler = scheduler
         self._schedule_logger = EveryNSecondLogger(logger, 2)
+
         self._desc = desc
         self._nr_ensembles = nr_ensembles
         self._devices = devices
         self._nr_epochs = nr_epochs
         self._epoch_size = epoch_size
-        self._retrain_thresh = retrain_thresh
 
         self._envs = []
-        self._envs_predict = []
-        self._funcs_predict = []
-        self._funcs_predict_lock = threading.Lock()
+        self._funcs = []
+        self._funcs_lock = threading.Lock()
         self._dataflows = []
 
         self._data_pool = []
-        # number of data points used for training last time step
-        self._data_pool_last = 0
+        self._data_pool_last = 0  # number of data points used for training last time step
         self._data_pool_lock = threading.Lock()
-        # list of list of data
-        self._training_sets = []
-        # list of data
-        self._validation_set = []
-
-        self._training_lock = threading.Lock()
+        self._data_pool_cond = threading.Condition(lock=self._data_pool_lock)
+        self._training_sets = []  # List of list of data.
+        self._validation_set = []  # List of data.
+        self._waiting_for_data = threading.Event()
 
         self._rng = random.gen_rng()
 
-    def initialize(self):
-        self.__initialize_envs()
+    @property
+    def waiting_for_data(self):
+        return self._waiting_for_data
 
-    def add_training_data(self, data, acquire_lock=True, try_retrain=True):
+    def initialize(self):
+        self._initialize_envs()
+
+    def add_training_data(self, data, acquire_lock=True):
         assert isinstance(data, TrainingData)
         if data.pref == -1:
             return
@@ -166,119 +166,83 @@ class EnsemblePredictor(PredictorBase):
                     t1_action=data.t1_action, t2_action=data.t2_action,
                     pref=data.pref)
 
-        if acquire_lock:
-            self._data_pool_lock.acquire()
-        self._data_pool.append(data)
-        last_size, new_size = self._data_pool_last, len(self._data_pool)
-        if acquire_lock:
-            self._data_pool_lock.release()
+        with cond_with(self._data_pool_lock, acquire_lock):
+            self._data_pool.append(data)
 
-        if try_retrain:
-            if new_size - last_size > self._retrain_thresh:
-                self._try_train_again()
+            if acquire_lock:
+                self._data_pool_cond.notify()
 
-    def extend_training_data(self, data, force_retrain=True):
+    def extend_training_data(self, data):
         with self._data_pool_lock:
-            for d in data[:-1]:
-                self.add_training_data(d, acquire_lock=False, try_retrain=False)
-            self.add_training_data(data[-1], acquire_lock=False, try_retrain=not force_retrain)
-
-        if force_retrain:
-            self._try_train_again()
+            for d in data:
+                self.add_training_data(d, acquire_lock=False)
+            self._data_pool_cond.notify()
 
     def predict(self, state, action, ret_variance=False):
         action = np.array(action)
 
-        with self._funcs_predict_lock:
-            if len(self._funcs_predict) == 0:
+        with self._funcs_lock:
+            if len(self._funcs) == 0:
                 rs = self._rng.random_sample(size=self._nr_ensembles)
             else:
                 rs = []
-                for f in self._funcs_predict:
+                for f in self._funcs:
                     r = f(state=state[np.newaxis], action=action[np.newaxis])[0]
                     rs.append(r)
 
             return _compute_e_var(rs, ret_variance=ret_variance)
 
     def predict_batch(self, state_batch, action_batch, ret_variance=False):
-        with self._funcs_predict_lock:
-            if len(self._funcs_predict) == 0:
+        with self._funcs_lock:
+            if len(self._funcs) == 0:
                 rs = self._rng.random_sample(size=(len(state_batch), self._nr_ensembles))
             else:
                 rs = []
-                for f in self._funcs_predict:
+                for f in self._funcs:
                     r = f(state=state_batch, action=action_batch)
                     rs.append(r)
 
             result = [_compute_e_var(r, ret_variance=ret_variance) for r in rs]
             return result
 
-    def ready_for_step(self, epoch):
+    def wait(self, epoch):
+        target = self._scheduler.get_target(epoch)
+        logger.critical('Waiting for collector data, target={}.'.format(target))
+
+        self._waiting_for_data.set()
         with self._data_pool_lock:
-            target, curr = self._scheduler.get_target(epoch), self._data_pool_last
-        if curr < target:
-            self._schedule_logger.info('Insufficient data for epoch {}: {}/{}.'.format(epoch, curr, target))
-            return False
-        return True
+            if not len(self._data_pool) >= target:
+                self._data_pool_cond.wait_for(lambda: len(self._data_pool) >= target)
 
-    @property
-    def _make_network(self):
-        return self._desc.make_network
+            current = len(self._data_pool)
+            assert current >= target
+        self._waiting_for_data.clear()
 
-    @property
-    def _make_optimizer(self):
-        return self._desc.make_optimizer
+        if target > self._data_pool_last:
+            self._train_again()
 
-    @property
-    def _wrap_dataflow_train(self):
-        return self._desc.wrap_dataflow_train or _default_wrap_dataflow
-
-    @property
-    def _wrap_dataflow_validation(self):
-        return self._desc.wrap_dataflow_validation or _default_wrap_dataflow
-
-    @property
-    def _main_train(self):
-        return self._desc.main_train or _default_main_train
-
-    def __initialize_envs(self):
+    def _initialize_envs(self):
         # Using rolling array
         def gen(i):
-            for _ in range(2):
-                env = SimpleTrainerEnv(SimpleTrainerEnv.Phase.TRAIN, self._devices[i])
+            env = SimpleTrainerEnv(SimpleTrainerEnv.Phase.TRAIN, self._devices[i])
 
-                with env.as_default():
-                    self._make_network(env)
-                    self._make_optimizer(env)
+            with env.as_default():
+                self._make_network(env)
+                self._make_optimizer(env)
 
-                # initialize the fully random weights
-                env.initialize_all_variables()
-                env.share_func_lock_with(self._owner_env)
-                yield env
+                # Initialize the fully random weights.
+            env.initialize_all_variables()
+            env.share_func_lock_with(self._owner_env)
+            return env
 
         for eid in range(self._nr_ensembles):
-            env, env_predict = gen(eid)
+            env = gen(eid)
+            func = env.make_func()
+            func.compile(env.network.outputs[self._network_output_name])
             self._envs.append(env)
-            self._envs_predict.append(env_predict)
+            self._funcs.append(func)
 
-        with self._funcs_predict_lock:
-            self.__make_predictors()
-
-    def train_again(self):
-        return self._try_train_again()
-
-    def _try_train_again(self):
-        """Try to run the training. If the predictors are being trained, do nothing"""
-        rc = self._training_lock.acquire(blocking=False)
-
-        if rc:
-            t = threading.Thread(target=self.__do_train_again)
-            t.start()
-            self._training_lock.release()
-
-        return rc
-
-    def __do_train_again(self):
+    def _train_again(self):
         """Do the actual training."""
         logger.critical('Predictors training begins.')
         with self._data_pool_lock:
@@ -287,9 +251,8 @@ class EnsemblePredictor(PredictorBase):
         # MJY(20170802):: It seems that we can not jointly run prediction and training even if
         # we already use rolling arrays due to some tensorflow bugs.
         # So here during training, we also acquire the lock.
-        with self._funcs_predict_lock:
+        with self._funcs_lock:
             self.__train()
-            self.__make_predictors()
         logger.critical('Predictors training ends.')
 
     def __split_training_data(self):
@@ -324,6 +287,7 @@ class EnsemblePredictor(PredictorBase):
         for i in range(self._nr_ensembles):
             self.__train_thread(i)
 
+        # MJY(20170903):: Disable the multi-threading training due to tensorflow bugs.
         # all_threads = []
         # for i in range(self._nr_ensembles):
         #     t = threading.Thread(target=self.__train_thread, args=(i, ))
@@ -334,7 +298,7 @@ class EnsemblePredictor(PredictorBase):
         logger.critical('Predictor ensemble retraining finished.')
 
     def __train_thread(self, i):
-        logger.info('Starting training for predictor #{}'.format(i))
+        logger.info('Starting training for predictor #{}.'.format(i))
 
         nr_iters = self._epoch_size * self._nr_epochs
         trainer = SimpleTrainer(nr_iters, env=self._envs[i],
@@ -345,11 +309,25 @@ class EnsemblePredictor(PredictorBase):
         # When you run train(), the parameters will be reset due to the calling of initialize_all_variables.
         self._main_train(trainer)
 
-    def __make_predictors(self):
-        """Training step 3: swap the envs for training and prediction, also build the function for prediction."""
-        self._envs_predict, self._envs = self._envs, self._envs_predict
-        self._funcs_predict = []
-        for i, e in enumerate(self._envs_predict):
-            f = e.make_func()
-            f.compile(e.network.outputs[self._network_output_name])
-            self._funcs_predict.append(f)
+    # Description
+
+    @property
+    def _make_network(self):
+        return self._desc.make_network
+
+    @property
+    def _make_optimizer(self):
+        return self._desc.make_optimizer
+
+    @property
+    def _wrap_dataflow_train(self):
+        return self._desc.wrap_dataflow_train or _default_wrap_dataflow
+
+    @property
+    def _wrap_dataflow_validation(self):
+        return self._desc.wrap_dataflow_validation or _default_wrap_dataflow
+
+    @property
+    def _main_train(self):
+        return self._desc.main_train or _default_main_train
+

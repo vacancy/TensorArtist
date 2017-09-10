@@ -65,17 +65,18 @@ __envs__ = {
 
     'rpredictor': {
         'nr_ensembles': 3,
-        'learning_rate': 0.001,
-        'batch_size': 16,
+        'learning_rate': 0.0001,
         'epoch_size': 20,
         'nr_epochs': 100,
         'retrain_thresh': 25,
     },
 
     'pcollector': {
+        'nr_pretrain': 200,
+        'nr_total': 1000,
         'video_length': 25,
-        'window_length': 25,
-        'pool_size': 25,
+        'window_length': 100,
+        'pool_size': 5,
         'web_configs': {
             'title': 'RL Human Preference Collector',
             'author': 'TensorArtist authors',
@@ -210,6 +211,7 @@ def make_rpredictor_network(env):
             t2_reward_exp = O.exp(forward_fc(dpc.outputs['t2_feature'], t2_action).sum())
 
             pref = O.placeholder('pref')
+            pref = O.callback_injector(pref)
             p1, p2 = 1 - pref, pref
 
             p_greater = t1_reward_exp / (t1_reward_exp + t2_reward_exp)
@@ -316,13 +318,20 @@ def on_data_func(env, identifier, inp_data):
         gamma = get_env('a3c.gamma')
         for i in history[::-1]:
             r = np.clip(i.reward, -1, 1) + gamma * r
-            # r = i.reward + gamma * r
-            data_queue.put({'state': i.state, 'action': i.action, 'future_reward': r})
+            try:
+                # MJY(20170910):: No wait!!! We need post_state.
+                if env.rpredictor.waiting_for_data.is_set():
+                    data_queue.put_nowait({'state': i.state, 'action': i.action, 'future_reward': r})
+                else:
+                    # Still set a timeout.
+                    data_queue.put({'state': i.state, 'action': i.action, 'future_reward': r}, timeout=1)
+            except queue.Full:
+                pass
 
     def callback(action, reward_info, predict_value):
-        # reward_info is of form (reward, reward_variance)
+        # `reward_info` is of form (reward, reward_variance).
         player_history.append(PlayerHistory(state, action, predict_value, reward_info[0], reward_info[1]))
-        # simply use state as observation
+        # Simply use state as observation
         unproxied_state = get_unproxied_state(state)
         env.pcollector.post_state(identifier, unproxied_state, unproxied_state, action, reward_info[1])
         router.send(identifier, (action, reward_info[0]))
@@ -414,14 +423,13 @@ def make_a3c_configs(env):
 
     predictor_desc = libhpref.PredictorDesc(make_rpredictor_network, make_rpredictor_optimizer,
                                             None, None, None)
-    scheduler = libhpref.ExponentialDecayCollectorScheduler(1000, 200, get_env('trainer.nr_epochs'))
+    scheduler = libhpref.ExponentialDecayCollectorScheduler(
+        get_env('pcollector.nr_total'), get_env('pcollector.nr_pretrain'), get_env('trainer.nr_epochs'))
     env.player_master.rpredictor = rpredictor = libhpref.EnsemblePredictor(
         env, scheduler, predictor_desc,
         nr_ensembles=get_env('rpredictor.nr_ensembles'),
         devices=[env.master_device] * get_env('rpredictor.nr_ensembles'),
-        nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'),
-        # retrain_thresh=get_env('rpredictor.retrain_thresh'))
-        retrain_thresh=100000)  # disable auto retrain
+        nr_epochs=get_env('rpredictor.nr_epochs'), epoch_size=get_env('rpredictor.epoch_size'))
     env.set_pcollector(libhpref.PreferenceCollector(
         rpredictor, get_env('pcollector.web_configs'),
         video_length=get_env('pcollector.video_length'), window_length=get_env('pcollector.window_length'),

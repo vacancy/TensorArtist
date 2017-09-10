@@ -37,6 +37,10 @@ class HPA3CTrainerEnv(A3CTrainerEnv):
     def pcollector(self):
         return self._pcollector
 
+    @notnone_property
+    def rpredictor(self):
+        return self._pcollector.rpredictor
+
     def set_pcollector(self, pc):
         self._pcollector = pc
         return self
@@ -51,41 +55,11 @@ class HPA3CTrainer(A3CTrainer):
     def initialize(self):
         super().initialize()
         self.env.pcollector.initialize()
+        _register_rpredictor_wait(self)
 
-    def train(self):
-        self.trigger_event('initialization:before')
-        self.initialize()
-        self.trigger_event('initialization:after')
-        self.runtime.setdefault('iter', 0)
 
-        self.trigger_event('optimization:before')
+def _register_rpredictor_wait(trainer):
+    def wait(t):
+        t.env.rpredictor.wait(t.epoch)
 
-        self.runtime['zero_iter'] = True
-        while self.runtime['iter'] <= self.nr_iters and not self.stop_signal:
-            if self.runtime['iter'] == 0:
-                inp, out = {}, {}
-                self.trigger_event('epoch:before')
-                self.trigger_event('iter:before', inp)
-                self.trigger_event('iter:after', inp, out)
-                self.trigger_event('epoch:after')
-                step_succ = True
-            else:
-                step_succ = self._wrapped_run_step()
-
-            if step_succ:
-                self.runtime['iter'] += 1
-                self.runtime['zero_iter'] = False
-
-        self.trigger_event('optimization:after')
-
-        self.trigger_event('finalization:begin')
-        self.finalize()
-        self.trigger_event('finalization:after')
-
-    def _wrapped_run_step(self):
-        if self.env.pcollector.ready_for_step(self.epoch):
-            super()._wrapped_run_step()
-            return True
-
-        time.sleep(1)
-        return False
+    trainer.register_event('epoch:before', wait)

@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : pcollector_schedule.py
+# File   : rpredictor_schedule.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 22/08/2017
@@ -14,6 +14,7 @@ class CollectorScheduler(object):
         self._nr_epochs = nr_epochs
 
     def get_target(self, epoch):
+        self._get_annealed_target(epoch)
         if epoch == 0:
             return self._nr_pretrain
         else:
@@ -29,10 +30,9 @@ class LinearCollectorScheduler(CollectorScheduler):
 
 
 class ExponentialDecayCollectorScheduler(CollectorScheduler):
-    @property
     def _get_annealed_target(self, epoch):
         """Return the number of labels desired at this point in training. """
         exp_decay_frac = 0.01 ** (epoch / self._nr_epochs)  # Decay from 1 to 0
-        pretrain_frac = self._nr_pretrain/ self._nr_total
+        pretrain_frac = self._nr_pretrain / self._nr_total
         desired_frac = pretrain_frac + (1 - pretrain_frac) * (1 - exp_decay_frac)  # Start with 0.25 and anneal to 0.99
         return desired_frac * self._nr_total

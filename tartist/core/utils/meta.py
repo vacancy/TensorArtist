@@ -10,10 +10,10 @@
 import functools
 import collections
 import threading
+import contextlib
 
-import numpy
 
-__all__ = ['iter_kv', 'merge_iterable', 'map_exec', 'filter_exec',
+__all__ = ['iter_kv', 'merge_iterable', 'map_exec', 'filter_exec', 'cond_with',
            'dict_deep_update', 'dict_deep_keys',
            'astuple', 'asshape',
            'canonize_args_list',
@@ -47,6 +47,15 @@ def map_exec(func, *iterables):
 
 def filter_exec(func, iterable):
     return list(filter(func, iterable))
+
+
+@contextlib.contextmanager
+def cond_with(with_statement, cond):
+    if cond:
+        with with_statement:
+            yield
+    else:
+        yield
 
 
 def dict_deep_update(a, b):
