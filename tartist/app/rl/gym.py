@@ -29,7 +29,11 @@ _ENV_LOCK = threading.Lock()
 def get_env_lock():
     return _ENV_LOCK
 
-__all__ = ['GymRLEnviron', 'GymHistoryProxyRLEnviron', 'GymPreventStuckProxyRLEnviron', 'GymNintendoWrapper', 'GymMarioRLEnviron']
+__all__ = [
+    'GymRLEnviron',
+    'GymAtariRLEnviron', 'GymNintendoWrapper', 'GymMarioRLEnviron',
+    'GymHistoryProxyRLEnviron', 'GymPreventStuckProxyRLEnviron'
+]
 
 
 class GymRLEnviron(SimpleRLEnvironBase):
@@ -100,6 +104,20 @@ class GymRLEnviron(SimpleRLEnvironBase):
 
     def _finish(self):
         self._gym.close()
+
+
+class GymAtariRLEnviron(GymRLEnviron):
+    def __init__(self, name, *args, live_lost_as_eoe=True, **kwargs):
+        super().__init__(name, *args, **kwargs)
+        self._live_lost_as_eoe = live_lost_as_eoe
+
+    def _action(self, action):
+        old_lives = self._gym.unwrapped.ale.lives()
+        r, is_over = super()._action(action)
+        new_lives = self._gym.unwrapped.ale.lives()
+        if self._live_lost_as_eoe and old_lives > new_lives:
+            is_over = True
+        return r, is_over
 
 
 GymHistoryProxyRLEnviron_warning = run_once(lambda: logger.warn(
@@ -177,7 +195,7 @@ class GymMarioRLEnviron(GymRLEnviron):
         import ppaquette_gym_super_mario
         from ppaquette_gym_super_mario import wrappers
         env = gym.make(name)
-        #modewrapper = wrappers.SetPlayingMode('algo')
+        # modewrapper = wrappers.SetPlayingMode('algo')
         return GymNintendoWrapper(env)
 
     def _action(self, action):
@@ -188,10 +206,9 @@ class GymMarioRLEnviron(GymRLEnviron):
 
     def _restart(self):
         if self._cur_iter < 0:
-            # hard mario fceux reset
-            self._gym.reset()
+            self._gym.reset()  # hard mario fceux reset
         # https://github.com/ppaquette/gym-super-mario/issues/4
-        o, _, _, info = self._gym.step(7) # take one step right
+        o, _, _, info = self._gym.step(7)  # take one step right
         if info.get('ignore', False):  # assuming this happens only in beginning
             self._cur_iter = -1
             self._gym.close()

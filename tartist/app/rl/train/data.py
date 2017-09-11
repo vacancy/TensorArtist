@@ -81,6 +81,7 @@ class QLearningDataFlow(SimpleDataFlowBase):
         self._gamma = gamma
         self._reward_cb = reward_cb
 
+        assert self._nr_td_steps == 1, 'TD mode not implemented.'
         assert self._collector.mode.startswith('EPISODE')
 
     def _initialize(self):
@@ -101,13 +102,22 @@ class QLearningDataFlow(SimpleDataFlowBase):
 
     def _add_to_memory(self, raw_data):
         for t in raw_data:
-            for i, e in enumerate(t):
-                j = min(i + self._nr_td_steps, len(t))
-                f = t[j - 1]
+            for i, (e, f) in enumerate(zip(t[:-1], t[1:])):
+                for key in ['state', 'action', 'is_over']:
+                    self._memory[key].append(getattr(e, key))
+                self._memory['next_state'].append(f.state)
+                self._memory['reward'].append(self._process_reward(e.reward))
+
+    def _add_to_memory_td(self, raw_data):
+        for t in raw_data:
+            # for i = 1 to n - 1
+            for i, e in enumerate(t[:-1]):
+                j = min(i + self._nr_td_steps, len(t) - 1)
+                f = t[j]
 
                 reward = 0
                 for k in range(j-1, i-1, -1):
-                    reward = reward * self._gamma + self._process_reward(t[k].reward)
+                    reward = self._gamma * reward + self._process_reward(t[k].reward)
 
                 self._memory['state'].append(e.state)
                 self._memory['action'].append(e.action)

@@ -7,6 +7,7 @@
 # This file is part of TensorArtist.
 
 import os
+import functools
 import threading
 
 import numpy as np
@@ -46,9 +47,7 @@ __envs__ = {
             'target': 64000,
             'nr_workers': 8,
             'nr_predictors': 2,
-
-            # Add 'value' if you don't use a linear value regressor.
-            'predictor_output_names': ['argmax_q']
+            'predictor_output_names': ['q_argmax'],
         },
 
         'inference': {
@@ -72,9 +71,6 @@ __envs__ = {
 
 def make_network(env):
     is_train = env.phase is env.Phase.TRAIN
-    if is_train:
-        slave_devices = env.slave_devices
-        env.set_slave_devices([])
 
     with env.create_network() as net:
         h, w, c = get_input_shape()
@@ -89,14 +85,12 @@ def make_network(env):
             @O.auto_reuse
             def phi(x):
                 _ = x / 255.0
+
+                # Nature structure
                 with O.argscope(O.conv2d, nonlin=O.relu):
-                    _ = O.conv2d('conv0', _, 32, 5)
-                    _ = O.max_pooling2d('pool0', _, 2)
-                    _ = O.conv2d('conv1', _, 32, 5)
-                    _ = O.max_pooling2d('pool1', _, 2)
-                    _ = O.conv2d('conv2', _, 64, 4)
-                    _ = O.max_pooling2d('pool2', _, 2)
-                    _ = O.conv2d('conv3', _, 64, 3)
+                    _ = O.conv2d('conv1', _, 32, 8, stride=4)
+                    _ = O.conv2d('conv2', _, 64, 4, stride=2)
+                    _ = O.conv2d('conv3', _, 64, 3, stride=1)
                 return _
 
             def forward(state, next_state):
@@ -108,23 +102,21 @@ def make_network(env):
         @O.auto_reuse
         def phi_fc(feature):
             _ = feature
-            _ = O.fc('fc0', _, 512, nonlin=O.p_relu)
+            _ = O.fc('fc0', _, 512, nonlin=functools.partial(O.leaky_relu, alpha=0.01))
             q_pred = O.fc('fcq', _, get_player_nr_actions())
-            return q_pred
+            q_max = q_pred.max(axis=1)
+            q_argmax = q_pred.argmax(axis=1)
+            return q_pred, q_max, q_argmax
 
         _ = dpc.outputs['feature']
-        q_pred = phi_fc(_)
-        max_q = q_pred.max(axis=1)
-        argmax_q = q_pred.argmax(axis=1)
+        q_pred, q_max, q_argmax = phi_fc(_)
 
         _ = dpc.outputs['next_feature']
-        next_q_pred = phi_fc(_)
-        next_max_q = next_q_pred.max(axis=1)
-        next_argmax_q = next_q_pred.argmax(axis=1)
+        next_q_pred, next_q_max, _ = phi_fc(_)
 
         net.add_output(q_pred, name='q_pred')
-        net.add_output(max_q, name='max_q')
-        net.add_output(argmax_q, name='argmax_q')
+        net.add_output(q_max, name='q_max')
+        net.add_output(q_argmax, name='q_argmax')
 
         if is_train:
             reward = O.placeholder('reward', shape=(None, ), dtype='float32')
@@ -133,24 +125,22 @@ def make_network(env):
 
             assert get_env('dqn.nr_td_steps') == 1
             this_q_pred = (q_pred * O.one_hot(action, get_player_nr_actions())).sum(axis=1)
-            this_q_label = reward + (1 - is_over.astype('float32')) * get_env('dqn.gamma') * O.zero_grad(next_max_q)
+            this_q_label = reward + get_env('dqn.gamma') * (1 - is_over.astype('float32')) * O.zero_grad(next_q_max)
 
             summary.scalar('this_q_pred', this_q_pred.mean())
             summary.scalar('this_q_label', this_q_label.mean())
             summary.scalar('reward', reward.mean())
+            summary.scalar('is_over', is_over.astype('float32').mean())
 
             q_loss = O.raw_smooth_l1_loss('raw_q_loss', this_q_pred, this_q_label).mean(name='q_loss')
             net.set_loss(q_loss)
-
-    if is_train:
-        env.set_slave_devices(slave_devices)
 
 
 def make_player(is_train=True, dump_dir=None):
     def resize_state(s):
         return image.grayscale(image.resize(s, get_env('dqn.input_shape'), interpolation='NEAREST'))
 
-    p = rl.GymRLEnviron(get_env('dqn.env_name'), dump_dir=dump_dir)
+    p = rl.GymAtariRLEnviron(get_env('dqn.env_name'), live_lost_as_eoe=is_train, dump_dir=dump_dir)
     p = rl.RepeatActionProxyRLEnviron(p, get_env('dqn.frame_skip'))
     p = rl.MapStateProxyRLEnviron(p, resize_state)
     p = rl.HistoryFrameProxyRLEnviron(p, get_env('dqn.nr_history_frames'))
@@ -165,7 +155,7 @@ def make_optimizer(env):
     lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
 
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, epsilon=1e-3))
+    wrapper.set_base_optimizer(optimizer.base.RMSPropOptimizer(lr))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))
@@ -180,7 +170,7 @@ def make_dataflow_train(env):
 
     def _outputs2action(outputs):
         epsilon = env.runtime['exp_epsilon']
-        return outputs['argmax_q'] if rng.rand() > epsilon else rng.choice(get_player_nr_actions())
+        return outputs['q_argmax'] if rng.rand() > epsilon else rng.choice(get_player_nr_actions())
 
     collector = rl.train.SynchronizedExperienceCollector(
         env, make_player, _outputs2action,
@@ -215,7 +205,7 @@ def get_input_shape():
 def main_inference_play_multithread(trainer):
     def runner():
         func = trainer.env.make_func()
-        func.compile(trainer.env.network.outputs['argmax_q'])
+        func.compile(trainer.env.network.outputs['q_argmax'])
         player = make_player()
         score = player.evaluate_one_episode(lambda state: func(state=state[np.newaxis])[0])
 
@@ -252,7 +242,7 @@ def main_train(trainer):
             logger.critical('Setting exploration epsilon to {}'.format(value))
             r['exp_epsilon'] = value
 
-    schedule = [(0, 1), (10, 0.1), (250, 0.01), (1e9, 0.01)]
+    schedule = [(0, 0.1), (10, 0.1), (250, 0.01), (1e9, 0.01)]
     def schedule_exp_epsilon(trainer):
         # `trainer.runtime` is synchronous with `trainer.env.runtime`.
         last_v = None
@@ -279,7 +269,7 @@ def main_train(trainer):
 
 
 def main_demo(env, func):
-    func.compile(env.network.outputs['argmax_q'])
+    func.compile(env.network.outputs['q_argmax'])
 
     dump_dir = get_env('dir.demo', os.path.join(get_env('dir.root'), 'demo'))
     logger.info('Demo dump dir: {}'.format(dump_dir))

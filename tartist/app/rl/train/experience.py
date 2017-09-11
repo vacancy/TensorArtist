@@ -44,12 +44,28 @@ class PredictionFuture(object):
 
 
 class SynchronizedExperienceCollector(object):
+    """Synchronized experience collector."""
+
     def __init__(self, owner_env,
                  make_player, output2action,
                  nr_workers, nr_predictors,
                  mode='EPISODE',
                  predictor_output_names=None,
                  predictor_batch_size=16):
+        """
+
+        :param owner_env: owner environment for infer the agent.
+        :param make_player: callable, return the environment (player).
+        :param output2action: callable, network's output => action.
+        :param nr_workers: number of environment workers.
+        :param nr_predictors: number of predictors forwarding the neural network.
+        :param mode: collecting mode:
+            - EPISODE: collect `target` episode
+            - EPISODE: collect several episode until reach total steps `target`
+            - STEP: collect `target` primitive steps
+        :param predictor_output_names: predictor's output names, used for compose the function.
+        :param predictor_batch_size: predictor's batch size, typically 4/8/16.
+        """
 
         self._owner_env = owner_env
         self._make_player = make_player
@@ -88,9 +104,8 @@ class SynchronizedExperienceCollector(object):
 
     def collect(self, target):
         with self._collect_mutex:
-            logger.critical('Trajectory collecting begins: target={}.'.format(target))
+            logger.critical('Trajectory collecting: target={}.'.format(target))
             return self.__collect(target)
-            logger.critical('Trajectory collecting finished.')
 
     def __collect(self, target):
         self._trajectories = [[] for _ in range(self._nr_workers)]
