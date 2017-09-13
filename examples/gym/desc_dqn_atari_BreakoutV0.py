@@ -155,7 +155,7 @@ def make_optimizer(env):
     lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
 
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.RMSPropOptimizer(lr))
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, epsilon=1e-3))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))

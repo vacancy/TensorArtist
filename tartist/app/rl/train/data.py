@@ -86,7 +86,8 @@ class QLearningDataFlow(SimpleDataFlowBase):
 
     def _initialize(self):
         self._collector.initialize()
-        self._memory = {k: deque(maxlen=self._maxsize) for k in self._data_keys}
+        # self._memory = {k: deque(maxlen=self._maxsize) for k in self._data_keys}
+        self._memory = {k: [] for k in self._data_keys}
 
     def _gen(self):
         while True:
@@ -100,13 +101,21 @@ class QLearningDataFlow(SimpleDataFlowBase):
             return r
         return self._reward_cb(r)
 
+    def _add_to_memory_step(self, e, f):
+        for key in ['state', 'action', 'is_over']:
+            self._memory[key].append(getattr(e, key))
+        self._memory['next_state'].append(f.state)
+        self._memory['reward'].append(self._process_reward(e.reward))
+
     def _add_to_memory(self, raw_data):
+        self._memory = {k: [] for k in self._data_keys}
+
         for t in raw_data:
             for i, (e, f) in enumerate(zip(t[:-1], t[1:])):
-                for key in ['state', 'action', 'is_over']:
-                    self._memory[key].append(getattr(e, key))
-                self._memory['next_state'].append(f.state)
-                self._memory['reward'].append(self._process_reward(e.reward))
+                self._add_to_memory_step(e, f)
+
+            if len(t) and t[-1].is_over:
+                self._add_to_memory_step(t[-1], t[-1])
 
     def _add_to_memory_td(self, raw_data):
         for t in raw_data:
