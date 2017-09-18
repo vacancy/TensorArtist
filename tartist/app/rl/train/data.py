@@ -12,9 +12,7 @@ from tartist.data.flow import SimpleDataFlowBase
 from tartist.random.sampler import EpochBatchSampler
 from collections import deque
 
-__all__ = ['SynchronizedTrajectoryDataFlow', 'QLearningDataFlow']
-
-
+__all__ = ['SynchronizedTrajectoryDataFlow', 'QLearningDataFlow'] 
 class SynchronizedTrajectoryDataFlow(SimpleDataFlowBase):
     def __init__(self, collector, target, incl_value):
         self._collector = collector
@@ -86,8 +84,7 @@ class QLearningDataFlow(SimpleDataFlowBase):
 
     def _initialize(self):
         self._collector.initialize()
-        # self._memory = {k: deque(maxlen=self._maxsize) for k in self._data_keys}
-        self._memory = {k: [] for k in self._data_keys}
+        self._memory = {k: deque(maxlen=self._maxsize) for k in self._data_keys}
 
     def _gen(self):
         while True:
@@ -108,8 +105,6 @@ class QLearningDataFlow(SimpleDataFlowBase):
         self._memory['reward'].append(self._process_reward(e.reward))
 
     def _add_to_memory(self, raw_data):
-        self._memory = {k: [] for k in self._data_keys}
-
         for t in raw_data:
             for i, (e, f) in enumerate(zip(t[:-1], t[1:])):
                 self._add_to_memory_step(e, f)
@@ -117,19 +112,3 @@ class QLearningDataFlow(SimpleDataFlowBase):
             if len(t) and t[-1].is_over:
                 self._add_to_memory_step(t[-1], t[-1])
 
-    def _add_to_memory_td(self, raw_data):
-        for t in raw_data:
-            # for i = 1 to n - 1
-            for i, e in enumerate(t[:-1]):
-                j = min(i + self._nr_td_steps, len(t) - 1)
-                f = t[j]
-
-                reward = 0
-                for k in range(j-1, i-1, -1):
-                    reward = self._gamma * reward + self._process_reward(t[k].reward)
-
-                self._memory['state'].append(e.state)
-                self._memory['action'].append(e.action)
-                self._memory['next_state'].append(f.state)
-                self._memory['reward'].append(reward)
-                self._memory['is_over'].append(e.is_over)
