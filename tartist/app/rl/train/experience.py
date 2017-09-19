@@ -51,7 +51,8 @@ class SynchronizedExperienceCollector(object):
                  nr_workers, nr_predictors,
                  mode='EPISODE',
                  predictor_output_names=None,
-                 predictor_batch_size=16):
+                 predictor_batch_size=16,
+                 output2action_ts=True):
         """
 
         :param owner_env: owner environment for infer the agent.
@@ -70,6 +71,10 @@ class SynchronizedExperienceCollector(object):
         self._owner_env = owner_env
         self._make_player = make_player
         self._output2action = output2action
+        if output2action_ts:
+            self._output2action_mutex = threading.Lock()
+        else:
+            self._output2action_mutex = None
 
         self._nr_workers = nr_workers
         self._nr_predictors = nr_predictors
@@ -205,6 +210,14 @@ class SynchronizedExperienceCollector(object):
         outputs = func(state=batched)
         for i in range(nr_total):
             this_output = {k: v[i] for k, v in outputs.items()}
-            action = self._output2action(this_output)
+            action = self._output2action_wrapped(this_output)
             pred = Prediction(action, this_output)
             futures[i].set_result(pred)
+
+
+    def _output2action_wrapped(self, output):
+        if self._output2action_mutex is None:
+            return self._output2action(output)
+        else:
+            with self._output2action_mutex:
+                return self._output2action(output)
