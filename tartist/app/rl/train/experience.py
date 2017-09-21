@@ -61,7 +61,7 @@ class SynchronizedExperienceCollector(object):
         :param output2action: callable, network's output => action.
         :param nr_workers: number of environment workers.
         :param nr_predictors: number of predictors forwarding the neural network.
-        :param mode: collecting mode:
+        :param mode: collection mode:
             - EPISODE: collect `target` episode
             - EPISODE: collect several episode until reach total steps `target`
             - STEP: collect `target` primitive steps
@@ -110,13 +110,12 @@ class SynchronizedExperienceCollector(object):
 
     def collect(self, target):
         with self._collect_mutex:
-            logger.critical('Trajectory collecting: target={}.'.format(target))
             return self.__collect(target)
 
     def __collect(self, target):
         self._trajectories = [[] for _ in range(self._nr_workers)]
         self._trajectories_counter = TSCounterBasedEvent(
-                target, tqdm=tqdm(total=target, desc='Trajectory collecting', **get_tqdm_defaults()))
+                target, tqdm=tqdm(total=target, leave=False, desc='Trajectory collecting', **get_tqdm_defaults()))
 
         # Start all workers.
         self._task_start.broadcast()

@@ -302,9 +302,11 @@ class ACOptimizationTrainerBase(TrainerBase):
 
 
 class SurrOptimizerTrainerFeederMixin(object):
+    _feed_dict_keys = ['step', 'state', 'action', 'theta_old', 'return_', 'advantage']
+
     def _get_feed_dict(self, data_list):
         feed_dict = {}
-        for k in ['step', 'state', 'action', 'theta_old', 'return_', 'advantage']:
+        for k in self._feed_dict_keys:
             feed_dict[k] = np.concatenate([data[k] for data in data_list])
         feed_dict['advantage'] = normalize_advantage(feed_dict['advantage'])
         return feed_dict
@@ -436,7 +438,6 @@ class TRPOTrainer(AlterSurrOptimizationTrainerBase):
 
 
 class PPOTrainerMixin(ACOptimizationTrainerBase):
-    _p_feed_dict_keys = ['state', 'action', 'advantage', 'theta_old']
     _batch_sampler = None
 
     def _initialize_summaries(self):
@@ -454,6 +455,8 @@ class PPOTrainerMixin(ACOptimizationTrainerBase):
 
 
 class PPOTrainer(PPOTrainerMixin, AlterSurrOptimizationTrainerBase):
+    _p_feed_dict_keys = ['state', 'action', 'advantage', 'theta_old']
+
     def _compile_fn_train(self):
         self._p_func.compile([])
         self._compile_func_with_summary(
@@ -470,6 +473,7 @@ class PPOTrainer(PPOTrainerMixin, AlterSurrOptimizationTrainerBase):
                 iterator,
                 desc='Proximal policy optimizing',
                 total=len(iterator),
+                leave=False,
                 **get_tqdm_defaults()
             ):
 
@@ -483,6 +487,7 @@ class PPOTrainer(PPOTrainerMixin, AlterSurrOptimizationTrainerBase):
                 iterator,
                 desc='Proximal value optimizing',
                 total=len(iterator),
+                leave=False,
                 **get_tqdm_defaults()
             ):
 
@@ -491,20 +496,28 @@ class PPOTrainer(PPOTrainerMixin, AlterSurrOptimizationTrainerBase):
 
 
 class PPOTrainerV2(PPOTrainerMixin, JointSurrOptimizationTrainerBase):
+    _feed_dict_keys = JointSurrOptimizationTrainerBase._feed_dict_keys + ['value', 'return_']
+    _p_feed_dict_keys = ['state', 'action', 'advantage', 'theta_old', 'value', 'return_']
+    _p_feed_dict_renames = ['state', 'action', 'advantage', 'theta_old', 'value_old', 'value_label']
+
     def _compile_fn_train(self):
         self._opt_func.compile([])
         self._compile_func_with_summary(self._inference_func,
                                         {'p_loss': self.env.policy_loss, 'v_loss': self.env.value_loss})
 
     def _run_step_network(self, feed_dict):
-        iterator = self.batch_sampler(feed_dict, self._p_feed_dict_keys)
+        iterator = self.batch_sampler(feed_dict, self._p_feed_dict_keys, renames=self._p_feed_dict_renames)
         for batch in tqdm(
                 iterator,
                 desc='Proximal policy optimizing',
                 total=len(iterator),
-                **get_tqdm_defaults()
+                leave=False,
+                **get_tqdm_defaults(),
             ):
 
             self._opt_func.call_args(batch)
-        opt_outputs = self._inference_func.call_args({k: feed_dict[k] for k in self._p_feed_dict_keys})
+        opt_outputs = self._inference_func.call_args({
+            k1: feed_dict[k2] for k1, k2 in zip(self._p_feed_dict_renames, self._p_feed_dict_keys)
+        })
         return opt_outputs
+
