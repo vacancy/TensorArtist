@@ -143,7 +143,8 @@ def make_player(dump_dir=None):
 
 def make_optimizer(env):
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('trainer.policy_learning_rate'), epsilon=1e-3))
+    lr = optimizer.make_optimizer_variable('learning_rate', get_env('trainer.policy_learning_rate'), prefix='policy_')
+    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, epsilon=1e-3))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))
@@ -152,7 +153,8 @@ def make_optimizer(env):
     use_linear_vr = get_env('ppo.use_linear_vr')
     if not use_linear_vr:
         wrapper = optimizer.OptimizerWrapper()
-        wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(get_env('trainer.value_learning_rate'), epsilon=1e-3))
+        lr = optimizer.make_optimizer_variable('learning_rate', get_env('trainer.value_learning_rate'), prefix='value_')
+        wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, epsilon=1e-3))
         wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
             ('*/b', 2.0),
         ]))
