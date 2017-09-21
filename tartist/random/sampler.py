@@ -25,7 +25,20 @@ class _SizedGenerator(object):
         return self._length
 
 
-class EpochBatchSampler(object):
+class RenamedDictSamplerBase(object):
+    def _gen_renamed(self, data, keys, renames=None):
+        if renames is None:
+            return self._gen(data, keys)
+
+        assert len(renames) == len(keys)
+        for v in self._gen(data, keys):
+            yield {k1: v[k2] for k1, k2 in zip(renames, keys)}
+
+    def _gen(self, data, keys):
+        raise NotImplementedError()
+
+
+class EpochBatchSampler(RenamedDictSamplerBase):
     def __init__(self, batch_size, epoch_size, rng=None):
         self._batch_size = batch_size
         self._epoch_size = epoch_size
@@ -38,11 +51,11 @@ class EpochBatchSampler(object):
             this = {k: gather_list_batch(data[k], this_idx) for k in keys}
             yield this
 
-    def __call__(self, data, keys):
-        return _SizedGenerator(self._gen(data, keys), self._epoch_size)
+    def __call__(self, data, keys, renames=None):
+        return _SizedGenerator(self._gen_renamed(data, keys, renames), self._epoch_size)
 
 
-class SimpleBatchSampler(object):
+class SimpleBatchSampler(RenamedDictSamplerBase):
     def __init__(self, batch_size, nr_repeat, rng=None):
         self._batch_size = batch_size
         self._nr_repeat = nr_repeat
@@ -62,5 +75,5 @@ class SimpleBatchSampler(object):
         n = len(data[keys[0]])
         return self._nr_repeat * (n // self._batch_size)
 
-    def __call__(self, data, keys):
-        return _SizedGenerator(self._gen(data, keys), self._len(data, keys))
+    def __call__(self, data, keys, renames=None):
+        return _SizedGenerator(self._gen_renamed(data, keys, renames), self._len(data, keys))

@@ -310,9 +310,12 @@ class SurrPolicyOptimizationTrainer(TrainerBase):
         # Fit the baseline.
         if self._has_value_regressor():
             self._value_regressor.fit(feed_dict['state'], feed_dict['step'], feed_dict['return_'])
-            v_outputs = None
+            return None
         else:
-            v_outputs = self._v_func(state=feed_dict['state'], value_label=feed_dict['return_'])
+            return self._run_step_v_network(feed_dict)
+
+    def _run_step_v_network(self, feed_dict):
+        v_outputs = self._v_func(state=feed_dict['state'], value_label=feed_dict['return_'])
         return v_outputs
 
     def _run_step_p(self, feed_dict):
@@ -385,3 +388,16 @@ class PPOTrainer(SurrPolicyOptimizationTrainer):
             self._p_func.call_args(batch)
         p_outputs = self._p_func_inference.call_args({k: feed_dict[k] for k in self._p_feed_dict_keys})
         return p_outputs
+
+    def _run_step_v_network(self, feed_dict):
+        iterator = self.batch_sampler(feed_dict, ['state', 'return_'], renames=['state', 'value_label'])
+        for batch in tqdm(
+                iterator,
+                desc='Proximal value optimizing',
+                total=len(iterator),
+                **get_tqdm_defaults()
+            ):
+
+            self._v_func.call_args(batch)
+        return None
+
