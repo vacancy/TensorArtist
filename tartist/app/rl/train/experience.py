@@ -10,6 +10,7 @@ from tartist.core import get_logger
 from tartist.core.utils.meta import map_exec
 from tartist.core.utils.concurrent_stat import TSCounterBasedEvent, TSCoordinatorEvent
 from tartist.core.utils.thirdparty import get_tqdm_defaults
+from tartist.data.flow import SimpleDataFlowBase
 
 from threading import Thread
 from tqdm import tqdm
@@ -21,7 +22,7 @@ import numpy as np
 
 logger = get_logger(__file__)
 
-__all__ = ['SynchronizedExperienceCollector']
+__all__ = ['SynchronizedExperienceCollector', 'SynchronizedTrajectoryDataFlow']
 
 
 Experience = collections.namedtuple('Experience', ('state', 'action', 'outputs', 'reward', 'is_over'))
@@ -214,10 +215,63 @@ class SynchronizedExperienceCollector(object):
             pred = Prediction(action, this_output)
             futures[i].set_result(pred)
 
-
     def _output2action_wrapped(self, output):
         if self._output2action_mutex is None:
             return self._output2action(output)
         else:
             with self._output2action_mutex:
                 return self._output2action(output)
+
+
+class SynchronizedTrajectoryDataFlow(SimpleDataFlowBase):
+    def __init__(self, collector, target, incl_value=True):
+        self._collector = collector
+        self._target = target
+        self._incl_value = incl_value
+
+        assert self._collector.mode.startswith('EPISODE')
+
+    def _initialize(self):
+        self._collector.initialize()
+
+    def _gen(self):
+        while True:
+            data = self._collector.collect(self._target)
+            data = self._process(data)
+            yield data
+
+    def _process(self, raw_data):
+        data_list = []
+        for t in raw_data:
+            data = dict(
+                step=[],
+                state=[],
+                action=[],
+                theta_old=[],
+                reward=[],
+                value=[],
+                score=0
+            )
+
+            for i, e in enumerate(t):
+                data['step'].append(i)
+                data['state'].append(e.state)
+                data['action'].append(e.action)
+                data['theta_old'].append(e.outputs['theta'])
+                data['reward'].append(e.reward)
+                data['score'] += e.reward
+
+                if self._incl_value:
+                    data['value'].append(e.outputs['value'])
+
+            if not self._incl_value:
+                del data['value']
+
+            for k, v in data.items():
+                data[k] = np.array(v)
+
+            if len(t) > 0:
+                data_list.append(data)
+        return data_list
+
+

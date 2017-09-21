@@ -23,8 +23,8 @@ from tqdm import tqdm
 __all__ = [
     'ACGraphKeys',
     'TRPOOptimizer',
-    'ACOptimizationTrainerEnv', 'TRPOTrainerEnv', 'PPOTrainerEnv',
-    'SurrPolicyOptimizationTrainer', 'TRPOTrainer', 'PPOTrainer'
+    'TRPOTrainerEnv', 'PPOTrainerEnv', 'PPOTrainerEnvV2',
+    'TRPOTrainer', 'PPOTrainer', 'PPOTrainerV2'
 ]
 
 
@@ -132,7 +132,21 @@ class TRPOOptimizer(CustomOptimizerBase):
         return full_step, negg_dot_stepdir
 
 
-class ACOptimizationTrainerEnv(TrainerEnvBase):
+class ACOptimizationTrainerEnvBase(TrainerEnvBase):
+    @notnone_property
+    def policy_loss(self):
+        return self.network.outputs['policy_loss']
+
+    @notnone_property
+    def value_loss(self):
+        return self.network.outputs['value_loss']
+
+    @property
+    def value_regressor(self):
+        return getattr(self.network, 'value_regressor', None)
+
+
+class AlterACOptimizationTrainerEnvBase(ACOptimizationTrainerEnvBase):
     _policy_optimizer = None
     _value_optimizer = None
 
@@ -156,20 +170,28 @@ class ACOptimizationTrainerEnv(TrainerEnvBase):
         self._value_optimizer = opt
         return self
 
-    @notnone_property
-    def policy_loss(self):
-        return self.network.outputs['policy_loss']
+
+class JointACOptimizationTrainerEnvBase(ACOptimizationTrainerEnvBase):
+    _optimizer = None
 
     @notnone_property
-    def value_loss(self):
-        return self.network.outputs['value_loss']
+    def optimizer(self):
+        return self._optimizer
 
-    @property
-    def value_regressor(self):
-        return getattr(self.network, 'value_regressor', None)
+    def set_optimizer(self, opt):
+        self._optimizer = opt
+        return self
+
+    def make_optimizable_func(self, loss=None):
+        loss = loss or self.network.loss
+        loss = as_tftensor(loss)
+
+        func = self.make_func()
+        func.add_extra_op(self.optimizer.minimize(loss))
+        return func
 
 
-class TRPOTrainerEnv(ACOptimizationTrainerEnv):
+class TRPOTrainerEnv(AlterACOptimizationTrainerEnvBase):
     @notnone_property
     def policy_kl(self):
         return self.network.outputs['kl']
@@ -197,7 +219,7 @@ class TRPOTrainerEnv(ACOptimizationTrainerEnv):
             return p_func, v_func
 
 
-class PPOTrainerEnv(ACOptimizationTrainerEnv):
+class PPOTrainerEnv(AlterACOptimizationTrainerEnvBase):
     def make_optimizable_func(self, policy_loss=None, value_loss=None):
         with self.as_default():
             policy_loss = policy_loss or self.policy_loss
@@ -217,11 +239,19 @@ class PPOTrainerEnv(ACOptimizationTrainerEnv):
             return p_func, v_func
 
 
-class SurrPolicyOptimizationTrainer(TrainerBase):
-    _p_func = None
-    _p_func_inference = None
-    _v_func = None
+class PPOTrainerEnvV2(JointACOptimizationTrainerEnvBase):
+    pass
+
+
+class ACOptimizationTrainerBase(TrainerBase):
     _adv_computer = None
+
+    @notnone_property
+    def adv_computer(self):
+        return self._adv_computer
+
+    def set_adv_computer(self, adv):
+        self._adv_computer = adv
 
     def _has_value_regressor(self):
         return self._value_regressor is not None
@@ -230,12 +260,17 @@ class SurrPolicyOptimizationTrainer(TrainerBase):
     def _value_regressor(self):
         return self.env.value_regressor
 
-    @notnone_property
-    def adv_computer(self):
-        return self._adv_computer
+    def _gen_advantage(self, data_list):
+        # Compute the value estimation and advantage.
+        for data in data_list:
+            if self._has_value_regressor():
+                if 'value' not in data:
+                    data['value'] = self._value_regressor.predict(data['state'], data['step'])
+            else:
+                assert 'value' in data
 
-    def set_adv_computer(self, adv):
-        self._adv_computer = adv
+        for data in data_list:
+            self.adv_computer(data)
 
     def initialize(self):
         self._initialize_summaries()
@@ -249,12 +284,7 @@ class SurrPolicyOptimizationTrainer(TrainerBase):
         raise NotImplementedError()
 
     def _initialize_opt_func(self):
-        assert isinstance(self.env, ACOptimizationTrainerEnv)
-        if self._has_value_regressor():
-            self._p_func = self.env.make_optimizable_func()
-        else:
-            self._p_func, self._v_func = self.env.make_optimizable_func()
-        self._p_func_inference = self.env.make_func()
+        raise NotImplementedError()
 
     def _initialize_snapshot_parts(self):
         if self._has_value_regressor():
@@ -262,6 +292,36 @@ class SurrPolicyOptimizationTrainer(TrainerBase):
 
     def _compile_fn_train(self):
         raise NotImplementedError()
+
+    def _run_step(self, data):
+        raise NotImplementedError()
+
+    def _run_step_v_regressor(self, feed_dict):
+        self._value_regressor.fit(feed_dict['state'], feed_dict['step'], feed_dict['return_'])
+        return None
+
+
+class SurrOptimizerTrainerFeederMixin(object):
+    def _get_feed_dict(self, data_list):
+        feed_dict = {}
+        for k in ['step', 'state', 'action', 'theta_old', 'return_', 'advantage']:
+            feed_dict[k] = np.concatenate([data[k] for data in data_list])
+        feed_dict['advantage'] = normalize_advantage(feed_dict['advantage'])
+        return feed_dict
+
+
+class AlterSurrOptimizationTrainerBase(ACOptimizationTrainerBase, SurrOptimizerTrainerFeederMixin):
+    _p_func = None
+    _p_func_inference = None
+    _v_func = None
+
+    def _initialize_opt_func(self):
+        assert isinstance(self.env, AlterACOptimizationTrainerEnvBase)
+        if self._has_value_regressor():
+            self._p_func = self.env.make_optimizable_func()
+        else:
+            self._p_func, self._v_func = self.env.make_optimizable_func()
+        self._p_func_inference = self.env.make_func()
 
     def _run_step(self, data_list):
         self._gen_advantage(data_list)
@@ -287,30 +347,10 @@ class SurrPolicyOptimizationTrainer(TrainerBase):
         self.runtime['summaries'] = summaries
         return output
 
-    def _gen_advantage(self, data_list):
-        # Compute the value estimation and advantage.
-        for data in data_list:
-            if self._has_value_regressor():
-                if 'value' not in data:
-                    data['value'] = self._value_regressor.predict(data['state'], data['step'])
-            else:
-                assert 'value' in data
-
-        for data in data_list:
-            self.adv_computer(data)
-
-    def _get_feed_dict(self, data_list):
-        feed_dict = {}
-        for k in ['step', 'state', 'action', 'theta_old', 'return_', 'advantage']:
-            feed_dict[k] = np.concatenate([data[k] for data in data_list])
-        feed_dict['advantage'] = normalize_advantage(feed_dict['advantage'])
-        return feed_dict
-
     def _run_step_v(self, feed_dict):
         # Fit the baseline.
         if self._has_value_regressor():
-            self._value_regressor.fit(feed_dict['state'], feed_dict['step'], feed_dict['return_'])
-            return None
+            return self._run_step_v_regressor(feed_dict)
         else:
             return self._run_step_v_network(feed_dict)
 
@@ -318,11 +358,58 @@ class SurrPolicyOptimizationTrainer(TrainerBase):
         v_outputs = self._v_func(state=feed_dict['state'], value_label=feed_dict['return_'])
         return v_outputs
 
+    def _initialize_summaries(self):
+        raise NotImplementedError()
+
+    def _compile_fn_train(self):
+        raise NotImplementedError()
+
     def _run_step_p(self, feed_dict):
         raise NotImplementedError()
 
 
-class TRPOTrainer(SurrPolicyOptimizationTrainer):
+class JointSurrOptimizationTrainerBase(ACOptimizationTrainerBase, SurrOptimizerTrainerFeederMixin):
+    _opt_func = None
+    _inference_func = None
+
+    def _initialize_opt_func(self):
+        assert isinstance(self.env, JointACOptimizationTrainerEnvBase)
+        self._opt_func = self.env.make_optimizable_func()
+        self._inference_func = self.env.make_func()
+
+    def _run_step(self, data_list):
+        self._gen_advantage(data_list)
+        feed_dict = self._get_feed_dict(data_list)
+
+        if self._has_value_regressor():
+            self._run_step_v_regressor(feed_dict)
+
+        net_outputs = self._run_step_network(feed_dict)
+
+        # Summaries
+        avg_score = sum([data['score'] for data in data_list]) / len(data_list)
+        output = dict(score=avg_score)
+        summaries = tf.Summary()
+        summaries.value.add(tag='train/score', simple_value=avg_score)
+
+        if 'summaries' in net_outputs:
+            summaries.value.MergeFrom(tf.Summary.FromString(net_outputs['summaries']).value)
+            output.update(net_outputs)
+
+        self.runtime['summaries'] = summaries
+        return output
+
+    def _run_step_network(self, data):
+        raise NotImplementedError()
+
+    def _initialize_summaries(self):
+        raise NotImplementedError()
+
+    def _compile_fn_train(self):
+        raise NotImplementedError()
+
+
+class TRPOTrainer(AlterSurrOptimizationTrainerBase):
     _p_feed_dict_keys = ['state', 'action', 'advantage', 'theta_old']
 
     def _initialize_summaries(self):
@@ -337,7 +424,6 @@ class TRPOTrainer(SurrPolicyOptimizationTrainer):
         self._compile_func_with_summary(
             self._p_func_inference, {'p_loss': self.env.policy_loss, 'p_kl': self.env.policy_kl},
             ACGraphKeys.POLICY_SUMMARIES)
-
         if self._value_regressor is None:
             self._compile_func_with_summary(
                 self._v_func, {'v_loss': self.env.value_loss}, ACGraphKeys.VALUE_SUMMARIES)
@@ -349,7 +435,7 @@ class TRPOTrainer(SurrPolicyOptimizationTrainer):
         return p_outputs
 
 
-class PPOTrainer(SurrPolicyOptimizationTrainer):
+class PPOTrainerMixin(ACOptimizationTrainerBase):
     _p_feed_dict_keys = ['state', 'action', 'advantage', 'theta_old']
     _batch_sampler = None
 
@@ -359,6 +445,15 @@ class PPOTrainer(SurrPolicyOptimizationTrainer):
             if not self._has_value_regressor():
                 summary.scalar('value_loss', self.env.value_loss, collections=[ACGraphKeys.VALUE_SUMMARIES])
 
+    @notnone_property
+    def batch_sampler(self):
+        return self._batch_sampler
+
+    def set_batch_sampler(self, sampler):
+        self._batch_sampler = sampler
+
+
+class PPOTrainer(PPOTrainerMixin, AlterSurrOptimizationTrainerBase):
     def _compile_fn_train(self):
         self._p_func.compile([])
         self._compile_func_with_summary(
@@ -368,13 +463,6 @@ class PPOTrainer(SurrPolicyOptimizationTrainer):
         if self._value_regressor is None:
             self._compile_func_with_summary(
                 self._v_func, {'v_loss': self.env.value_loss}, ACGraphKeys.VALUE_SUMMARIES)
-
-    @notnone_property
-    def batch_sampler(self):
-        return self._batch_sampler
-
-    def set_batch_sampler(self, sampler):
-        self._batch_sampler = sampler
 
     def _run_step_p(self, feed_dict):
         iterator = self.batch_sampler(feed_dict, self._p_feed_dict_keys)
@@ -401,3 +489,22 @@ class PPOTrainer(SurrPolicyOptimizationTrainer):
             self._v_func.call_args(batch)
         return None
 
+
+class PPOTrainerV2(PPOTrainerMixin, JointSurrOptimizationTrainerBase):
+    def _compile_fn_train(self):
+        self._opt_func.compile([])
+        self._compile_func_with_summary(self._inference_func,
+                                        {'p_loss': self.env.policy_loss, 'v_loss': self.env.value_loss})
+
+    def _run_step_network(self, feed_dict):
+        iterator = self.batch_sampler(feed_dict, self._p_feed_dict_keys)
+        for batch in tqdm(
+                iterator,
+                desc='Proximal policy optimizing',
+                total=len(iterator),
+                **get_tqdm_defaults()
+            ):
+
+            self._opt_func.call_args(batch)
+        opt_outputs = self._inference_func.call_args({k: feed_dict[k] for k in self._p_feed_dict_keys})
+        return opt_outputs

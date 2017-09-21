@@ -7,7 +7,7 @@
 # This file is part of TensorArtist.
 
 from .a3c import *
-from .data import *
 from .evolution import *
 from .experience import *
 from .policy_opt import *
+from .q_learning import *
