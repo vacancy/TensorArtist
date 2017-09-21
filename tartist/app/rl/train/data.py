@@ -13,8 +13,10 @@ from tartist.random.sampler import EpochBatchSampler
 from collections import deque
 
 __all__ = ['SynchronizedTrajectoryDataFlow', 'QLearningDataFlow'] 
+
+
 class SynchronizedTrajectoryDataFlow(SimpleDataFlowBase):
-    def __init__(self, collector, target, incl_value):
+    def __init__(self, collector, target, incl_value=True):
         self._collector = collector
         self._target = target
         self._incl_value = incl_value

@@ -27,7 +27,8 @@ class TrainerEnvBase(Env):
         self.add_snapshot_part('runtime', self.__dump_runtime, self.__load_runtime)
 
     def __dump_network_variable(self):
-        return self.network.fetch_all_variables_dict()
+        result = self.network.fetch_all_variables_dict()
+        return result
 
     def __load_network_variable(self, variables):
         self.network.assign_all_variables_dict(variables)
@@ -54,13 +55,16 @@ class TrainerEnvBase(Env):
                 logger.warning('Ignored snapshot part: {}.'.format(k))
             else:
                 loader = self._snapshot_parts[k][1]
+                self.trigger_event('snapshot:{}:load', v)
                 loader(v)
         return self
 
     def dump_snapshot(self):
         snapshot = dict()
         for identifier, (d, l) in self._snapshot_parts.items():
-            snapshot[identifier] = d()
+            v = d()
+            self.trigger_event('snapshot:{}:dump', v)
+            snapshot[identifier] = v
         return snapshot
 
     def register_event(self, name, callback, *args, priority=EventManager.DEF_PRIORITY, **kwargs):

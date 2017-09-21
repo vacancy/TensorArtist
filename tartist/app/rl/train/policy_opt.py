@@ -239,9 +239,9 @@ class SurrPolicyOptimizationTrainer(TrainerBase):
 
     def initialize(self):
         self._initialize_summaries()
-        super().initialize()
         self._initialize_opt_func()
         self._initialize_snapshot_parts()
+        super().initialize()
 
         self._compile_fn_train()
 

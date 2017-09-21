@@ -66,6 +66,31 @@ def fetch_variable(var, session=None):
         return session.run(var)
 
 
+def fetch_variables(var_list, session=None):
+    from .graph.env import get_default_env
+    session = session or get_default_env().session
+    try:
+        return session.run(var_list)
+    except tf.errors.FailedPredictionError as e:
+        raise ValueError('Uninitialized variable(s) encountered in fetch_variables') from e
+
+
+def assign_variables(var_list_or_dict, value_list=None, session=None, use_locking=False):
+    from .graph.env import get_default_env
+    session = session or get_default_env().session
+
+    assigns = []
+    if isinstance(var_list_or_dict, dict):
+        iterator = var_list_or_dict.items()
+    else:
+        iterator = zip(var_list_or_dict, value_list)
+
+    for var, value in iterator:
+        assigns.append(var.assign(value, use_locking=use_locking))
+
+    session.run(tf.group(*assigns))
+
+
 def extend_collection_list(base, *others):
     if base is None:
         return others
