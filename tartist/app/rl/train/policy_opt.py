@@ -196,11 +196,15 @@ class TRPOTrainerEnv(AlterACOptimizationTrainerEnvBase):
     def policy_kl(self):
         return self.network.outputs['kl']
 
+    @notnone_property
+    def policy_kl_self(self):
+        return self.network.outputs['kl_self']
+
     def make_optimizable_func(self, policy_loss=None, kl_self=None, value_loss=None):
         assert isinstance(self._policy_optimizer, TRPOOptimizer)
         with self.as_default():
             policy_loss = policy_loss or self.policy_loss
-            kl_self = kl_self or self.policy_kl
+            kl_self = kl_self or self.policy_kl_self
 
             p_func = self.make_func()
             scope = ACGraphKeys.POLICY_VARIABLES + '/.*'

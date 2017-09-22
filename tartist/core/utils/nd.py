@@ -46,7 +46,7 @@ def nd_batch_size(thing):
     if type(thing) in (tuple, list):
         return nd_len(thing[0])
     elif type(thing) in (dict, collections.OrderedDict):
-        return nd_len(list(thing.values())[0])
+        return nd_len(next(thing.values()))
     else:
         raise NotImplementedError()
 
