@@ -38,8 +38,9 @@ __envs__ = {
         },
 
         'collector': {
-            'target': 25000,
-            'nr_workers': 8,
+            'mode': 'EPISODE-STEP',
+            'target': 50000,
+            'nr_workers': 4,
             'nr_predictors': 2,
             'predictor_output_names': ['q_argmax'],
         },
@@ -96,7 +97,7 @@ def make_network(env):
         @O.auto_reuse
         def phi_fc(feature):
             _ = feature
-            _ = O.fc('fc0', _, 256, nonlin=functools.partial(O.leaky_relu, alpha=0.01))
+            _ = O.fc('fc0', _, 512, nonlin=functools.partial(O.leaky_relu, alpha=0.01))
             q_pred = O.fc('fcq', _, get_player_nr_actions())
             q_max = q_pred.max(axis=1)
             q_argmax = q_pred.argmax(axis=1)
@@ -170,7 +171,7 @@ def make_dataflow_train(env):
         env, make_player, _outputs2action,
         nr_workers=get_env('dqn.collector.nr_workers'), nr_predictors=get_env('dqn.collector.nr_workers'),
         predictor_output_names=get_env('dqn.collector.predictor_output_names'),
-        mode='EPISODE-STEP'
+        mode=get_env('dqn.collector.mode')
     )
 
     return rl.train.QLearningDataFlow(
