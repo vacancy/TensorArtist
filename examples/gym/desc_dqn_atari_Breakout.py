@@ -1,10 +1,4 @@
 # -*- coding:utf8 -*-
-# File   : desc_dqn_atari_Breakout.py
-# Author : Jiayuan Mao
-# Email  : maojiayuan@gmail.com
-# Date   : 20/08/2017
-# 
-# This file is part of TensorArtist.
 
 import os
 import functools
@@ -36,16 +30,17 @@ __envs__ = {
 
         # gamma and TD steps in future_reward
         # nr_td_steps must be 1
-        'gamma': 0.99,
+        'gamma': 0.9,
         'nr_td_steps': 1,
 
         'expreplay': {
-            'maxsize': 640000,
+            'maxsize': 500000,
         },
 
         'collector': {
-            'target': 64000,
-            'nr_workers': 8,
+            'mode': 'EPISODE-STEP',
+            'target': 50000,
+            'nr_workers': 4,
             'nr_predictors': 2,
             'predictor_output_names': ['q_argmax'],
         },
@@ -60,7 +55,7 @@ __envs__ = {
     },
     'trainer': {
         'learning_rate': 0.0001,
-        'nr_epochs': 400,
+        'nr_epochs': 800,
 
         # Parameters for Q-learner.
         'batch_size': 64,
@@ -155,7 +150,7 @@ def make_optimizer(env):
     lr = optimizer.base.make_optimizer_variable('learning_rate', get_env('trainer.learning_rate'))
 
     wrapper = optimizer.OptimizerWrapper()
-    wrapper.set_base_optimizer(optimizer.base.AdamOptimizer(lr, epsilon=1e-3))
+    wrapper.set_base_optimizer(optimizer.base.RMSPropOptimizer(lr, epsilon=1e-3))
     wrapper.append_grad_modifier(optimizer.grad_modifier.LearningRateMultiplier([
         ('*/b', 2.0),
     ]))
@@ -176,7 +171,7 @@ def make_dataflow_train(env):
         env, make_player, _outputs2action,
         nr_workers=get_env('dqn.collector.nr_workers'), nr_predictors=get_env('dqn.collector.nr_workers'),
         predictor_output_names=get_env('dqn.collector.predictor_output_names'),
-        mode='EPISODE-STEP'
+        mode=get_env('dqn.collector.mode')
     )
 
     return rl.train.QLearningDataFlow(

@@ -120,9 +120,10 @@ def make_network(env):
             summary.scalar('policy_entropy', entropy, collections=[rl.train.ACGraphKeys.POLICY_SUMMARIES])
 
         with env.variable_scope('value'):
+            _ = state
             _ = O.fc('fc1', _, 64, nonlin=O.relu)
             _ = O.fc('fc2', _, 64, nonlin=O.relu)
-            value = O.fc('fcv', state, 1)
+            value = O.fc('fcv', _, 1)
             value = value.remove_axis(1)
             net.add_output(value, name='value')
 

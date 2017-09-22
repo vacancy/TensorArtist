@@ -7,8 +7,10 @@
 # This file is part of TensorArtist.
 
 from .opr import vectorize_var_list
+from tartist import random
 from tartist.app.rl.utils.math import normalize_advantage
 from tartist.core.utils.meta import notnone_property
+from tartist.core.utils.nd import nd_batch_size
 from tartist.core.utils.thirdparty import get_tqdm_defaults
 from tartist.nn import summary
 from tartist.nn.graph import as_tftensor
@@ -439,6 +441,7 @@ class TRPOTrainer(AlterSurrOptimizationTrainerBase):
 
 class PPOTrainerMixin(ACOptimizationTrainerBase):
     _batch_sampler = None
+    _inference_batch_size = None
 
     def _initialize_summaries(self):
         with self.env.as_default():
@@ -452,6 +455,19 @@ class PPOTrainerMixin(ACOptimizationTrainerBase):
 
     def set_batch_sampler(self, sampler):
         self._batch_sampler = sampler
+
+    def inference_batch_size(self):
+        return self._inference_batch_size
+
+    def _make_inference_batch(self, feed_dict):
+        if self._inference_batch_size is None:
+            return feed_dict
+        else:
+            idx = random.randint(nd_batch_size(feed_dict), size=self._inference_batch_size)
+            return {k: v[idx] for k, v in feed_dict.items()}
+
+    def set_inference_batch_size(self, batch_size):
+        self._inference_batch_size = batch_size
 
 
 class PPOTrainer(PPOTrainerMixin, AlterSurrOptimizationTrainerBase):
@@ -478,7 +494,9 @@ class PPOTrainer(PPOTrainerMixin, AlterSurrOptimizationTrainerBase):
             ):
 
             self._p_func.call_args(batch)
-        p_outputs = self._p_func_inference.call_args({k: feed_dict[k] for k in self._p_feed_dict_keys})
+        p_outputs = self._p_func_inference.call_args(
+            self._make_inference_batch({k: feed_dict[k] for k in self._p_feed_dict_keys})
+        )
         return p_outputs
 
     def _run_step_v_network(self, feed_dict):
@@ -516,8 +534,8 @@ class PPOTrainerV2(PPOTrainerMixin, JointSurrOptimizationTrainerBase):
             ):
 
             self._opt_func.call_args(batch)
-        opt_outputs = self._inference_func.call_args({
+        opt_outputs = self._inference_func.call_args(self._make_inference_batch({
             k1: feed_dict[k2] for k1, k2 in zip(self._p_feed_dict_renames, self._p_feed_dict_keys)
-        })
+        }))
         return opt_outputs
 
