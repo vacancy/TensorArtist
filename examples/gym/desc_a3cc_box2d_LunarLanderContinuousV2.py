@@ -182,7 +182,7 @@ def make_network(env):
             policy_loss = O.identity(-(log_pi_a_given_s * advantage).mean(), name='policy_loss')
 
             # As mentioned, there is no trainable variance.
-            # xentropy_loss = O.identity(-entropy_beta * (policy_std ** 2.).sum(axis=1).mean(), name='xentropy_loss')
+            # entropy_loss = O.identity(-entropy_beta * (policy_std ** 2.).sum(axis=1).mean(), name='entropy_loss')
 
             value_loss = O.raw_smooth_l1_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
 

@@ -129,14 +129,14 @@ def make_network(env):
             advantage = (future_reward - O.zero_grad(value)).rename('advantage')
 
             policy_loss = O.identity(-(log_pi_a_given_s * advantage).mean(), name='policy_loss')
-            xentropy_loss = O.identity(-entropy_beta * (-policy * log_policy).sum(axis=1).mean(), name='xentropy_loss')
+            entropy_loss = O.identity(-entropy_beta * (-policy * log_policy).sum(axis=1).mean(), name='entropy_loss')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
 
-            loss = O.add_n([policy_loss, xentropy_loss, value_loss], name='loss')
+            loss = O.add_n([policy_loss, entropy_loss, value_loss], name='loss')
 
             net.set_loss(loss)
 
-            for v in [policy_loss, xentropy_loss, value_loss,
+            for v in [policy_loss, entropy_loss, value_loss,
                       value.mean(name='predict_value'), advantage.rms(name='rms_advantage'), loss]:
                 summary.scalar(v)
 
