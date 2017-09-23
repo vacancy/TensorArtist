@@ -122,19 +122,21 @@ def make_network(env):
         if is_train:
             action = O.placeholder('action', shape=(None, ), dtype='int64')
             future_reward = O.placeholder('future_reward', shape=(None, ))
+            entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
 
             log_policy = O.log(policy + 1e-6)
             log_pi_a_given_s = (log_policy * O.one_hot(action, get_player_nr_actions())).sum(axis=1)
             advantage = (future_reward - O.zero_grad(value)).rename('advantage')
-            policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
-            xentropy_cost = (-policy * log_policy).sum(axis=1).mean(name='xentropy_cost')
+
+            policy_loss = O.identity(-(log_pi_a_given_s * advantage).mean(), name='policy_loss')
+            xentropy_loss = O.identity(-entropy_beta * (-policy * log_policy).sum(axis=1).mean(), name='xentropy_loss')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
-            entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
-            loss = O.add_n([-policy_cost, -xentropy_cost * entropy_beta, value_loss], name='loss')
+
+            loss = O.add_n([policy_loss, xentropy_loss, value_loss], name='loss')
 
             net.set_loss(loss)
 
-            for v in [policy_cost, xentropy_cost, value_loss,
+            for v in [policy_loss, xentropy_loss, value_loss,
                       value.mean(name='predict_value'), advantage.rms(name='rms_advantage'), loss]:
                 summary.scalar(v)
 
