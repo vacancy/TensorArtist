@@ -6,6 +6,7 @@
 # 
 # This file is part of TensorArtist.
 
+from .simple import *
 from .maze import *
 from .maze_visualizer import *
 from .taxi import *
