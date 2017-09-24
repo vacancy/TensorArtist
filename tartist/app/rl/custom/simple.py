@@ -10,10 +10,10 @@
 from ..base import SimpleRLEnvironBase, DiscreteActionSpace
 import numpy as np
 
-__all__ = ['MoveRightRLEnviron']
+__all__ = ['MoveRightEnv']
 
 
-class MoveRightRLEnviron(SimpleRLEnvironBase):
+class MoveRightEnv(SimpleRLEnvironBase):
     def __init__(self, size=10):
         super().__init__()
         self._size = size
