@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : desc_ppo_roboschool_HopperV1.py
+# File   : desc_ppov2_roboschool_HopperV1.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 15/08/2017
