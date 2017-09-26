@@ -117,7 +117,7 @@ def make_network(env):
             net.add_output(policy_loss, name='policy_loss')
             net.add_output(entropy_loss, name='entropy_loss')
 
-            summary.scalar('policy_entropy', entropy, collections=[rl.train.ACGraphKeys.POLICY_SUMMARIES])
+            summary.scalar('policy_entropy', entropy)
 
         with env.variable_scope('value'):
             _ = state
