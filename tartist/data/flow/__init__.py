@@ -3,7 +3,7 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 2/23/17
-# 
+#
 # This file is part of TensorArtist.
 
 from . import tools
@@ -13,5 +13,5 @@ from .collections import *
 from .kv import *
 from .remote import *
 from .rng import *
-from .tools import MapDataFlow
+from .tools import MapDataFlow, DataFlowMixer
 
