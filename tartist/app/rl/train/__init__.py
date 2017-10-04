@@ -9,4 +9,5 @@
 from .a3c import *
 from .evolution import *
 from .experience import *
-from .trpo import *
+from .policy_opt import *
+from .q_learning import *

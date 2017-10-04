@@ -4,6 +4,10 @@
 # Adapters
 
 from gym.spaces import Discrete, MultiDiscrete
+
+Error = Exception
+
+
 class DiscreteToMultiDiscrete(Discrete):
     """
     Adapter that adapts the MultiDiscrete action space to a Discrete action space of any size
@@ -49,6 +53,8 @@ class DiscreteToMultiDiscrete(Discrete):
         }
     """
     def __init__(self, multi_discrete, options=None):
+        super().__init__(0)
+
         assert isinstance(multi_discrete, MultiDiscrete)
         self.multi_discrete = multi_discrete
         self.num_discrete_space = self.multi_discrete.num_discrete_space
@@ -71,7 +77,7 @@ class DiscreteToMultiDiscrete(Discrete):
 
         # Config 3
         elif isinstance(options, dict):
-            self.n = len(options.keys())
+            self.n = len(list(options.keys()))
             self.mapping = options
             for i, key in enumerate(options.keys()):
                 if i != key:

@@ -2,11 +2,10 @@
 # File   : __init__.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
-# Date   : 3/18/17
+# Date   : 17/08/2017
 # 
 # This file is part of TensorArtist.
 
-from .simple import *
-from .maze import *
-from .maze_visualizer import *
-from .taxi import *
+
+from .adv import *
+from .env import *

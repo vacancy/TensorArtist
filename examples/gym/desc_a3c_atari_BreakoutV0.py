@@ -122,19 +122,21 @@ def make_network(env):
         if is_train:
             action = O.placeholder('action', shape=(None, ), dtype='int64')
             future_reward = O.placeholder('future_reward', shape=(None, ))
+            entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
 
             log_policy = O.log(policy + 1e-6)
             log_pi_a_given_s = (log_policy * O.one_hot(action, get_player_nr_actions())).sum(axis=1)
             advantage = (future_reward - O.zero_grad(value)).rename('advantage')
-            policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
-            xentropy_cost = (-policy * log_policy).sum(axis=1).mean(name='xentropy_cost')
+
+            policy_loss = O.identity(-(log_pi_a_given_s * advantage).mean(), name='policy_loss')
+            entropy_loss = O.identity(-entropy_beta * (-policy * log_policy).sum(axis=1).mean(), name='entropy_loss')
             value_loss = O.raw_l2_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
-            entropy_beta = O.scalar('entropy_beta', 0.01, trainable=False)
-            loss = O.add_n([-policy_cost, -xentropy_cost * entropy_beta, value_loss], name='loss')
+
+            loss = O.add_n([policy_loss, entropy_loss, value_loss], name='loss')
 
             net.set_loss(loss)
 
-            for v in [policy_cost, xentropy_cost, value_loss,
+            for v in [policy_loss, entropy_loss, value_loss,
                       value.mean(name='predict_value'), advantage.rms(name='rms_advantage'), loss]:
                 summary.scalar(v)
 
@@ -272,7 +274,7 @@ def make_a3c_configs(env):
     env.player_master.on_data_func = on_data_func
     env.player_master.on_stat_func = on_stat_func
 
-    # currently we don't use multi-proc inference, so these settings are not used at all
+    # Currently we don't use multi-proc inference, so these settings are not used at all.
     if False:
         from common_a3c import inference_on_data_func, inference_on_stat_func
         inference_predictor_func = functools.partial(_predictor_func, is_inference=True)
@@ -309,7 +311,7 @@ def main_train(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
             main_inference_play_multithread(trainer, make_player=make_player)
 
-    # this one should run before monitor
+    # This one should run before monitor.
     register_event(trainer, 'epoch:after', on_epoch_after, priority=5)
 
     trainer.train()

@@ -57,17 +57,29 @@ class TSCoordinatorEvent(object):
 class TSCounterBasedEvent(object):
     """Thread-safe counter-based callback invoker. When the counter is incremented, the system will check whether
     the counter has reached a target value. If so, the event will be set."""
-    def __init__(self, target):
+    def __init__(self, target, tqdm=None):
         self._cnt = itertools.count()
         self._iter_cnt = iter(self._cnt)
 
         self._target = target
         self._event = threading.Event()
 
+        self._tick_mutex = threading.Lock()
+        self._tqdm = tqdm
+
     def tick(self):
+        with self._tick_mutex:
+            return self.__tick()
+
+    def __tick(self):
         value = next(self._iter_cnt)
+        if self._tqdm is not None:
+            self._tqdm.update(1)
         if value >= self._target:
             self._event.set()
+            if self._tqdm is not None:
+                self._tqdm.close()
+        return value
 
     def is_set(self):
         return self._event.is_set()

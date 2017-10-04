@@ -61,12 +61,19 @@ Parallel (multi-threading only) implementation for TRPO and GAE:
 [1506.02438] High-Dimensional Continuous Control Using Generalized Advantage Estimation (https://arxiv.org/abs/1506.02438).
 
 ```
-tart-train desc_trpo_gae_box2d_LunarLanderContinuousV2.py -d cpu
-tart-demo desc_trpo_gae_box2d_LunarLanderContinuousV2.py -d cpu [-w xxx.snapshot.pkl] [-e last]
+tart-train desc_trpo_gae_roboschool_HopperV1.py -d cpu
+tart-demo desc_trpo_gae_roboschool_HopperV1.py -d cpu [-w xxx.snapshot.pkl] [-e last]
 ```
 
 Thank you authors of the following repos and blogs:
 - https://github.com/kvfrans/parallel-trpo
 - https://github.com/steveKapturowski/tensorflow-rl
 - http://kvfrans.com/speeding-up-trpo-through-parallelization-and-parameter-adaptation
+
+
+## Proximal Policy Optimization
+
+Reproduction of PPO: [1707.06347]Proximal Policy Optimization Algorithms (https://arxiv.org/abs/1707.06347)
+
+Working in progress.
 

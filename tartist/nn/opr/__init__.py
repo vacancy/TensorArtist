@@ -9,6 +9,7 @@
 from ..graph.node import as_varnode, as_tftensor, as_varnode
 from .arith import *
 from .cnn import *
+from .control import *
 from .debug import *
 from .grad import *
 from .helper import *

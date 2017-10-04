@@ -64,7 +64,7 @@ def check_integrity(fpath, md5):
     """
     Check data integrity using md5 hashing
     Credit to torchvision
-    https://github.com/pytorch/vision/blob/master/torchvision/datasets/utils.py
+    https://github.com/pytorch/vision/blob/master/torchvision/datasets/opr.py
     """
 
     if not os.path.isfile(fpath):

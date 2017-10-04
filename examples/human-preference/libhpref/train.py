@@ -10,6 +10,7 @@ from tartist.app.rl.train import A3CMaster, A3CTrainer, A3CTrainerEnv
 from tartist.core import get_env
 from tartist.core.utils.meta import notnone_property
 
+import time
 import threading
 
 __all__ = ['HPA3CMaster', 'HPA3CTrainerEnv', 'HPA3CTrainer']
@@ -36,6 +37,10 @@ class HPA3CTrainerEnv(A3CTrainerEnv):
     def pcollector(self):
         return self._pcollector
 
+    @notnone_property
+    def rpredictor(self):
+        return self._pcollector.rpredictor
+
     def set_pcollector(self, pc):
         self._pcollector = pc
         return self
@@ -50,3 +55,11 @@ class HPA3CTrainer(A3CTrainer):
     def initialize(self):
         super().initialize()
         self.env.pcollector.initialize()
+        _register_rpredictor_wait(self)
+
+
+def _register_rpredictor_wait(trainer):
+    def wait(t):
+        t.env.rpredictor.wait(t.epoch)
+
+    trainer.register_event('epoch:before', wait)

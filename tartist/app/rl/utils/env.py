@@ -1,14 +1,14 @@
 # -*- coding:utf8 -*-
-# File   : utils.py
+# File   : opr.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 3/18/17
-# 
+#
 # This file is part of TensorArtist.
 
-from .base import DiscreteActionSpace
-from .base import ProxyRLEnvironBase
-from tartist.core import get_logger 
+from tartist.app.rl.base import DiscreteActionSpace
+from tartist.app.rl.base import ProxyRLEnvironBase
+from tartist.core import get_logger
 from tartist.core.utils.meta import run_once
 import copy
 import functools
@@ -20,11 +20,11 @@ logger = get_logger(__file__)
 
 __all__ = [
         'TransparentAttributeProxyRLEnviron',
-        'AutoRestartProxyRLEnviron', 
+        'AutoRestartProxyRLEnviron',
         'RepeatActionProxyRLEnviron', 'NOPFillProxyRLEnviron',
         'LimitLengthProxyRLEnviron', 'MapStateProxyRLEnviron',
         'MapActionProxyRLEnviron', 'HistoryFrameProxyRLEnviron',
-        'ManipulateRewardProxyRLEnviron', 'manipulate_reward', 
+        'ManipulateRewardProxyRLEnviron', 'manipulate_reward',
         'remove_proxies', 'find_proxy']
 
 

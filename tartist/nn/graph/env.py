@@ -44,16 +44,19 @@ def select_device(devid, env):
     return tf.device(env.slave_devices[devid - 1])
 
 
-def reuse_context(activate=True):
+def reuse_context(activate=True, name=None):
     """
     enable variable reuse context, without any name
 
     :param activate: whether use or not, this is useful when you have some conditional parameters to enable
     parameter reuse
+    :param name: if provided, use as the name for variable_scope
     :return: if active, return a reuse variable scope, otherwise an empty context
     """
+    name = name or tf.get_variable_scope()
+
     if activate:
-        return tf.variable_scope(tf.get_variable_scope(), reuse=True)
+        return tf.variable_scope(name, reuse=True)
     else:
         return EmptyContext()
 
@@ -706,23 +709,28 @@ class Network(object):
 
     def fetch_all_variables_dict(self):
         """Get all variables as a dict."""
-        from ..tfutils import fetch_variable
+        from ..tfutils import fetch_variables
 
         all_variables = {}
-        for v in self.owner_env.graph.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
-            all_variables[clean_name(v)] = fetch_variable(v, self.owner_env.session)
+        var_list = self.owner_env.graph.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+        value_list = fetch_variables(var_list, self.owner_env.session)
+        all_variables = {clean_name(var): value for var, value in zip(var_list, value_list)}
         return all_variables
 
     def assign_all_variables_dict(self, all_variables, verbose=True):
         """Assign all variables from a dict."""
-        from ..tfutils import assign_variable
+        from ..tfutils import assign_variables
 
+        var_list, value_list = [], []
         for v in self.owner_env.graph.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
             value = all_variables.get(clean_name(v), None)
             if value is not None:
                 if verbose:
                     logger.info('Assign variable from external dict: {}.'.format(clean_name(v)))
-                assign_variable(v, value, self.owner_env.session)
+                var_list.append(v)
+                value_list.append(value)
+
+        assign_variables(var_list, value_list, self.owner_env.session)
         return self
 
     def find_opr_by_name(self, name):

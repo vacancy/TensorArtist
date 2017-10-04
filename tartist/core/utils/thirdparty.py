@@ -9,5 +9,7 @@
 __all__ = ['get_tqdm_defaults']
 
 
+__tqdm_defaults = {'dynamic_ncols': True, 'ascii': True}
+
 def get_tqdm_defaults():
-    return {'dynamic_ncols': True}
+    return __tqdm_defaults

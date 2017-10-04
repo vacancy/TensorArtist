@@ -32,5 +32,5 @@ that example.
 + Basic A3C on Box2D environment: `gym/desc_a3cc_box2d_LunarLanderContinuousV2.py`
 + Cross-Entropy method as gradient-free optimization for RL environments: `gym/desc_cem_classic_CartPoleV0.py`
 + Serial naive Evolution Strategy as gradient-free optimization for RL environments: `gym/desc_es_classic_CartPoleV0.py`
-+ TRPO with GAE: `gym/desc_trpo_gae_box2d_LunarLanderContinuousV2.py`
++ TRPO with GAE: `gym/desc_trpo_gae_roboschool_HopperV1.py`
 + RL Environment Simulator: `rl-sim/README.md`

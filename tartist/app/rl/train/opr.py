@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-# File   : utils.py
+# File   : opr.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 12/08/2017
@@ -47,3 +47,4 @@ def make_param_gs(env, var_list, name_scope):
         param_provider = as_tftensor(flat_variables_tensor)
 
     return param_nr_elems, param_getter, param_setter, param_provider
+

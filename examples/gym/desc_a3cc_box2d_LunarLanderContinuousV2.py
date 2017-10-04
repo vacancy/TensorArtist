@@ -170,6 +170,7 @@ def make_network(env):
         if is_train:
             action = O.placeholder('action', shape=(None, action_length), dtype='int64')
             future_reward = O.placeholder('future_reward', shape=(None, ))
+            entropy_beta = O.scalar('entropy_beta', 0.1, trainable=False)
 
             # Since we discretized the action space, use cross entropy here.
             log_policy = O.log(policy_explore + 1e-4)
@@ -178,15 +179,14 @@ def make_network(env):
 
             # Important trick: using only positive advantage to perform gradient assent. This stabilizes the training.
             advantage = advantage * O.zero_grad((advantage > 0.).astype('float32'))
-            policy_cost = (log_pi_a_given_s * advantage).mean(name='policy_cost')
+            policy_loss = O.identity(-(log_pi_a_given_s * advantage).mean(), name='policy_loss')
 
             # As mentioned, there is no trainable variance.
-            # xentropy_cost = (policy_std ** 2.).sum(axis=1).mean(name='xentropy_cost')
-            # entropy_beta = O.scalar('entropy_beta', 0.1, trainable=False)
+            # entropy_loss = O.identity(-entropy_beta * (policy_std ** 2.).sum(axis=1).mean(), name='entropy_loss')
 
             value_loss = O.raw_smooth_l1_loss('raw_value_loss', future_reward, value).mean(name='value_loss')
 
-            loss = O.add_n([-policy_cost, value_loss], name='loss')
+            loss = O.add_n([policy_cost, value_loss], name='loss')
 
             net.set_loss(loss)
 
@@ -248,7 +248,7 @@ def get_action_range():
     l, h = p.action_space.low, p.action_space.high
     del p
 
-    # Convert it to float32 to match the network's data type
+    # Convert it to float32 to match the network's data type.
     return l.astype('float32'), h.astype('float32')
 
 
@@ -357,7 +357,7 @@ def main_train(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
             main_inference_play_multithread(trainer, make_player=make_player)
 
-    # this one should run before monitor
+    # This one should run before monitor.
     register_event(trainer, 'epoch:after', on_epoch_after, priority=5)
 
     trainer.train()

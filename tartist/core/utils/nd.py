@@ -7,17 +7,22 @@
 # This file is part of TensorArtist.
 
 import collections
-import numpy
+import numpy as np
 
 __all__ = [
-    'isndarray', 
+    'isndarray',  'is_ndarray'
     'nd_concat', 'nd_len', 'nd_batch_size', 
-    'nd_split_n', 'size_split_n'
+    'nd_split_n', 'size_split_n',
+    'gather_list_batch'
 ]
 
 
 def isndarray(arr):
-    return isinstance(arr, numpy.ndarray)
+    return isinstance(arr, np.ndarray)
+
+
+# MJY(20170820):: more pythonic naming
+is_ndarray = isndarray
 
 
 def nd_concat(lst):
@@ -26,7 +31,7 @@ def nd_concat(lst):
     elif len(lst) == 1:
         return lst[0]
     else:
-        return numpy.concatenate(lst)
+        return np.concatenate(lst)
 
 
 def nd_len(arr):
@@ -41,7 +46,7 @@ def nd_batch_size(thing):
     if type(thing) in (tuple, list):
         return nd_len(thing[0])
     elif type(thing) in (dict, collections.OrderedDict):
-        return nd_len(list(thing.values())[0])
+        return nd_len(next(thing.values()))
     else:
         raise NotImplementedError()
 
@@ -64,3 +69,21 @@ def size_split_n(full_size, n):
     if rest != 0:
         result[-1] += rest
     return result
+
+
+def gather_list_batch(data, indices):
+    """Gather `indices` as batch indices from `data`, which can either be typical nd array or a
+    list of nd array"""
+
+    assert isinstance(indices, (tuple, list)) or (isndarray(indices) and len(indices.shape) == 1)
+
+    if isndarray(data):
+        return data[indices]
+
+    assert len(data) > 0 and len(indices) > 0
+
+    sample = np.array(data[0])  # Try to convert the first element to a typical nd array.
+    output = np.empty((len(indices), ) + sample.shape, dtype=sample.dtype)
+    for i, j in enumerate(indices):
+        output[i] = data[j]
+    return output

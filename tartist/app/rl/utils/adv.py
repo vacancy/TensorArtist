@@ -1,12 +1,14 @@
 # -*- coding:utf8 -*-
-# File   : adv_utils.py
+# File   : adv.py
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 15/08/2017
 # 
 # This file is part of TensorArtist.
 
-from ..math_utils import discount_cumsum, compute_gae
+from tartist.app.rl.utils.math import discount_cumsum, compute_gae
+
+__all__ = ['AdvantageComputerBase', 'DiscountedAdvantageComputer', 'GAEComputer']
 
 
 class AdvantageComputerBase(object):

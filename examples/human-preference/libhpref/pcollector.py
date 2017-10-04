@@ -41,29 +41,107 @@ def _save_gif(traj, filename):
 
 
 class PreferenceCollector(object):
-    """
-    Preference collector is the interface for prefcol's front end.
-    """
+    """Preference collector is the interface for prefcol's front end."""
+
     def __init__(self, rpredictor, web_configs, video_length=100, window_length=300, pool_size=100):
+        """
+        Initialize the preference collector.
+
+        :param rpredictor: the corresponding reward predictor.
+        :param web_configs: web server configs.
+        :param video_length: video length.
+        :param window_length: window length, for video sampling. The video for labeling will be sampled by choosing
+        the subsequent `video_length` frames with largest summed variance within every `window_length` frames.
+        :param pool_size: cache pool size for labeling.
+        """
         self._rpredictor = rpredictor
         self._pool = TrajectoryPairPool(maxlen=pool_size)
+
+        self._webserver = WebServer(self, configs=web_configs)
+        self._webserver_thread = None
 
         self._video_length = video_length
         self._window_length = window_length
         assert self._video_length <= self._window_length
 
         # `data` holds the working set of each worker (wid => list of observations)
-        self._data = collections.defaultdict(lambda: collections.deque(maxlen=window_length))
+        self._data_buffer = collections.defaultdict(lambda: collections.deque(maxlen=window_length))
         # pair buffer is a buffer with size at most 2, used for generating the pair
         self._pair_buffer = []
+        self._pair_mutex = threading.Lock()
 
-        self._webserver = WebServer(self, configs=web_configs)
-        self._webserver_thread = None
+    @property
+    def pool(self):
+        return self._pool
+
+    @property
+    def rpredictor(self):
+        return self._rpredictor
 
     def initialize(self):
+        # First: try to restore the stored preference.
         self.__restore_preferences()
+
+        # Start the webserver thread.
         self._webserver_thread = threading.Thread(target=self._webserver.mainloop, daemon=True)
         self._webserver_thread.start()
+
+    def post_state(self, identifier, state, observation, action, variance):
+        # Do NOT use lock: each worker (identified by `identifier`) is one thread.
+        data = self._data_buffer[identifier]
+        data.append((state, observation, action, variance))
+        if len(data) == data.maxlen:
+            self._try_post_video(data)
+
+    def post_preference(self, uid, pref):
+        dirname = _compose_dir(uid)
+        pair = io.load(osp.join(dirname, 'pair.pkl'))
+        io.dump(osp.join(dirname, 'pref.txt'), str(pref))
+
+        logger.info('Post preference uid={}, pref={}.'.format(uid, pref))
+
+        data = TrainingData(pair.t1_state, pair.t1_action, pair.t2_state, pair.t2_action, pref)
+
+        # Lock acquired inside this function call.
+        self._rpredictor.add_training_data(data)
+
+    def _try_post_video(self, data):
+        # Find the subsequence with largest variance.
+        current_sum = 0
+        for i in range(self._video_length):
+            current_sum += data[i][-1]
+
+        max_sum, max_idx = current_sum, 0
+        for i in range(self._video_length, self._window_length):
+            current_sum = current_sum - data[i-self._video_length][-1] + data[i][-1]
+            if current_sum > max_sum:
+                max_sum, max_idx = current_sum, i - self._video_length
+
+        # Extract the subsequence.
+        this_states, this_observations, this_actions = [], [], []
+        for i in range(max_idx):
+            data.popleft()
+        for i in range(self._video_length):
+            d = data.popleft()
+            this_states.append(d[0])
+            this_observations.append(d[1])
+            this_actions.append(d[2])
+
+        # Convert the output to ndarrays.
+        this_states, this_observations, this_actions = map(np.array, (this_states, this_observations, this_actions))
+
+        self._try_post_pair(this_states, this_observations, this_actions, max_sum)
+
+    def _try_post_pair(self, states, observations, actions, variance):
+        # Non-thread-safe operation: acquire the lock.
+
+        with self._pair_mutex:
+            self._pair_buffer.append((states, observations, actions, variance))
+
+            if len(self._pair_buffer) == 2:
+                t1, t2 = self._pair_buffer
+                self._pool.push(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2], t1[3] + t2[3])
+                self._pair_buffer.clear()
 
     def __restore_preferences(self):
         """Restore the preferences we already have."""
@@ -89,61 +167,6 @@ class PreferenceCollector(object):
             self._rpredictor.extend_training_data(all_data)
 
         logger.critical('Preference restore finished: success={}'.format(len(all_data)))
-
-    @property
-    def pool(self):
-        return self._pool
-
-    def post_state(self, identifier, state, observation, action, variance):
-        # logger.info('Post state identifier={}, state={}.'.format(identifier, id(state)))
-
-        data = self._data[identifier]
-        data.append((state, observation, action, variance))
-        if len(data) == data.maxlen:
-            self._try_post_video(data)
-
-    def post_preference(self, uid, pref):
-        dirname = _compose_dir(uid)
-        pair = io.load(osp.join(dirname, 'pair.pkl'))
-        io.dump(osp.join(dirname, 'pref.txt'), str(pref))
-
-        logger.info('Post preference uid={}, pref={}.'.format(uid, pref))
-
-        data = TrainingData(pair.t1_state, pair.t1_action, pair.t2_state, pair.t2_action, pref)
-        self._rpredictor.add_training_data(data)
-
-    def _try_post_video(self, data):
-        current_sum = 0
-        for i in range(self._video_length):
-            current_sum += data[i][-1]
-
-        max_sum, max_idx = current_sum, 0
-        for i in range(self._video_length, self._window_length):
-            current_sum = current_sum - data[i-self._video_length][-1] + data[i][-1]
-            if current_sum > max_sum:
-                max_sum, max_idx = current_sum, i - self._video_length
-
-        this_states, this_observations, this_actions = [], [], []
-        for i in range(max_idx):
-            data.popleft()
-        for i in range(self._video_length):
-            d = data.popleft()
-            this_states.append(d[0])
-            this_observations.append(d[1])
-            this_actions.append(d[2])
-
-        # convert the output to ndarrays
-        this_states, this_observations, this_actions = map(np.array, (this_states, this_observations, this_actions))
-
-        self._try_post_pair(this_states, this_observations, this_actions, max_sum)
-
-    def _try_post_pair(self, states, observations, actions, variance):
-        self._pair_buffer.append((states, observations, actions, variance))
-
-        if len(self._pair_buffer) == 2:
-            t1, t2 = self._pair_buffer
-            self._pool.push(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2], t1[3] + t2[3])
-            self._pair_buffer.clear()
 
 
 class TrajectoryPairPool(object):
@@ -172,11 +195,6 @@ class TrajectoryPairPool(object):
         self._tformat = tformat
 
     def push(self, t1_state, t1_observation, t1_action, t2_state, t2_observation, t2_action, priority):
-
-        # logger.info('Got pushed trajectory: len1={}, len2={}, priority={}.'.format(
-        #     len(t1_state), len(t2_state), priority
-        # ))
-
         with self._data_pool_lock:
             wrapped = _TrajectoryPairWrapper(priority=priority, count=next(self._data_pool_counter),
                                              pair=TrajectoryPair(
@@ -214,16 +232,16 @@ class TrajectoryPairPool(object):
 
 class WebServer(object):
     def __init__(self, collector, configs):
-        from . import _web_handlers as handlers
+        from .pcollector_web_handlers import MainHandler, GetHandler, SubmitHandler
 
         self._template_loader = template.Loader(osp.join(osp.dirname(__file__), '_tpl'))
         self._configs = configs
 
         init_kwargs = dict(collector=collector, loader=self._template_loader, configs=configs)
         self._application = Application([
-            (r'/', handlers.MainHandler, init_kwargs),
-            (r'/get', handlers.GetHandler, init_kwargs),
-            (r'/submit', handlers.SubmitHandler, init_kwargs),
+            (r'/', MainHandler, init_kwargs),
+            (r'/get', GetHandler, init_kwargs),
+            (r'/submit', SubmitHandler, init_kwargs),
             (r'/trajectories/(.*)', StaticFileHandler, {'path': osp.join(get_env('dir.root'), 'trajectories')})
         ], debug=True)
 

@@ -116,7 +116,7 @@ def main_inference_play_multithread(trainer):
 
 
 def main_train(trainer):
-    # Compose the evaluator
+    # Compose the evaluator.
     player = make_player()
 
     def evaluate_train(trainer, p=player):
@@ -124,7 +124,7 @@ def main_train(trainer):
 
     trainer.set_evaluator(evaluate_train)
 
-    # Register plugins
+    # Register plugins.
     from tartist.plugins.trainer_enhancer import summary
     summary.enable_summary_history(trainer, extra_summary_types={
         'inference/score': 'async_scalar',
@@ -143,7 +143,7 @@ def main_train(trainer):
         if trainer.epoch > 0 and trainer.epoch % 2 == 0:
             main_inference_play_multithread(trainer)
 
-    # this one should run before monitor
+    # This one should run before monitor.
     trainer.register_event('epoch:after', on_epoch_after, priority=5)
 
     trainer.train()
