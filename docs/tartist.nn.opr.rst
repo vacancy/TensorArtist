@@ -20,6 +20,14 @@ tartist\.nn\.opr\.cnn module
     :undoc-members:
     :show-inheritance:
 
+tartist\.nn\.opr\.control module
+--------------------------------
+
+.. automodule:: tartist.nn.opr.control
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tartist\.nn\.opr\.debug module
 ------------------------------
 

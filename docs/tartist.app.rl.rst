@@ -9,6 +9,7 @@ Subpackages
     tartist.app.rl.custom
     tartist.app.rl.simulator
     tartist.app.rl.train
+    tartist.app.rl.utils
 
 Submodules
 ----------
@@ -29,10 +30,10 @@ tartist\.app\.rl\.gym module
     :undoc-members:
     :show-inheritance:
 
-tartist\.app\.rl\.utils module
-------------------------------
+tartist\.app\.rl\.gym\_adapter module
+-------------------------------------
 
-.. automodule:: tartist.app.rl.utils
+.. automodule:: tartist.app.rl.gym_adapter
     :members:
     :undoc-members:
     :show-inheritance:

@@ -20,6 +20,14 @@ tartist\.app\.rl\.custom\.maze\_visualizer module
     :undoc-members:
     :show-inheritance:
 
+tartist\.app\.rl\.custom\.simple module
+---------------------------------------
+
+.. automodule:: tartist.app.rl.custom.simple
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tartist\.app\.rl\.custom\.taxi module
 -------------------------------------
 

@@ -12,6 +12,14 @@ tartist\.random\.rng module
     :undoc-members:
     :show-inheritance:
 
+tartist\.random\.sampler module
+-------------------------------
+
+.. automodule:: tartist.random.sampler
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

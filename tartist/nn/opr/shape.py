@@ -13,6 +13,7 @@ import numpy as np
 
 __all__ = [
     'canonize_sym_shape',
+    'set_static_shape',
     'flatten', 'flatten2', 
     'reshape', 'dimshuffle', 'transpose', 'broadcast', 'tile',
     'add_axis', 'expand_dim', 'remove_axis', 'sqeeze'
@@ -29,6 +30,13 @@ def canonize_sym_shape(shape, name='canonize_shape'):
     if all(map(lambda x: type(x) is int, shape)):
         return np.array(shape, dtype='int32')
     return tf.stack(shape)
+
+
+@wrap_named_op
+def set_static_shape(inpvar, shape, name='set_static_shape'):
+    out = tf.identity(inpvar, name=name)
+    out.set_shape(shape)
+    return out
 
 
 @wrap_named_op

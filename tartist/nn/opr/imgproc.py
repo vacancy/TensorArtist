@@ -8,7 +8,8 @@
 
 from .helper import wrap_named_op
 from .helper import lazy_O as O
-from ..graph.node import as_varnode, __valid_tensor_types__
+from ..graph.node import as_varnode, as_tftensor, __valid_tensor_types__
+from ...core.utils.shape import get_2dshape
 import tensorflow as tf
 import functools
 import collections
@@ -37,16 +38,33 @@ def get_vi_2dshape(shape):
 
 
 @wrap_named_op
-def _crop(inpvar, shape, method='center', name='crop'):
-    assert method in ('center', 'leftup')
-    assert inpvar.partial_shape is None or len(inpvar.static_shape) == 4
+def _crop(inpvar, shape, static_shape=None, method='center', name='crop'):
+    inpvar = as_varnode(inpvar)
+    shape = get_2dshape(shape)
 
-    inpvar = as_varnode(shape)
-    shape = get_vi_2dshape(shape)
-    h, w = shape[0], shape[1]
-    y = 0 if method == 'leftup' else (inpvar.shape[2] - h) // 2
-    x = 0 if method == 'leftup' else (inpvar.shape[3] - w) // 2
-    return inpvar[:, :, y:y+h, x:x+w]
+    assert method in ('center', 'leftup')
+    assert inpvar.static_shape is None or len(inpvar.static_shape) == 4
+    assert static_shape is None or type(static_shape) in (tuple, list) and len(static_shape) == 2
+
+    shape_var = get_vi_2dshape(shape)
+    h, w = shape_var[0], shape_var[1]
+    y = 0 if method == 'leftup' else (inpvar.shape[1] - h) // 2
+    x = 0 if method == 'leftup' else (inpvar.shape[2] - w) // 2
+
+    out = inpvar[:, y:y+h, x:x+w, :]
+    if static_shape is not None:
+        new_shape = [inpvar.static_shape[0], static_shape[0], static_shape[1], inpvar.static_shape[3]]
+    else:
+        new_shape = [inpvar.static_shape[0], None, None, inpvar.static_shape[3]]
+        if type(shape) in (tuple, list):
+            if type(shape[0]) is int:
+                new_shape[1] = shape[0]
+            if type(shape[1]) is int:
+                new_shape[2] = shape[1]
+
+    out.set_shape(new_shape)
+    return out
+
 
 
 crop_center = functools.partial(_crop, method='center')
@@ -54,19 +72,33 @@ crop_lu = functools.partial(_crop, method='leftup')
 
 
 @wrap_named_op
-def _pad(inpvar, shape, method='center', mode='CONSTANT', name='pad'):
+def _pad(inpvar, shape, static_shape=None, method='center', mode='CONSTANT', name='pad'):
+    inpvar = as_varnode(inpvar)
+    shape = get_2dshape(shape)
+
     assert method in ('center', 'rightbottom')
     assert inpvar.static_shape is not None and len(inpvar.static_shape) == 4
+    assert static_shape is None or type(static_shape) in (tuple, list) and len(static_shape) == 2
 
-    shape = get_vi_2dshape(shape)
-    h, w = inpvar.shape[2], inpvar.shape[3]
-    y0 = 0 if method == 'rightbottom' else (shape[0] - h) // 2
-    x0 = 0 if method == 'rightbottom' else (shape[1] - w) // 2
-    y1 = shape[0] - h - y0
-    x1 = shape[1] - w - x0
+    shape_var = get_vi_2dshape(shape)
+    h, w = inpvar.shape[1], inpvar.shape[2]
+    y0 = 0 if method == 'rightbottom' else (shape_var[0] - h) // 2
+    x0 = 0 if method == 'rightbottom' else (shape_var[1] - w) // 2
+    y1 = shape_var[0] - h - y0
+    x1 = shape_var[1] - w - x0
 
-    new_shape = [inpvar.static_shape[0], None, None, inpvar.static_shape[3]]
     out = tf.pad(inpvar, O.stack([[0, 0], O.stack([x0, x1]), O.stack([y0, y1]), [0, 0]]), mode=mode)
+
+    if static_shape is not None:
+        new_shape = [inpvar.static_shape[0], static_shape[0], static_shape[1], inpvar.static_shape[3]]
+    else:
+        new_shape = [inpvar.static_shape[0], None, None, inpvar.static_shape[3]]
+        if type(shape) in (tuple, list):
+            if type(shape[0]) is int:
+                new_shape[1] = shape[0]
+            if type(shape[1]) is int:
+                new_shape[2] = shape[1]
+
     out.set_shape(new_shape)
     return out
 
@@ -76,16 +108,30 @@ pad_rb = functools.partial(_pad, method='rightbottom')
 
 
 @wrap_named_op
-def pad_rb_multiple_of(inpvar, multiple, val=0, name='pad_rb_multiple_of'):
+def pad_rb_multiple_of(inpvar, multiple, static_shape=None, val=0, name='pad_rb_multiple_of'):
     assert inpvar.static_shape is None or len(inpvar.static_shape) == 4
+    assert val == 0, 'Not Implemented.'
 
-    multiple = get_vi_2dshape(multiple)
-    h, w = inpvar.shape[2], inpvar.shape[3]
+    multiple_var = get_vi_2dshape(multiple)
+    h, w = inpvar.shape[1], inpvar.shape[2]
 
     def canonicalize(x, mul):
         a = x // mul
         return (a + 1 - tf.cast(tf.equal(a * mul, x), tf.int32)) * mul
-    return pad_rb(inpvar, [canonicalize(h, multiple[0]), canonicalize(w, multiple[1])])
+
+    def canonicalize_num(x, mul):
+        a = x // mul
+        return (a + 1 - (a * mul == x)) * mul
+
+    dyn_shape = [canonicalize(h, multiple_var[0]), canonicalize(w, multiple_var[1])]
+    sta_shape = static_shape if static_shape is not None else [None, None]
+    if type(multiple) is int:
+        if inpvar.static_shape[1] is not None:
+            sta_shape[0] = canonicalize_num(inpvar.static_shape[1], multiple)
+        if inpvar.static_shape[2] is not None:
+            sta_shape[1] = canonicalize_num(inpvar.static_shape[2], multiple)
+
+    return pad_rb(inpvar, dyn_shape, static_shape=sta_shape)
 
 
 # def resize(name, inpvar, size=None, scale=None):

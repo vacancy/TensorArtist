@@ -36,10 +36,10 @@ tartist\.core\.utils\.concurrent module
     :undoc-members:
     :show-inheritance:
 
-tartist\.core\.utils\.concurrent\_monitor module
-------------------------------------------------
+tartist\.core\.utils\.concurrent\_stat module
+---------------------------------------------
 
-.. automodule:: tartist.core.utils.concurrent_monitor
+.. automodule:: tartist.core.utils.concurrent_stat
     :members:
     :undoc-members:
     :show-inheritance:
@@ -60,6 +60,14 @@ tartist\.core\.utils\.defaults module
     :undoc-members:
     :show-inheritance:
 
+tartist\.core\.utils\.g module
+------------------------------
+
+.. automodule:: tartist.core.utils.g
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tartist\.core\.utils\.imp module
 --------------------------------
 
@@ -72,6 +80,14 @@ tartist\.core\.utils\.init module
 ---------------------------------
 
 .. automodule:: tartist.core.utils.init
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+tartist\.core\.utils\.logging module
+------------------------------------
+
+.. automodule:: tartist.core.utils.logging
     :members:
     :undoc-members:
     :show-inheritance:
@@ -104,6 +120,14 @@ tartist\.core\.utils\.nd module
 -------------------------------
 
 .. automodule:: tartist.core.utils.nd
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+tartist\.core\.utils\.network module
+------------------------------------
+
+.. automodule:: tartist.core.utils.network
     :members:
     :undoc-members:
     :show-inheritance:

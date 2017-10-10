@@ -145,6 +145,10 @@ class VarNodeOpDecl(object):
     def rename(self, name):
         return as_varnode(tf.identity(self, name=name))
 
+    def set_static_shape(self, shape, name='set_static_shape'):
+        from ..opr.shape import set_static_shape
+        return set_static_shape(self, shape, name=name)
+
     def astype(self, dtype, name='astype'):
         return as_varnode(tf.cast(self, dtype, name=name))
 
