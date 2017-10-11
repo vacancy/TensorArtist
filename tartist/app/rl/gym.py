@@ -198,9 +198,13 @@ class GymMarioRLEnviron(GymRLEnviron):
         # modewrapper = wrappers.SetPlayingMode('algo')
         return GymNintendoWrapper(env)
 
+    def _set_info(self, info):
+        self.info = info
+
     def _action(self, action):
         o, r, is_over, info = self._gym.step(action)
         is_over = info.get('iteration', -1) > self._cur_iter
+        self._set_info(info)
         self._set_current_state(o)
         return r, is_over 
 
@@ -214,6 +218,7 @@ class GymMarioRLEnviron(GymRLEnviron):
             self._gym.close()
             self._restart()
         self._cur_iter = info.get('iteration', -1)
+        self._set_info(info)
         self._set_current_state(o)
 
     def _finish(self):
