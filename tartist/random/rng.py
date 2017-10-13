@@ -14,7 +14,11 @@ import contextlib
 import numpy as np
 import numpy.random as npr
 
-__all__ = ['get_rng', 'with_rng', 'reset_rng', 'gen_seed', 'gen_rng', 'shuffle_multiarray']
+__all__ = [
+    'get_rng', 'with_rng', 'reset_rng', 
+    'gen_seed', 'gen_rng', 
+    'shuffle_multiarray', 'list_choice', 'list_shuffle'
+]
 
 _rng = None
 _rng_local = threading.local()
