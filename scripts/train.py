@@ -35,6 +35,9 @@ args = parse_args(parser)
 
 
 def main():
+    if args.quiet:
+        os.environ['TART_QUIET'] = 'yes'
+
     desc = load_desc(args.desc)
 
     if get_env('dir.root'):
