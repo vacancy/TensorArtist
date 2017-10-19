@@ -17,16 +17,19 @@ from itertools import tee
 
 __all__ = [
     'cycle', 'cycle_n', 'cached_cycle', 'repeat', 'repeat_n',
-    'takewhile', 'dropwhile', 'filtertrue', 'filterfalse',
     'chain',
+    'takewhile', 'dropwhile',
+    'filter', 'filtertrue', 'filterfalse',
     'map', 'starmap', 'ssmap'
     'islice', 'truncate',
     'tee',
     'MapDataFlow'
 ]
 
+map = map
+filter = filter
+filtertrue = filter
 repeat_n = repeat
-filtertrue = dropwhile
 truncate = islice
 
 
