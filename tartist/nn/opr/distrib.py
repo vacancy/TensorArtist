@@ -17,7 +17,7 @@ import tensorflow as tf
 
 __all__ = [
     'DistributionBase',
-    'CategoricalDistribution',
+    'CategoricalDistribution', 'BinomialDistribution',
     'GaussianDistribution', 'GaussianDistributionWithUniformSample'
 ]
 
@@ -198,7 +198,7 @@ class CategoricalDistribution(DistributionBase):
         return O.softmax(theta)
 
     def _get_entropy(self, theta):
-        return -O.reduce_sum(theta * O.log(theta + self._eps), 1)
+        return -O.reduce_sum(O.log(theta + self._eps) * theta, 1)
 
     def _get_sample(self, batch_size, theta):
         ids = O.random_multinomial(O.log(theta + self._eps), num_samples=1).remove_axis(1)
@@ -212,6 +212,60 @@ class CategoricalDistribution(DistributionBase):
 
     def _get_param_size(self):
         return self._nr_classes
+
+
+class BinomialDistribution(DistributionBase):
+    _eps = 1e-8
+
+    def __init__(self, name, nr_dists):
+        super().__init__(name)
+        self._nr_dists = nr_dists
+
+    def _get_log_likelihood(self, x, theta):
+        return O.log(theta * x + (1 - theta) * (1 - x)).sum(axis=1)
+
+    def _get_kl(self, theta_p, theta_q):
+        raise NotImplementedError()
+        # return (theta_p * (O.log(theta_p) - O.log(theta_q + self._eps))).sum(axis=1)
+
+    def _get_true_theta(self, theta):
+        return O.sigmoid(theta)
+
+    def _get_entropy(self, theta):
+        return -O.reduce_sum(theta * O.log(theta + self._eps) + (1 - theta) * O.log(1 - theta + self._eps), 1)
+
+    @wrap_named_op_method
+    def sample(self, batch_size, theta, process_theta=False):
+        shape = theta.static_shape
+        assert len(shape) in [1, 2] and shape[-1] == self.param_size, shape
+        if len(shape) == 1:
+            theta = O.tile(theta.add_axis(0), [batch_size, 1])
+        elif type(batch_size) is int and shape[0] is not None:
+            assert shape[0] == batch_size
+
+        # HACK(MJY):: If the input is already probability, we perform logit function to inverse
+        if not process_theta:
+            theta = O.logit(theta)
+            theta = self._get_true_theta(theta)
+        sam = self._get_sample(batch_size, theta)
+        assert sam.ndims == 2 and sam.static_shape[1] == self.sample_size, sam.static_shape
+        return O.identity(sam, name='out')
+
+    def _get_sample(self, batch_size, theta):
+        # CAUTION(MJY):: theta is actually logit, not prob
+        shape = logits.shape
+        logits = logits.reshape(-1, 1)
+        sample = O.random_bernoulli(logits, 1)
+        return sample.reshape(shape)
+
+    def _get_numerical_sample(self, theta):
+        raise NotImplementedError()
+
+    def _get_sample_size(self):
+        return self._nr_dists
+
+    def _get_param_size(self):
+        return self._nr_dists
 
 
 class GaussianDistribution(DistributionBase):
