@@ -251,8 +251,8 @@ class BinomialDistribution(DistributionBase):
         assert sam.ndims == 2 and sam.static_shape[1] == self.sample_size, sam.static_shape
         return O.identity(sam, name='out')
 
-    def _get_sample(self, batch_size, theta):
-        # CAUTION(MJY):: theta is actually logit, not prob
+    def _get_sample(self, batch_size, logits):
+        # CAUTION(MJY):: theta is actually logits, not prob
         shape = logits.shape
         logits = logits.reshape(-1, 1)
         sample = O.random_bernoulli(logits, 1)
