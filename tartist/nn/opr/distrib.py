@@ -217,9 +217,9 @@ class CategoricalDistribution(DistributionBase):
 class BinomialDistribution(DistributionBase):
     _eps = 1e-8
 
-    def __init__(self, name, nr_dists):
+    def __init__(self, name, nr_samples):
         super().__init__(name)
-        self._nr_dists = nr_dists
+        self._nr_samples = nr_samples
 
     def _get_log_likelihood(self, x, theta):
         return O.log(theta * x + (1 - theta) * (1 - x)).sum(axis=1)
@@ -262,10 +262,10 @@ class BinomialDistribution(DistributionBase):
         raise NotImplementedError()
 
     def _get_sample_size(self):
-        return self._nr_dists
+        return self._nr_samples
 
     def _get_param_size(self):
-        return self._nr_dists
+        return self._nr_samples
 
 
 class GaussianDistribution(DistributionBase):
