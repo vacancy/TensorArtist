@@ -185,6 +185,9 @@ class GymNintendoWrapper(gym.Wrapper):
         return self.env._step(self.action_space(action))
 
 
+# Using https://github.com/ppaquette/gym-super-mario/tree/gabegrand
+# dhh: use meta-env and change_level to hack restart,
+#      old restart migth restore to a non-start intermediate state
 class GymMarioRLEnviron(GymRLEnviron):
     def __init__(self, name, dump_dir=None, force_dump=False, state_mode='DEFAULT'):
         super().__init__(name, dump_dir, force_dump, state_mode)
@@ -194,7 +197,17 @@ class GymMarioRLEnviron(GymRLEnviron):
     def _make_env(self, name):
         import ppaquette_gym_super_mario
         from ppaquette_gym_super_mario import wrappers
-        env = gym.make(name)
+        name_split = name.split('-')
+        if name_split[0] != 'meta':
+            prefix, world, level = name_split[:3]
+            author, prefix = prefix.split('/')
+            suffix = '-'.join(name_split[3:])
+            self._env_name = '/'.join([author, '-'.join(['meta', prefix, suffix])])
+            self._env_level = (int(world) - 1) * 4 + int(level) - 1
+        else:
+            self._env_name = name
+            self._env_level = None
+        env = gym.make(self._env_name)
         # modewrapper = wrappers.SetPlayingMode('algo')
         return GymNintendoWrapper(env)
 
@@ -211,6 +224,11 @@ class GymMarioRLEnviron(GymRLEnviron):
     def _restart(self):
         if self._cur_iter < 0:
             self._gym.reset()  # hard mario fceux reset
+            if self._env_level is not None:
+                self._gym.unwrapped.locked_levels = [False, ] * 32
+        else:
+            o, _, _, info = self._gym.step(7)  # take one step right
+            self._gym.unwrapped.change_level(self._env_level)
         # https://github.com/ppaquette/gym-super-mario/issues/4
         o, _, _, info = self._gym.step(7)  # take one step right
         if info.get('ignore', False):  # assuming this happens only in beginning
