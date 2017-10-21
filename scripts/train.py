@@ -28,12 +28,16 @@ parser.add_argument('--continue', dest='continue_flag', default=False, action='s
                     help='Whether to continue, if true, continue from the last epoch')
 parser.add_argument('--continue-from', dest='continue_from', default=-1, type=int,
                     help='Continue from the given epoch')
-parser.add_argument('--quiet', dest='quiet', default=False, action='store_true', help='Quiet run')
 parser.add_argument('--queue', dest='use_queue', default=False, action='store_true', help='Use input queues')
+
+parser.add_argument('-y', '--yes', '--quiet', dest='quiet', default=False, action='store_true', help='Quiet run')
 args = parse_args(parser)
 
 
 def main():
+    if args.quiet:
+        os.environ['TART_QUIET'] = 'yes'
+
     desc = load_desc(args.desc)
 
     if get_env('dir.root'):

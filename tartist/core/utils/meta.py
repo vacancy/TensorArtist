@@ -6,14 +6,15 @@
 # 
 # This file is part of TensorArtist.
 
-
+import math
 import functools
 import collections
 import threading
 import contextlib
 
-
-__all__ = ['iter_kv', 'merge_iterable', 'map_exec', 'filter_exec', 'cond_with',
+__all__ = ['iter_kv', 'merge_iterable',
+           'map_exec', 'filter_exec', 'mean', 'std', 'rms',
+           'cond_with',
            'dict_deep_update', 'dict_deep_keys',
            'astuple', 'asshape',
            'canonize_args_list',
@@ -47,6 +48,26 @@ def map_exec(func, *iterables):
 
 def filter_exec(func, iterable):
     return list(filter(func, iterable))
+
+
+def mean(values, default=0):
+    if len(values) == 0:
+        return default
+    return sum(values) / len(values)
+
+
+def std(values, default=0):
+    if len(values) == 0:
+        return default
+    l = len(values)
+    return math.sqrt(sum([v ** 2 for v in values]) / l - (sum(values) / l) ** 2)
+
+
+def rms(values, default=0):
+    if len(values) == 0:
+        return default
+    l = len(values)
+    return math.sqrt(sum([v ** 2 for v in values]) / l)
 
 
 @contextlib.contextmanager

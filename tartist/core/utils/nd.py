@@ -11,6 +11,7 @@ import numpy as np
 
 __all__ = [
     'isndarray',  'is_ndarray'
+    'nd_tobatch',
     'nd_concat', 'nd_len', 'nd_batch_size', 
     'nd_split_n', 'size_split_n',
     'gather_list_batch'
@@ -23,6 +24,11 @@ def isndarray(arr):
 
 # MJY(20170820):: more pythonic naming
 is_ndarray = isndarray
+
+
+def nd_tobatch(arr):
+    arr = np.array(arr)
+    return arr[np.newaxis]
 
 
 def nd_concat(lst):

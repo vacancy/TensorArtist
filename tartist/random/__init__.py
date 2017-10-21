@@ -8,12 +8,12 @@
 # This file is part of NeuArtist2
 
 from ..core.utils.nd import isndarray
-from .rng import rng, reset_rng, gen_seed, gen_rng, shuffle_multiarray
+from .rng import * 
 
 import random as _random
 import functools
 
-__all__ = ['rng', 'reset_rng', 'gen_seed', 'gen_rng', 'shuffle_multiarray']
+__all__ = ['get_rng', 'reset_rng', 'with_rng', 'gen_seed', 'gen_rng', 'shuffle_multiarray', 'list_choice', 'list_shuffle']
 
 __rng_meths__ = [
     # Utility functions
@@ -77,35 +77,19 @@ __rng_meths__ = [
 ]
 
 for m in __rng_meths__:
-    def gen(meth):
-        @functools.wraps(getattr(rng, meth))
+    def gen(meth_name):
+        meth = getattr(get_rng(), meth_name) 
+
+        @functools.wraps(meth)
         def wrapper(*args, **kwargs):
-            return getattr(rng, meth)(*args, **kwargs)
+            return meth(*args, **kwargs)
         return wrapper
+
     globals()[m] = gen(m)
+
+
 __all__.extend(__rng_meths__)
 
 # Alias for `random_sample`.
 random = random_sample
 __all__.append('random')
-
-_rng = rng
-
-
-def list_choice(l, rng=None):
-    """Efficiently draw an element from an list, if the rng is given, use it instead of the system one."""
-    rng = rng or _rng
-    assert type(l) in (list, tuple)
-    return l[rng.choice(len(l))]
-
-
-def list_shuffle(l, rng=None):
-    rng = rng or _rng
-    if isndarray(l):
-        rng.shuffle(l)
-        return
-
-    assert type(l) is list
-    _random.shuffle(l, random=rng.random_sample)
-    
-__all__.extend(['list_choice', 'list_shuffle'])

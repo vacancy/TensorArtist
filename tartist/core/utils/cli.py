@@ -12,7 +12,7 @@ from ..environ import load_env as load_env_
 import os
 import sys
 
-__all__ = ['parse_devices', 'load_desc', 'yes_or_no', 'maybe_mkdir']
+__all__ = ['parse_devices', 'load_desc', 'yes_or_no', 'maybe_mkdir', 'parse_args']
 
 
 def parse_devices(devs):
@@ -48,8 +48,18 @@ def yes_or_no(question, default="yes"):
 
     The "answer" return value is True for "yes" or False for "no".
     """
+
     valid = {"yes": True, "y": True, "ye": True,
              "no": False, "n": False}
+
+    quiet = os.getenv('TART_QUIET', '')
+    if quiet != '':
+        quiet = quiet.lower()
+        assert quiet in valid, 'Invalid TART_QUIET environ: {}.'.format(quiet) 
+        choice = valid[quiet]
+        sys.stdout.write('TART Quiet run:\n\t{}\n\tChoice={}\n'.format(question, 'Y' if choice else 'N'))
+        return choice
+
     if default is None:
         prompt = " [y/n] "
     elif default == "yes":
@@ -57,7 +67,7 @@ def yes_or_no(question, default="yes"):
     elif default == "no":
         prompt = " [y/N] "
     else:
-        raise ValueError("invalid default answer: '%s'." % default)
+        raise ValueError("Invalid default answer: '%s'." % default)
 
     while True:
         sys.stdout.write(question + prompt)
@@ -80,10 +90,13 @@ def maybe_mkdir(dirname):
     return dirname
 
 
-def parse_args(parser):
+def parse_args(parser, always_clear=True):
     args, argv = parser.parse_known_args()
     if argv:
         argv = sys.argv[:1] + argv
         print('Partial parsed argv:\n\tBefore: {}\n\tAfter: {}\t'.format(sys.argv, argv))
         sys.argv = argv
+    else:
+        if always_clear:
+            sys.argv = sys.argv[:1]
     return args

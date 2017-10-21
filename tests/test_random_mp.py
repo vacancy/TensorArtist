@@ -28,7 +28,6 @@ class TestRandomMP(unittest.TestCase):
         v2 = q.get()
 
         v1 = tar.normal()
-        print(v1, v2)
         self.assertNotEqual(v1, v2)
 
 

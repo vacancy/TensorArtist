@@ -19,6 +19,7 @@ import threading
 import tensorflow as tf
 
 from tartist.core import get_logger, get_env, io
+from tartist.core.utils.meta import mean, std, rms
 from tartist.data.rflow.utils import get_addr
 from tartist.nn.tfutils import format_summary_name, clean_summary_suffix
 
@@ -82,9 +83,9 @@ class SummaryHistoryManager(object):
         self._summaries_type[key] = value
 
     def _do_average(self, values, meth):
-        assert meth in ['avg', 'max', 'min', 'sum', 'std']
+        assert meth in ['avg', 'max', 'min', 'sum', 'std', 'rms']
         if meth == 'avg':
-            return sum(values) / (len(values) + 1e-4)
+            return mean(values)
         elif meth == 'max':
             return max(values)
         elif meth == 'min':
@@ -92,8 +93,9 @@ class SummaryHistoryManager(object):
         elif meth == 'sum':
             return sum(values)
         elif meth == 'std':
-            l = len(values) + 1e-4
-            return math.sqrt(sum([v ** 2 for v in values]) / l - (sum(values) / l) ** 2)
+            return std(values)
+        elif meth == 'rms':
+            return rms(values)
 
     def average(self, key, top_k=None, meth='avg'):
         type = self.get_type(key)

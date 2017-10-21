@@ -12,7 +12,7 @@ import numpy as np
 import collections
 import threading
 
-__all__ = ['stprint', 'stformat']
+__all__ = ['stprint', 'stformat', 'print_to_string']
 
 __stprint_locks = collections.defaultdict(threading.Lock)
 
@@ -24,7 +24,7 @@ def _indent_print(msg, indent, prefix=None, end='\n', file=sys.stdout):
     print(msg, end=end, file=file)
 
 
-def stprint(data, key=None, indent=0, file=sys.stdout, need_lock=True):
+def stprint(data, key=None, indent=0, file=None, need_lock=True):
     """
     Structure print. Usage:
 
@@ -82,3 +82,48 @@ def stformat(data, key=None, indent=0):
     value = f.getvalue()
     f.close()
     return value
+
+
+class _PrintToStringContext(object):
+    __global_locks = collections.defaultdict(threading.Lock)
+
+    def __init__(self, target='STDOUT', need_lock=True):
+        assert target in ('STDOUT', 'STDERR')
+        self._target = target
+        self._need_lock = need_lock
+        self._stream = io.StringIO()
+        self._backup = None
+        self._value = None
+
+    def _swap(self, rhs):
+        if self._target == 'STDOUT':
+            sys.stdout, rhs = rhs, sys.stdout
+        else:
+            sys.stderr, rhs = rhs, sys.stderr
+
+        return rhs
+
+    def __enter__(self):
+        if self._need_lock:
+            self.__global_locks[self._target].acquire()
+        self._backup = self._swap(self._stream)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._stream = self._swap(self._backup)
+        if self._need_lock:
+            self.__global_locks[self._target].release()
+
+    def _ensure_value(self):
+        if self._value is None:
+            self._value = self._stream.getvalue()
+            self._stream.close()
+
+    def get(self):
+        self._ensure_value()
+        return self._value
+
+
+def print_to_string(target='STDOUT'):
+    return _PrintToStringContext(target, need_lock=True)
+

@@ -6,6 +6,8 @@
 # 
 # This file is part of TensorArtist.
 
+import sys
+
 __all__ = ['G', 'g']
 
 
@@ -20,5 +22,12 @@ class G(dict):
 
     def __delattr__(self, k):
         del self[k]
+
+    def print(self, sep=': ', end='\n', file=None):
+        keys = sorted(self.keys())
+        lens = list(map(len, keys))
+        max_len = max(lens)
+        for k in keys:
+            print(k + ' ' * (max_len - len(k)), self[k], sep=sep, end=end, file=file, flush=True)
 
 g = G()
