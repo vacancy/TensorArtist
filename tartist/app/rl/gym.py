@@ -11,6 +11,8 @@ from .base import DiscreteActionSpace, ContinuousActionSpace
 from tartist.core import io
 from tartist.core import get_logger
 from tartist.core.utils.meta import run_once
+
+import copy
 import threading
 import numpy as np
 import collections
@@ -212,11 +214,16 @@ class GymMarioRLEnviron(GymRLEnviron):
         return GymNintendoWrapper(env)
 
     def _set_info(self, info):
-        self.info = info
+        self.info = copy.copy(info)
 
     def _action(self, action):
         o, r, is_over, info = self._gym.step(action)
         is_over = info.get('iteration', -1) > self._cur_iter
+        if self._env_level is not None:
+            if 'distance' in self.info and 'distance' in info:
+                r = info['distance'] - self.info['distance']
+            else:
+                r = 0
         self._set_info(info)
         self._set_current_state(o)
         return r, is_over 
