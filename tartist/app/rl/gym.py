@@ -3,7 +3,7 @@
 # Author : Jiayuan Mao
 # Email  : maojiayuan@gmail.com
 # Date   : 3/18/17
-# 
+#
 # This file is part of TensorArtist.
 
 from .base import SimpleRLEnvironBase, ProxyRLEnvironBase
@@ -189,7 +189,7 @@ class GymNintendoWrapper(gym.Wrapper):
 
 # Using https://github.com/ppaquette/gym-super-mario/tree/gabegrand
 # dhh: use meta-env and change_level to hack restart,
-#      old restart migth restore to a non-start intermediate state
+#      old restart might restore to a non-start intermediate state
 class GymMarioRLEnviron(GymRLEnviron):
     def __init__(self, name, dump_dir=None, force_dump=False, state_mode='DEFAULT'):
         super().__init__(name, dump_dir, force_dump, state_mode)
@@ -226,7 +226,7 @@ class GymMarioRLEnviron(GymRLEnviron):
                 r = 0
         self._set_info(info)
         self._set_current_state(o)
-        return r, is_over 
+        return r, is_over
 
     def _restart(self):
         if self._cur_iter < 0:
