@@ -237,7 +237,8 @@ class GymMarioRLEnviron(GymRLEnviron):
             o, _, _, info = self._gym.step(7)  # take one step right
             self._gym.unwrapped.change_level(self._env_level)
         # https://github.com/ppaquette/gym-super-mario/issues/4
-        o, _, _, info = self._gym.step(7)  # take one step right
+        # https://github.com/pathak22/noreward-rl/blob/master/src/env_wrapper.py#L142
+        o, _, _, info = self._gym.step(7)  # take right once to start game
         if info.get('ignore', False):  # assuming this happens only in beginning
             self._cur_iter = -1
             self._gym.close()
