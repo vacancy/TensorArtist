@@ -534,7 +534,7 @@ class PPOTrainerV2(PPOTrainerMixin, JointSurrOptimizationTrainerBase):
                 desc='Proximal policy optimizing',
                 total=len(iterator),
                 leave=False,
-                **get_tqdm_defaults(),
+                **get_tqdm_defaults()
             ):
 
             self._opt_func.call_args(batch)
