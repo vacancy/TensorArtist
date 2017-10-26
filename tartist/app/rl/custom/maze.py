@@ -506,6 +506,7 @@ class CustomLavaWorldEnv(MazeEnv):
             self._start_point = start_point
             self._final_point = final_point
             self._current_point = start_point
+            self._obstacles = self.lv_obstacles
             self._canvas = self._empty_canvas.copy()
             self._fill_canvas(self._canvas, *self._start_point, v=2)
             self._fill_canvas(self._canvas, *self._final_point, v=3)
