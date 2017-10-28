@@ -52,7 +52,6 @@ def pil_img2nd(image, require_chl3=True):
         nd = nd[:, :, ::-1]
     if require_chl3 and len(nd.shape) == 2:
         return nd[:, :, np.newaxis]
-    nd = 
     return nd
 
 
