@@ -143,6 +143,7 @@ def dropout(name, inpvar, keep_prob, keep_prob_sym=None, noise_shape=None, seed=
 def batch_norm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dtype=__default_dtype__):
     """
     Batch normalization.
+
     :param name: operator name
     :param inpvar: input tensor, of data type NHWC
     :param decay: decay for moving average
