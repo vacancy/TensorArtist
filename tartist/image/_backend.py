@@ -25,6 +25,9 @@ except ImportError:
         logger.error('Can not find either PIL or OpenCV; you can not use most function in tartist.image.')
 
 
+FORCE_PIL_BGR = True
+
+
 def opencv_or_pil(func):
     @functools.wraps(func)
     def new_func(*args, **kwargs):
@@ -45,12 +48,16 @@ def opencv_only(func):
 
 def pil_img2nd(image, require_chl3=True):
     nd = np.array(image)
+    if FORCE_PIL_BGR:
+        nd = nd[:, :, ::-1]
     if require_chl3 and len(nd.shape) == 2:
         return nd[:, :, np.newaxis]
     return nd
 
 
 def pil_nd2img(image):
+    if FORCE_PIL_BGR:
+        image = image[:, :, ::-1]
     if len(image.shape) == 3 and image.shape[2] == 1:
         image = image[:, :, 0]
     return Image.fromarray(image)
