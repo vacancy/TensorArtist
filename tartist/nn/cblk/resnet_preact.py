@@ -27,13 +27,13 @@ def residual_first(name, src, increase_dim=False, is_bottleneck=False):
 
     if not is_bottleneck:
         _ = layer.conv_bn_relu('{}_branch2a'.format(name), _, out_channel, 3, stride=1)
-        _ = layer.conv2d_kaiming('{}_branch2b'.format(name), _, out_channel, 3, stride=1)
+        _ = layer.conv2d_kaiming('{}_branch2b'.format(name), _, out_channel, 3, stride=1, use_bias=False)
     else:
         _ = layer.conv_bn_relu('{}_branch2a'.format(name), _, in_channel, 1, stride=1)
         _ = layer.conv_bn_relu('{}_branch2b'.format(name), _, in_channel, 3, stride=1)
-        _ = layer.conv2d_kaiming('{}_branch2c'.format(name), _, out_channel, 1, stride=1)
+        _ = layer.conv2d_kaiming('{}_branch2c'.format(name), _, out_channel, 1, stride=1, use_bias=False)
 
-        src = layer.conv2d_kaiming('{}_branch1'.format(name), src, out_channel, 1, stride=1)
+        src = layer.conv2d_kaiming('{}_branch1'.format(name), src, out_channel, 1, stride=1, use_bias=False)
 
     _ = O.add(_, src, name='{}_addition'.format(name))
 
@@ -70,8 +70,7 @@ def residual_block(name, src, increase_dim=False, is_bottleneck=False):
         _ = layer.bn_relu_conv('{}_branch2c'.format(name), _, out_channel, 1, stride=1)
 
     if increase_dim:
-        src = O.pooling2d('{}_branch1_pool'.format(name), src, 2, method='AVG')
-        src = layer.conv2d_kaiming('{}_branch1_conv'.format(name), src, out_channel, 1, 1)
+        src = layer.conv2d_kaiming('{}_branch1'.format(name), src, out_channel, 1, stride=2, use_bias=False)
 
     _ = O.add(_, src, name='{}_addition'.format(name))
 
@@ -80,7 +79,7 @@ def residual_block(name, src, increase_dim=False, is_bottleneck=False):
 
 def make_resnet(src, blocks, is_bottleneck, output_imm=False, imm_act=False):
     """
-    Build resnet.
+    Build resnet (preact version).
 
     :param src: input tensor, of data type NHWC.
     :param blocks: number of residual blocks for each residual module. Length should be 4.
@@ -90,9 +89,10 @@ def make_resnet(src, blocks, is_bottleneck, output_imm=False, imm_act=False):
     """
 
     _ = src
-    _ = layer.conv2d_kaiming('conv1', _, 64, 7, stride=2)
+    _ = layer.conv2d_kaiming('conv1', _, 64, 7, stride=2, use_bias=False)
     convs_imm = [_]
-    _ = O.bn_relu(_, name='conv1_bn_relu')
+    _ = O.batch_norm('conv1_bn', _)
+    _ = O.relu(_, name='conv1_relu')
     convs_imm_act = [_]
     _ = O.pooling2d('pool1', _, 3, stride=2, padding='SAME', method='MAX')
 
@@ -113,10 +113,11 @@ def make_resnet(src, blocks, is_bottleneck, output_imm=False, imm_act=False):
 
         convs_imm.append(_)
         if imm_act:
-            _act = O.bn_relu(_, name='conv{}_bn_relu'.format(s))
+            _act = O.bn_relu(_, name='conv{}_act'.format(s))
             convs_imm_act.append(_act)
 
-    _ = O.bn_relu(_, name='gap_bn_relu')
+    _ = O.batch_norm('gap_bn', _)
+    _ = O.relu(_, name='gap_relu')
     _ = layer.global_avg_pooling2d('gap', _)
 
     if output_imm:

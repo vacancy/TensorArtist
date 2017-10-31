@@ -86,7 +86,7 @@ def assign_variables(var_list_or_dict, value_list=None, session=None, use_lockin
         iterator = zip(var_list_or_dict, value_list)
 
     for var, value in iterator:
-        assigns.append(var.assign(value, use_locking=use_locking))
+        assigns.append(tf.assign(var, value, use_locking=use_locking, name='assign_{}'.format(escape_name(var))))
 
     session.run(tf.group(*assigns))
 

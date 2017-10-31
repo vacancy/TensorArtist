@@ -726,9 +726,14 @@ class Network(object):
             value = all_variables.get(clean_name(v), None)
             if value is not None:
                 if verbose:
-                    logger.info('Assign variable from external dict: {}.'.format(clean_name(v)))
+                    logger.info('Assign variable from external dict: {}, var_shape={}, val_shape={}.'.format(
+                        clean_name(v), tuple(v.get_shape().as_list()), value.shape
+                    ))
                 var_list.append(v)
                 value_list.append(value)
+            else:
+                if verbose:
+                    logger.warning('Unfound variable from external dict: {}.'.format(clean_name(v)))
 
         assign_variables(var_list, value_list, self.owner_env.session)
         return self

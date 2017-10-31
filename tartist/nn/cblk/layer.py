@@ -26,7 +26,8 @@ def conv2d_kaiming(name, src, channel, kernel, stride=1, padding='SAME', use_bia
 
 def bn_relu_conv(name, src, channel, kernel, stride=1, padding='SAME', use_bias=False):
     _ = src
-    _ = O.bn_relu(_, name=name + '_bn_relu')
+    _ = O.batch_norm(name + '_bn', _)
+    _ = O.relu(_, name=name + '_relu')
     _ = conv2d_kaiming(name, _, channel, kernel, stride, padding, use_bias=use_bias) 
     return _
 
@@ -34,7 +35,8 @@ def bn_relu_conv(name, src, channel, kernel, stride=1, padding='SAME', use_bias=
 def conv_bn_relu(name, src, channel, kernel, stride=1, padding='SAME', use_bias=False):
     _ = src
     _ = conv2d_kaiming(name, _, channel, kernel, stride, padding, use_bias=use_bias)
-    _ = O.bn_relu(_, name=name + '_bn_relu')
+    _ = O.batch_norm(name + '_bn', _)
+    _ = O.relu(_, name=name + '_relu')
     return _
 
 
