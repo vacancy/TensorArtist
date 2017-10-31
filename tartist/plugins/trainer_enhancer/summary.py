@@ -212,6 +212,9 @@ def enable_echo_summary_scalar(trainer, summary_spec=None,
         for k in sorted(mgr.get_all_summaries('scalar')):
             spec = summary_spec.get(k, ['avg'])
 
+            if k.startswith('inference') and trainer.runtime['inference_last_run'] != trainer.epoch:
+                continue
+
             for meth in spec:
                 if not k.startswith('inference'):  # do hack for inference
                     avg = mgr.average(k, trainer.epoch_size, meth=meth)

@@ -17,7 +17,9 @@ __all__ = ['parse_devices', 'load_desc', 'yes_or_no', 'maybe_mkdir', 'parse_args
 
 def parse_devices(devs):
     all_gpus = []
-    def rename(d):
+    def rename(id_pair):
+        i, d = id_pair
+
         d = d.lower()
         if d == 'cpu':
             return '/cpu:0'
@@ -25,8 +27,9 @@ def parse_devices(devs):
             d = d[3:]
         d = str(int(d))
         all_gpus.append(d)
-        return '/gpu:' + d
-    devs = tuple(map(rename, devs))
+        return '/gpu:' + str(i)
+
+    devs = tuple(map(rename, enumerate(devs)))
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(all_gpus)
     return devs
 
