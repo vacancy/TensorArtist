@@ -63,14 +63,12 @@ class QueuedInputFunction(Function):
                 return outputs
             return self._output_manager.format(outputs)
         else:
-            kwargs.setdefault(self._input_queue_desc.queue_cond.name, False)
             super().__call__(*args, output_raw=output_raw, **kwargs)
 
 
 class InputQueueDesc(object):
     _placeholders = None
     _input_queue = None
-    _input_queue_cond = None
     enqueue_op = None
     dequeue_op = None
     close_op = None
@@ -87,7 +85,6 @@ class InputQueueDesc(object):
         self._editable_operations = [o for o in graph.get_operations() if o not in self._placeholders]
         placeholders_dtypes = [x.dtype for x in self._placeholders]
         self._input_queue = tf.FIFOQueue(self._env.flags.input_queue_size, placeholders_dtypes, name=self._name)
-        self._input_queue_cond = tf.placeholder_with_default(True, shape=[], name=self._name + '_cond')
 
         self.enqueue_op = self._input_queue.enqueue(self._placeholders)
         self.dequeue_op = self._input_queue.dequeue()
@@ -102,8 +99,7 @@ class InputQueueDesc(object):
     def edit_graph(self, graph):
         sgv0 = [as_tftensor(x) for x in self._placeholders]
         sgv1 = self.dequeue_op
-        sgv2 = [tf.cond(self.queue_cond, lambda: x, lambda: y) for x, y in zip(sgv1, sgv0)]
-        graph_editor.swap_ts(sgv0, sgv2, can_modify=self._editable_operations)
+        graph_editor.swap_ts(sgv0, sgv1, can_modify=self._editable_operations)
 
     @property
     def queue(self):
