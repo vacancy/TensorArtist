@@ -13,7 +13,7 @@ from .rng import *
 import random as _random
 import functools
 
-__all__ = ['get_rng', 'reset_rng', 'with_rng', 'gen_seed', 'gen_rng', 'shuffle_multiarray', 'list_choice', 'list_shuffle']
+__all__ = ['get_rng', 'reset_rng', 'reset_global_rng', 'with_rng', 'gen_seed', 'gen_rng', 'shuffle_multiarray', 'list_choice', 'list_shuffle']
 
 __rng_meths__ = [
     # Utility functions

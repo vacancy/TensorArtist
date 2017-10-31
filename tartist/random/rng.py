@@ -16,7 +16,7 @@ import numpy as np
 import numpy.random as npr
 
 __all__ = [
-    'get_rng', 'with_rng', 'reset_rng', 
+    'get_rng', 'with_rng', 'reset_rng', 'reset_global_rng',
     'gen_seed', 'gen_rng', 
     'shuffle_multiarray', 'list_choice', 'list_shuffle'
 ]
@@ -39,6 +39,12 @@ def reset_rng(seed=None):
     else:
         rng2 = npr.RandomState(seed)
         _rng.set_state(rng2.get_state())
+
+
+def reset_global_rng(seed):
+    npr.seed(seed)
+    _random.seed(seed)
+    reset_rng(seed)
 
 
 @contextlib.contextmanager
