@@ -80,9 +80,11 @@ class InputQueueDesc(object):
         self._name = name
         self._env = env
         self._placeholders = None
+        self._editable_operations = None
 
     def setup(self, graph):
         self._placeholders = graph.get_collection(TArtGraphKeys.PLACEHOLDERS)
+        self._editable_operations = [o for o in graph.get_operations() if o not in self._placeholders]
         placeholders_dtypes = [x.dtype for x in self._placeholders]
         self._input_queue = tf.FIFOQueue(self._env.flags.input_queue_size, placeholders_dtypes, name=self._name)
         self._input_queue_cond = tf.placeholder_with_default(True, shape=[], name=self._name + '_cond')
@@ -101,7 +103,7 @@ class InputQueueDesc(object):
         sgv0 = [as_tftensor(x) for x in self._placeholders]
         sgv1 = self.dequeue_op
         sgv2 = [tf.cond(self.queue_cond, lambda: x, lambda: y) for x, y in zip(sgv1, sgv0)]
-        graph_editor.swap_ts(sgv0, sgv2, cannot_modify=[self.enqueue_op] + [x.op for x in sgv2])
+        graph_editor.swap_ts(sgv0, sgv2, can_modify=self._editable_operations)
 
     @property
     def queue(self):
