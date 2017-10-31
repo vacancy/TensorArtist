@@ -21,8 +21,14 @@ def enable_inference_runner(trainer, dataflow, interval=1,
     extra_outputs = extra_outputs or {}
 
     def compile_fn_inference(trainer):
-        trainer._fn_inference = func = trainer.env.make_func()
-        summaries = trainer.network.get_merged_summaries(collection_key)
+        trainer._env_inference = env = trainer.env.clone(trainer.env.Phase.TEST)
+        with env.as_default(), env.name_scope('inference'), env.reuse_scope():
+            trainer.desc.make_network(env)
+        trainer._fn_inference = func = env.make_func()
+        func.extend_extra_kw_modifiers([lambda fd: {'inference/' + k: fd[k] for k in fd}])
+
+        # TRICK(MJY):: the new env share the same graph as original env.
+        summaries = env.network.get_merged_summaries(collection_key)
         if summaries is not None:
             func.add_extra_kwoutput('summaries', summaries)
         func.compile(extra_outputs)

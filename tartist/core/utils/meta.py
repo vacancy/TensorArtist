@@ -7,6 +7,7 @@
 # This file is part of TensorArtist.
 
 import math
+import copy
 import functools
 import collections
 import threading
@@ -196,6 +197,9 @@ class AttrObject(object):
         if cvt is not None:
             v = cvt(v)
         super().__setattr__(k, v)
+
+    def clone(self):
+        return copy.deepcopy(self)
 
 
 class notnone_property:

@@ -258,7 +258,7 @@ class Env(object):
 
     @property
     def slave_devices(self):
-        return self._slave_devices
+        return list(self._slave_devices)
 
     @property
     def nr_slave_devices(self):
@@ -355,16 +355,22 @@ class Env(object):
         with self.graph.as_default():
             tf.train.start_queue_runners(sess=sess)
 
-    def clone(self, share_graph=True, share_session=True, share_func_lock=False):
+    def clone(self, phase=None, share_flags=True, share_dpflags=True, share_graph=True, share_session=True, share_func_lock=False):
         """
         Clone this graph.
 
+        :param phase: Override the phase.
+        :param share_flags: Whether the new env will share the flags with this.
+        :param share_dpflags: Whether the new env will share the data parallel flags with this.
         :param share_graph: Whether the new env will share the graph with this.
         :param share_session: Whether the new env will share the session with this.
         :param share_func_lock: Whether the new env will share the func_lock with this.
         """
-        return type(self)(self.phase, master_dev=self.master_device, slave_devs=self.slave_devices,
-                          flags=self.flags, dpflags=self.dpflags,
+        if phase is None:
+            phase = self.phase
+        return type(self)(phase, master_dev=self.master_device, slave_devs=self.slave_devices,
+                          flags=self.flags.clone() if share_flags else None, 
+                          dpflags=self.dpflags.clone() if share_dpflags else None,
                           graph=self.graph if share_graph else None,
                           session=self.session if share_session else None,
                           func_lock=self.get_or_make_func_lock() if share_func_lock else None)
@@ -579,13 +585,13 @@ class DataParallelController(object):
 
             name_prefix = self.owner_env.get_pure_unique_name('{}/{}'.format(self._name_scope_prefix, i))
             self._tower_prefixes.append(name_prefix)
-            with tf.name_scope(name_prefix), select_device(i, self.owner_env), reuse_context(i != 0):
+            with self.owner_env.name_scope(name_prefix), select_device(i, self.owner_env), reuse_context(i != 0):
                 inputs = self._input_maker()
 
                 if i == 0:
                     for v in inputs:
                         vname = v.name
-                        assert vname.startswith(self._real_name_scope_prefix) and vname.endswith(':0'), vname
+                        assert vname.startswith(self._real_name_scope_prefix) and vname.endswith(':0'), (vname, self._real_name_scope_prefix)
                         self._input_names.append(vname[len(self.owner_env.get_name_scope())+1:-2])
 
                 self._forward_func(*inputs)
