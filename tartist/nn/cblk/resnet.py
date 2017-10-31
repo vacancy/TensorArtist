@@ -16,7 +16,7 @@ __all__ = ['make_resnet', 'make_resnet_18', 'make_resnet_34', 'make_resnet_50',
 
 def create_bn_relu(name, inpvar, channel, kernel, stride, padding='SAME', has_bn=True, has_relu=True):
     _ = inpvar
-    _ = O.conv2d(name, _, channel, kernel, stride=stride, padding=padding)
+    _ = O.conv2d(name, _, channel, kernel, stride=stride, padding=padding, use_bias=False)
     if has_bn:
         _ = O.batch_norm(name + '_bn', _)
     if has_relu:
