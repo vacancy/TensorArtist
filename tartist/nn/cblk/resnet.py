@@ -16,7 +16,7 @@ __all__ = ['make_resnet', 'make_resnet_18', 'make_resnet_34', 'make_resnet_50',
 
 def create_bn_relu(name, inpvar, channel, kernel, stride, padding='SAME', has_bn=True, has_relu=True):
     _ = inpvar
-    _ = O.conv2d(name, _, channel, kernel, stride=stride, padding=padding, use_bias=False)
+    _ = layer.conv2d_kaiming(name, _, channel, kernel, stride=stride, padding=padding, use_bias=False)
     if has_bn:
         _ = O.batch_norm(name + '_bn', _)
     if has_relu:
@@ -30,8 +30,8 @@ def create_bottleneck(prefix, inpvar, stride, nr_outputs1, nr_outputs2, has_proj
         proj = create_bn_relu('conv' + prefix + '_branch1', proj, nr_outputs2, 1, stride=stride, has_relu=False)
 
     _ = inpvar
-    _ = create_bn_relu('conv' + prefix + '_branch2a', _, nr_outputs1, 1, stride=stride, has_relu=True)
-    _ = create_bn_relu('conv' + prefix + '_branch2b', _, nr_outputs1, 3, stride=1, has_relu=True)
+    _ = create_bn_relu('conv' + prefix + '_branch2a', _, nr_outputs1, 1, stride=1, has_relu=True)
+    _ = create_bn_relu('conv' + prefix + '_branch2b', _, nr_outputs1, 3, stride=stride, has_relu=True)
     _ = create_bn_relu('conv' + prefix + '_branch2c', _, nr_outputs2, 1, stride=1, has_relu=False)
     _ = _ + proj
     return O.relu(_, name='relu' + prefix)
@@ -62,7 +62,7 @@ def make_resnet(inpvar, blocks, is_bottleneck=True, output_imm=False, _mid_outpu
 
     f = create_bn_relu("conv1", inpvar, 64, 7, stride=2)
     convs_imm = [f]
-    f = O.pooling2d("pool1", f, 3, stride=2, padding='SAME', method="MAX")
+    f = layer.max_pooling2d_comp("pool1", f, 3, stride=2, padding='SAME')
 
     pre = [2, 3, 4, 5]
     if _mid_outputs is None:

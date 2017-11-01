@@ -94,7 +94,7 @@ def make_resnet(src, blocks, is_bottleneck, output_imm=False, imm_act=False):
     _ = O.batch_norm('conv1_bn', _)
     _ = O.relu(_, name='conv1_relu')
     convs_imm_act = [_]
-    _ = O.pooling2d('pool1', _, 3, stride=2, padding='SAME', method='MAX')
+    _ = layer.max_pooling2d_comp('pool1', _, 3, stride=2, padding='SAME')
 
     residual = functools.partial(residual_block, is_bottleneck=is_bottleneck)
 

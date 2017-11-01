@@ -170,7 +170,7 @@ def batch_norm(name, inpvar, decay=0.9, epsilon=1e-5, use_affine=True, param_dty
         beta = O.zeros([nr_channels], name='beta')
         gamma = O.ones([nr_channels], name='gamma')
     moving_mean = O.variable('mean/ema', tf.constant_initializer(), shape=[nr_channels], trainable=False)
-    moving_var = O.variable('variance/ema', tf.constant_initializer(), shape=[nr_channels], trainable=False)
+    moving_var = O.variable('variance/ema', tf.constant_initializer(1.0), shape=[nr_channels], trainable=False)
 
     env = get_default_env()
     if env.flags.compute_update_batch_normalization(name):

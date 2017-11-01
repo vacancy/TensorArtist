@@ -13,6 +13,7 @@ from ...core.event import EventManager, register_event, trigger_event
 from ...core.utils.meta import assert_instance, notnone_property
 from ...core.utils.cache import cached_property
 
+import os
 import math
 import tensorflow as tf
 
@@ -129,6 +130,10 @@ class TrainerBase(object):
         self.runtime.setdefault('iter', 0)
 
         self.trigger_event('optimization:before')
+
+        if os.getenv('TART_EMBED_TRAIN', '0') != '0':
+            from tartist import cao
+            cao.embed()
 
         self.runtime['zero_iter'] = True
         while self.runtime['iter'] <= self.nr_iters and not self.stop_signal:

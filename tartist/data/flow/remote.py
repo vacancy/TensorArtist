@@ -9,6 +9,7 @@
 from .base import SimpleDataFlowBase
 from ..rflow import InputPipe, OutputPipe, control
 from ..rflow import make_push_pair
+from ...random import gen_seed, reset_global_rng
 
 from multiprocessing import Process
 import time
@@ -27,7 +28,8 @@ class RemoteDataFlow(SimpleDataFlowBase):
 
 
 class MPPrefetchDataFlow(SimpleDataFlowBase):
-    def _mainloop_worker(self, wid):
+    def _mainloop_worker(self, wid, seed):
+        reset_global_rng(seed)
         with self._pushs[wid].activate():
             for data in self._dataflow:
                 self._pushs[wid].send(data)
@@ -44,7 +46,7 @@ class MPPrefetchDataFlow(SimpleDataFlowBase):
     def _initialize(self):
         super()._initialize()
         self._pull, self._pushs = make_push_pair(str(self), self._nr_workers, mode=self._mode, send_qsize=self._send_qsize)
-        self._procs = [Process(target=self._mainloop_worker, args=(i, ), daemon=True) for i in range(self._nr_workers)]
+        self._procs = [Process(target=self._mainloop_worker, args=(i, gen_seed()), daemon=True) for i in range(self._nr_workers)]
         for p in self._procs:
             p.start()
     
@@ -62,13 +64,14 @@ class MPCustomDataFlow(SimpleDataFlowBase):
         self._pull = None
         self._pushs = None
 
-    def run(self, wid, pipe):
+    def run(self, wid, pipe, seed):
+        reset_global_rng(seed)
         return self.target(wid, pipe)
  
     def _initialize(self):
         super()._initialize()
         self._pull, self._pushs = make_push_pair(str(self), self._nr_workers, mode=self._mode, send_qsize=self._send_qsize)
-        self._procs = [Process(target=self.run, args=(i, self._pushs[i]), daemon=True) for i in range(self._nr_workers)]
+        self._procs = [Process(target=self.run, args=(i, self._pushs[i], gen_seed()), daemon=True) for i in range(self._nr_workers)]
         for p in self._procs:
             p.start()
     
