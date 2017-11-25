@@ -10,6 +10,7 @@
 import os
 import threading
 import contextlib
+import random as _random
 
 import numpy as np
 import numpy.random as npr
@@ -78,7 +79,7 @@ def list_choice(l, rng=None):
 
 def list_shuffle(l, rng=None):
     rng = rng or _rng
-    if isndarray(l):
+    if isinstance(l, np.ndarray):
         rng.shuffle(l)
         return
 
