@@ -451,7 +451,7 @@ class CustomLavaWorldEnv(MazeEnv):
 
         self._lv_obstacles = list(itertools.chain(
             [(i, (w-1) // 2) for i in range(h) if i not in ((h-3) // 4, (h-1)//2 + (h+1)//4)],
-            [((h-1) // 2, i) for i in range(w) if i not in ((w-3) // 4, (w-1)//2 + (w+1)//4), (w-1) // 2]
+            [((h-1) // 2, i) for i in range(w) if i not in ((w-3) // 4, (w-1)//2 + (w+1)//4, (w-1) // 2)]
         ))
         self._lv_starts = [(i,j) for i in range(h) for j in range(w) if (i,j) not in self._lv_obstacles]
         if mode == 'ALL':
